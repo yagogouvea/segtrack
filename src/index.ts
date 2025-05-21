@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 
 import veiculosRoutes from "./routes/veiculos";
@@ -13,8 +14,12 @@ import relatoriosRoutes from "./routes/relatorios";
 import userRoutes from "./routes/userRoutes";
 import authRoutes from "./routes/authRoutes";
 
-// Carrega variáveis do .env
-dotenv.config();
+// Carrega .env.local em ambiente de desenvolvimento, .env ou variáveis externas em produção
+if (process.env.NODE_ENV !== "production" && fs.existsSync(".env.local")) {
+    dotenv.config({ path: ".env.local" });
+} else {
+    dotenv.config();
+}
 
 const app = express();
 
