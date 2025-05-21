@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "main": "build/index.js",
   "scripts": {
+    "preinstall": "npx prisma generate",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node build/index.js"
   },
   "dependencies": {
+    "@prisma/client": "^6.8.2",
     "axios": "^1.6.7",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -15,7 +17,8 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "zod": "^3.25.20"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
@@ -24,6 +27,7 @@
     "@types/jsonwebtoken": "^9.0.2",
     "@types/multer": "^1.4.7",
     "@types/node": "^20.11.30",
+    "prisma": "^6.8.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.2.2"
   }
