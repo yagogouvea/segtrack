@@ -8,6 +8,9 @@
     "build": "tsc",
     "start": "node build/index.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@prisma/client": "^6.8.2",
     "axios": "^1.6.7",
