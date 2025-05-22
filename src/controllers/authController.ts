@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/db'; // Usa instância compartilhada
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -33,6 +31,7 @@ export const login = async (req: Request, res: Response) => {
 
     res.json({ token });
   } catch (error) {
+    console.error("Erro no login:", error);
     res.status(500).json({ message: 'Erro interno no login', error });
   }
 };
@@ -68,6 +67,7 @@ export const seedAdmin = async (_req: Request, res: Response) => {
 
     res.json({ message: 'Usuário admin criado com sucesso', id: user.id });
   } catch (error) {
+    console.error("Erro ao criar admin:", error);
     res.status(500).json({ message: 'Erro ao criar admin', error });
   }
 };
