@@ -46,6 +46,7 @@ app.get('/', (_req, res) => {
 });
 // Inicialização
 const PORT = Number(process.env.PORT) || 8080;
+console.log(`🔧 Iniciando servidor na porta ${PORT}...`);
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Servidor rodando na porta ${PORT}`);
 });
