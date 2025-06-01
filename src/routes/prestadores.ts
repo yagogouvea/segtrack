@@ -87,35 +87,111 @@ router.get('/buscar-por-nome/:nome', async (req: Request, res: Response) => {
 
 // POST - Criar novo prestador
 router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const {
-    nome, cpf, cod_nome, telefone, email, aprovado,
-    tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
-    valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
-    funcoes, regioes
-  } = req.body;
-
   try {
-    const existente = await prisma.prestador.findFirst({ where: { cpf } });
+    const {
+      nome, cpf, cod_nome, telefone, email, aprovado,
+      tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
+      valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
+      funcoes, regioes, tipo_veiculo
+    } = req.body;
+
+    // Validações básicas
+    if (!nome || !cpf) {
+      res.status(400).json({ erro: 'Nome e CPF são obrigatórios' });
+      return;
+    }
+
+    // Verificar se já existe um prestador com este CPF
+    const existente = await prisma.prestador.findFirst({ 
+      where: { cpf: cpf.replace(/\D/g, '') } 
+    });
+    
     if (existente) {
       res.status(400).json({ erro: 'Já existe um prestador com este CPF' });
       return;
     }
 
+    // Converter valores numéricos
+    const valorAcionamentoFloat = valor_acionamento ? parseFloat(valor_acionamento.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
+    const franquiaKmFloat = franquia_km ? parseFloat(String(franquia_km)) : 0;
+    const valorHoraAdcFloat = valor_hora_adc ? parseFloat(valor_hora_adc.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
+    const valorKmAdcFloat = valor_km_adc ? parseFloat(valor_km_adc.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
+
+    // Processar arrays de funções, regiões e veículos
+    const processarFuncoes = (funcs: any[] | null | undefined) => {
+      if (!funcs) return [];
+      return funcs.map(f => ({
+        funcao: typeof f === 'string' ? f : f.funcao || f.nome || String(f)
+      }));
+    };
+
+    const processarRegioes = (regs: any[] | null | undefined) => {
+      if (!regs) return [];
+      return regs.map(r => ({
+        regiao: typeof r === 'string' ? r : r.regiao || r.nome || String(r)
+      }));
+    };
+
+    const processarVeiculos = (veics: any[] | null | undefined) => {
+      if (!veics) return [];
+      return veics.map(v => ({
+        tipo: typeof v === 'string' ? v : v.tipo || v.nome || String(v)
+      }));
+    };
+
+    // Criar o prestador com todas as relações
     const novo = await prisma.prestador.create({
       data: {
-        nome, cpf, cod_nome, telefone, email, aprovado,
-        tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
-        valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
-        funcoes: { create: funcoes?.map((f: string) => ({ funcao: f })) },
-        regioes: { create: regioes?.map((r: string) => ({ regiao: r })) }
+        nome,
+        cpf: cpf.replace(/\D/g, ''),
+        cod_nome,
+        telefone,
+        email,
+        aprovado: aprovado || false,
+        tipo_pix,
+        chave_pix,
+        cep,
+        endereco,
+        bairro,
+        cidade,
+        estado,
+        valor_acionamento: valorAcionamentoFloat,
+        franquia_horas,
+        franquia_km: franquiaKmFloat,
+        valor_hora_adc: valorHoraAdcFloat,
+        valor_km_adc: valorKmAdcFloat,
+        funcoes: {
+          create: processarFuncoes(funcoes)
+        },
+        regioes: {
+          create: processarRegioes(regioes)
+        },
+        veiculos: {
+          create: processarVeiculos(tipo_veiculo)
+        }
       },
-      include: { funcoes: true, regioes: true }
+      include: {
+        funcoes: true,
+        regioes: true,
+        veiculos: true
+      }
     });
 
-    res.status(201).json(novo);
+    // Formatar a resposta
+    const prestadorFormatado = {
+      ...novo,
+      funcoes: novo.funcoes.map(f => f.funcao),
+      regioes: novo.regioes.map(r => r.regiao),
+      tipo_veiculo: novo.veiculos.map(v => v.tipo)
+    };
+
+    res.status(201).json(prestadorFormatado);
   } catch (err) {
     console.error('❌ Erro ao criar prestador:', err);
-    res.status(500).json({ erro: 'Erro ao criar prestador' });
+    res.status(500).json({ 
+      erro: 'Erro ao criar prestador',
+      detalhes: err instanceof Error ? err.message : String(err)
+    });
   }
 });
 
