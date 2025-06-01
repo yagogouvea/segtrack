@@ -68,7 +68,8 @@ router.post('/', upload.array('imagens'), async (req: Request, res: Response) =>
     const fotosCriadas = await Promise.all(
       arquivos.map(async (file, i) => {
         const nomeArquivo = file.filename;
-        const url = `/uploads/${nomeArquivo}`;
+        // Garantir que a URL comece com /uploads/
+        const url = nomeArquivo.startsWith('uploads/') ? `/${nomeArquivo}` : `/uploads/${nomeArquivo}`;
 
         return prisma.foto.create({
           data: {
@@ -79,6 +80,9 @@ router.post('/', upload.array('imagens'), async (req: Request, res: Response) =>
         });
       })
     );
+
+    // Log para debug
+    console.log('Fotos criadas:', fotosCriadas);
 
     res.status(201).json(fotosCriadas);
   } catch (error) {

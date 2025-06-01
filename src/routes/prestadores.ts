@@ -208,6 +208,34 @@ router.put('/:id', async (req: Request, res: Response) => {
   } = req.body;
 
   try {
+    // Converter valores numéricos
+    const valorAcionamentoFloat = valor_acionamento ? parseFloat(valor_acionamento.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
+    const franquiaKmFloat = franquia_km ? parseFloat(String(franquia_km)) : 0;
+    const valorHoraAdcFloat = valor_hora_adc ? parseFloat(valor_hora_adc.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
+    const valorKmAdcFloat = valor_km_adc ? parseFloat(valor_km_adc.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
+
+    // Processar arrays de funções, regiões e veículos
+    const processarFuncoes = (funcs: any[] | null | undefined) => {
+      if (!funcs) return [];
+      return funcs.map(f => ({
+        funcao: typeof f === 'string' ? f : f.funcao || f.nome || String(f)
+      }));
+    };
+
+    const processarRegioes = (regs: any[] | null | undefined) => {
+      if (!regs) return [];
+      return regs.map(r => ({
+        regiao: typeof r === 'string' ? r : r.regiao || r.nome || String(r)
+      }));
+    };
+
+    const processarVeiculos = (veics: any[] | null | undefined) => {
+      if (!veics) return [];
+      return veics.map(v => ({
+        tipo: typeof v === 'string' ? v : v.tipo || v.nome || String(v)
+      }));
+    };
+
     // Deletar registros relacionados existentes
     console.log('Deletando registros relacionados antigos...');
     await prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
@@ -218,17 +246,32 @@ router.put('/:id', async (req: Request, res: Response) => {
     const atualizado = await prisma.prestador.update({
       where: { id: Number(id) },
       data: {
-        nome, cpf, cod_nome, telefone, email, aprovado,
-        tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
-        valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
+        nome,
+        cpf: cpf ? cpf.replace(/\D/g, '') : undefined,
+        cod_nome,
+        telefone,
+        email,
+        aprovado: aprovado || false,
+        tipo_pix,
+        chave_pix,
+        cep,
+        endereco,
+        bairro,
+        cidade,
+        estado,
+        valor_acionamento: valorAcionamentoFloat,
+        franquia_horas,
+        franquia_km: franquiaKmFloat,
+        valor_hora_adc: valorHoraAdcFloat,
+        valor_km_adc: valorKmAdcFloat,
         funcoes: { 
-          create: funcoes?.map((f: string) => ({ funcao: f })) 
+          create: processarFuncoes(funcoes)
         },
         regioes: { 
-          create: regioes?.map((r: string) => ({ regiao: r })) 
+          create: processarRegioes(regioes)
         },
         veiculos: {
-          create: tipo_veiculo?.map((v: string) => ({ tipo: v }))
+          create: processarVeiculos(tipo_veiculo)
         }
       },
       include: { 
@@ -238,8 +281,16 @@ router.put('/:id', async (req: Request, res: Response) => {
       }
     });
 
-    console.log('Prestador atualizado com sucesso:', atualizado);
-    res.json(atualizado);
+    // Formatar a resposta
+    const prestadorFormatado = {
+      ...atualizado,
+      funcoes: atualizado.funcoes.map(f => f.funcao),
+      regioes: atualizado.regioes.map(r => r.regiao),
+      tipo_veiculo: atualizado.veiculos.map(v => v.tipo)
+    };
+
+    console.log('Prestador atualizado com sucesso:', prestadorFormatado);
+    res.json(prestadorFormatado);
   } catch (err) {
     console.error('❌ Erro ao editar prestador:', err);
     res.status(500).json({ 
