@@ -4,20 +4,22 @@ FROM node:18-slim AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Install OpenSSL and other dependencies
+RUN apt-get update -y && apt-get install -y openssl ca-certificates
+
+# Copy package files and prisma schema
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY prisma ./prisma
 
 # Install dependencies
-RUN apt-get update -y && apt-get install -y openssl
 RUN npm ci
+
+# Generate Prisma Client (before copying the rest of the code)
+RUN npx prisma generate
 
 # Copy source code
 COPY . .
-
-# Generate Prisma client
-RUN npx prisma generate
 
 # Build TypeScript code
 RUN npm run build
@@ -26,6 +28,9 @@ RUN npm run build
 FROM node:18-slim
 
 WORKDIR /app
+
+# Install production dependencies
+RUN apt-get update -y && apt-get install -y openssl ca-certificates
 
 # Copy built files and dependencies
 COPY --from=builder /app/dist ./dist
@@ -41,11 +46,12 @@ ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOST=0.0.0.0
 
-# Install OpenSSL (required for Prisma)
-RUN apt-get update -y && apt-get install -y openssl
-
 # Expose the port
 EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
 # Start the application
 CMD ["npm", "start"]
