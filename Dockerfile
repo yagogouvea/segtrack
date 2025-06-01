@@ -7,8 +7,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY prisma ./prisma
 
 # Install dependencies
+RUN apt-get update -y && apt-get install -y openssl
 RUN npm ci
 
 # Copy source code
@@ -38,6 +40,9 @@ RUN mkdir -p uploads relatorios-pdf
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOST=0.0.0.0
+
+# Install OpenSSL (required for Prisma)
+RUN apt-get update -y && apt-get install -y openssl
 
 # Expose the port
 EXPOSE 8080
