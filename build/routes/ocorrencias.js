@@ -11,6 +11,45 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const router = express_1.default.Router();
 const upload = (0, multer_1.default)({ dest: 'uploads/' });
+// 🔹 Atualizar apenas o resultado da ocorrência
+router.put('/:id/resultado', async (req, res) => {
+    const { id } = req.params;
+    const { resultado } = req.body;
+    if (isNaN(Number(id)))
+        return res.status(400).json({ error: 'ID inválido' });
+    const opcoesValidas = ['Recuperado', 'Não Recuperado', 'Cancelado'];
+    if (!resultado || !opcoesValidas.includes(resultado)) {
+        return res.status(400).json({ error: 'Resultado inválido ou ausente.' });
+    }
+    try {
+        const atualizada = await db_1.prisma.ocorrencia.update({
+            where: { id: Number(id) },
+            data: { resultado }
+        });
+        res.json({ mensagem: 'Resultado atualizado com sucesso', resultado: atualizada.resultado });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Erro ao atualizar resultado.' });
+    }
+});
+// 🔹 Buscar apenas o resultado da ocorrência
+router.get('/:id/resultado', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(Number(id)))
+        return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const ocorrencia = await db_1.prisma.ocorrencia.findUnique({
+            where: { id: Number(id) },
+            select: { resultado: true }
+        });
+        if (!ocorrencia)
+            return res.status(404).json({ error: 'Ocorrência não encontrada' });
+        res.json({ resultado: ocorrencia.resultado });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Erro ao buscar resultado.' });
+    }
+});
 const ocorrenciaSchema = zod_1.z.object({
     placa1: zod_1.z.string(),
     placa2: zod_1.z.string().optional(),
@@ -49,6 +88,31 @@ const ocorrenciaSchema = zod_1.z.object({
     status: zod_1.z.string().optional(),
     encerrada_em: zod_1.z.coerce.date().optional(),
     data_acionamento: zod_1.z.coerce.date().optional(),
+});
+// 🔹 Encerrar ocorrência (com resultado)
+router.post('/:id/encerrar', async (req, res) => {
+    const { id } = req.params;
+    const { resultado } = req.body;
+    if (isNaN(Number(id)))
+        return res.status(400).json({ error: 'ID inválido' });
+    if (!resultado || resultado.trim() === '') {
+        return res.status(400).json({ error: 'O campo resultado é obrigatório ao encerrar.' });
+    }
+    try {
+        const encerrada = await db_1.prisma.ocorrencia.update({
+            where: { id: Number(id) },
+            data: {
+                status: 'encerrada',
+                encerrada_em: new Date(),
+                resultado: resultado.trim()
+            },
+            include: { fotos: true }
+        });
+        res.json({ ...encerrada, encerradaEm: encerrada.encerrada_em });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Erro ao encerrar ocorrência.' });
+    }
 });
 // 🔹 Criar nova ocorrência
 router.post('/', async (req, res) => {
@@ -95,13 +159,17 @@ router.get('/', async (req, res) => {
                 fotos: true
             }
         });
+        const formatarData = (data) => data ? new Date(data).toISOString().slice(0, 16) : null;
         const formatadas = ocorrencias.map(o => ({
             ...o,
             fotos: o.fotos ?? [],
             tem_fotos: o.fotos?.length > 0,
             despesas_detalhadas: o.despesas_detalhadas ?? [],
             encerradaEm: o.encerrada_em,
-            resultado: o.resultado ?? '' // ✅ inclusão explícita do campo
+            resultado: o.resultado ?? '',
+            inicio: formatarData(o.inicio),
+            chegada: formatarData(o.chegada),
+            termino: formatarData(o.termino)
         }));
         res.json(formatadas);
     }
@@ -144,7 +212,7 @@ router.get('/:id', async (req, res) => {
                 origem_estado: true,
                 origem_cidade: true,
                 origem_bairro: true,
-                resultado: true // ✅ necessário aqui
+                resultado: true
             }
         });
         if (!ocorrencia)
@@ -225,36 +293,14 @@ router.put('/:id', async (req, res) => {
                 }))
             });
         }
-        res.json({ ...atualizada, encerradaEm: atualizada.encerrada_em });
+        res.json({
+            ...atualizada,
+            encerradaEm: atualizada.encerrada_em,
+            resultado: atualizada.resultado // ← garante que resultado siga visível após updates
+        });
     }
     catch (error) {
         res.status(400).json({ error: 'Erro ao atualizar ocorrência', detalhes: String(error) });
-    }
-});
-// 🔹 Encerrar ocorrência
-// 🔹 Encerrar ocorrência (com resultado)
-router.post('/:id/encerrar', async (req, res) => {
-    const { id } = req.params;
-    const { resultado } = req.body;
-    if (isNaN(Number(id)))
-        return res.status(400).json({ error: 'ID inválido' });
-    if (!resultado || resultado.trim() === '') {
-        return res.status(400).json({ error: 'O campo resultado é obrigatório ao encerrar.' });
-    }
-    try {
-        const encerrada = await db_1.prisma.ocorrencia.update({
-            where: { id: Number(id) },
-            data: {
-                status: 'encerrada',
-                encerrada_em: new Date(),
-                resultado: resultado.trim()
-            },
-            include: { fotos: true }
-        });
-        res.json({ ...encerrada, encerradaEm: encerrada.encerrada_em });
-    }
-    catch (error) {
-        res.status(500).json({ error: 'Erro ao encerrar ocorrência.' });
     }
 });
 exports.default = router;

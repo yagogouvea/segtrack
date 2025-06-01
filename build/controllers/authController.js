@@ -4,14 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.seedAdmin = exports.login = void 0;
-const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const prisma = new client_1.PrismaClient();
+const db_1 = require("../lib/db"); // Usa instância compartilhada
 const login = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await db_1.prisma.user.findUnique({ where: { email } });
         if (!user) {
             return res.status(401).json({ message: 'Usuário não encontrado' });
         }
@@ -28,20 +27,21 @@ const login = async (req, res) => {
         res.json({ token });
     }
     catch (error) {
+        console.error("Erro no login:", error);
         res.status(500).json({ message: 'Erro interno no login', error });
     }
 };
 exports.login = login;
 const seedAdmin = async (_req, res) => {
     try {
-        const existing = await prisma.user.findUnique({
+        const existing = await db_1.prisma.user.findUnique({
             where: { email: 'admin@segtrack.com' },
         });
         if (existing) {
             return res.status(400).json({ message: 'Usuário já existe' });
         }
         const hashedPassword = await bcrypt_1.default.hash('123456', 10);
-        const user = await prisma.user.create({
+        const user = await db_1.prisma.user.create({
             data: {
                 name: 'Admin SEGTRACK',
                 email: 'admin@segtrack.com',
@@ -60,6 +60,7 @@ const seedAdmin = async (_req, res) => {
         res.json({ message: 'Usuário admin criado com sucesso', id: user.id });
     }
     catch (error) {
+        console.error("Erro ao criar admin:", error);
         res.status(500).json({ message: 'Erro ao criar admin', error });
     }
 };

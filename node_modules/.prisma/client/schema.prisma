@@ -46,13 +46,13 @@ model Contrato {
 }
 
 model Prestador {
-  id                Int               @id @default(autoincrement())
+  id                Int                    @id @default(autoincrement())
   nome              String
   cpf               String
   cod_nome          String?
   telefone          String?
   email             String?
-  aprovado          Boolean           @default(false)
+  aprovado          Boolean                @default(false)
   tipo_pix          String?
   chave_pix         String?
   cep               String?
@@ -60,14 +60,16 @@ model Prestador {
   bairro            String?
   cidade            String?
   estado            String?
-  valor_acionamento String?
-  franquia_horas    String?
-  franquia_km       String?
-  valor_hora_adc    String?
-  valor_km_adc      String?
-  criado_em         DateTime          @default(now())
+  valor_acionamento Float?                 @default(0)
+  franquia_horas    String?                @default("")
+  franquia_km       Float?                 @default(0)
+  valor_hora_adc    Float?                 @default(0)
+  valor_km_adc      Float?                 @default(0)
+  criado_em         DateTime               @default(now())
+  origem            String?                @default("interno")
   funcoes           FuncaoPrestador[]
   regioes           RegiaoPrestador[]
+  veiculos          TipoVeiculoPrestador[]
 }
 
 model FuncaoPrestador {
@@ -86,6 +88,15 @@ model RegiaoPrestador {
   prestador   Prestador @relation(fields: [prestadorId], references: [id])
 
   @@index([prestadorId], map: "RegiaoPrestador_prestadorId_fkey")
+}
+
+model TipoVeiculoPrestador {
+  id          Int       @id @default(autoincrement())
+  tipo        String
+  prestadorId Int
+  prestador   Prestador @relation(fields: [prestadorId], references: [id])
+
+  @@index([prestadorId])
 }
 
 model Veiculo {
@@ -144,8 +155,8 @@ model Ocorrencia {
 
 model Foto {
   id           Int        @id @default(autoincrement())
-  url          String
-  legenda      String
+  url          String     @db.Text
+  legenda      String     @db.Text
   ocorrenciaId Int
   createdAt    DateTime   @default(now())
   ocorrencia   Ocorrencia @relation(fields: [ocorrenciaId], references: [id])

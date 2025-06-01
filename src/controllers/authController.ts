@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../lib/db'; // Usa instância compartilhada
+import prisma from '../lib/db';
+ // Usa instância compartilhada
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;

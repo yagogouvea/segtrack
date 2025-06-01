@@ -8,10 +8,29 @@ const prisma = new PrismaClient();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const prestadores = await prisma.prestador.findMany({
-      include: { funcoes: true, regioes: true },
+      include: { 
+        funcoes: true, 
+        regioes: true,
+        veiculos: true 
+      },
       orderBy: { nome: 'asc' }
     });
-    res.json(prestadores);
+
+    // Formatando a resposta para incluir todos os campos necessários
+    const prestadoresFormatados = prestadores.map(prestador => ({
+      ...prestador,
+      funcoes: prestador.funcoes.map(f => f.funcao),
+      regioes: prestador.regioes.map(r => r.regiao),
+      tipo_veiculo: prestador.veiculos.map(v => v.tipo),
+      // Formatando valores monetários e numéricos
+      valor_acionamento: prestador.valor_acionamento || 0,
+      valor_hora_adc: prestador.valor_hora_adc || 0,
+      valor_km_adc: prestador.valor_km_adc || 0,
+      franquia_km: prestador.franquia_km || 0,
+      franquia_horas: prestador.franquia_horas || ''
+    }));
+
+    res.json(prestadoresFormatados);
   } catch (err) {
     console.error('❌ Erro ao listar prestadores:', err);
     res.status(500).json({ erro: 'Erro ao listar prestadores' });
@@ -103,33 +122,85 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 // PUT - Atualizar prestador
 router.put('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
+  console.log('Atualizando prestador:', { id, body: req.body });
+  
   const {
     nome, cpf, cod_nome, telefone, email, aprovado,
     tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
     valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
-    funcoes, regioes
+    funcoes, regioes, tipo_veiculo
   } = req.body;
 
   try {
+    // Deletar registros relacionados existentes
+    console.log('Deletando registros relacionados antigos...');
     await prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
     await prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
+    await prisma.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
 
+    console.log('Atualizando prestador com novos dados...');
     const atualizado = await prisma.prestador.update({
       where: { id: Number(id) },
       data: {
         nome, cpf, cod_nome, telefone, email, aprovado,
         tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
         valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
-        funcoes: { create: funcoes?.map((f: string) => ({ funcao: f })) },
-        regioes: { create: regioes?.map((r: string) => ({ regiao: r })) }
+        funcoes: { 
+          create: funcoes?.map((f: string) => ({ funcao: f })) 
+        },
+        regioes: { 
+          create: regioes?.map((r: string) => ({ regiao: r })) 
+        },
+        veiculos: {
+          create: tipo_veiculo?.map((v: string) => ({ tipo: v }))
+        }
       },
-      include: { funcoes: true, regioes: true }
+      include: { 
+        funcoes: true, 
+        regioes: true,
+        veiculos: true
+      }
+    });
+
+    console.log('Prestador atualizado com sucesso:', atualizado);
+    res.json(atualizado);
+  } catch (err) {
+    console.error('❌ Erro ao editar prestador:', err);
+    res.status(500).json({ 
+      erro: 'Erro ao editar prestador',
+      detalhes: err instanceof Error ? err.message : String(err)
+    });
+  }
+});
+
+// PUT - Aprovar prestador
+router.put('/:id/aprovar', async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const prestador = await prisma.prestador.findUnique({
+      where: { id: Number(id) }
+    });
+
+    if (!prestador) {
+      return res.status(404).json({ erro: 'Prestador não encontrado' });
+    }
+
+    if (prestador.aprovado) {
+      return res.status(400).json({ erro: 'Prestador já está aprovado' });
+    }
+
+    const atualizado = await prisma.prestador.update({
+      where: { id: Number(id) },
+      data: {
+        aprovado: true
+      }
     });
 
     res.json(atualizado);
   } catch (err) {
-    console.error('❌ Erro ao editar prestador:', err);
-    res.status(500).json({ erro: 'Erro ao editar prestador' });
+    console.error('❌ Erro ao aprovar prestador:', err);
+    res.status(500).json({ erro: 'Erro ao aprovar prestador' });
   }
 });
 

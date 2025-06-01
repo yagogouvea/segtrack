@@ -1,32 +1,46 @@
-# Etapa 1: Imagem base para build com Node + dependências
-FROM node:20 as build
+# Build stage
+FROM node:18-slim AS builder
 
-# Cria pasta de trabalho
+# Set working directory
 WORKDIR /app
 
-# Copia os arquivos do projeto
-COPY . .
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.json ./
 
-# Instala dependências sem modificar package-lock.json
+# Install dependencies
 RUN npm ci
 
-# Gera os arquivos TypeScript (./build)
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build TypeScript code
 RUN npm run build
 
-# Etapa 2: Imagem leve para produção
-FROM node:20-slim
+# Production stage
+FROM node:18-slim
 
 WORKDIR /app
 
-# Copia o projeto já buildado da imagem anterior
-COPY --from=build /app .
+# Copy built files and dependencies
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/prisma ./prisma
 
-# Define variáveis de ambiente
+# Create necessary directories
+RUN mkdir -p uploads relatorios-pdf
+
+# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV HOST=0.0.0.0
 
-# Porta que o Cloud Run usará
+# Expose the port
 EXPOSE 8080
 
-# Comando de inicialização
-CMD ["node", "build/index.js"]
+# Start the application
+CMD ["npm", "start"]
