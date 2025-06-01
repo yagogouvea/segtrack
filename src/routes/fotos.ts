@@ -4,9 +4,42 @@ import path from 'path';
 import fs from 'fs';
 import prisma from '../lib/db';
 
+const UPLOAD_DIR = path.resolve(__dirname, '../../uploads');
+
+// Garantir que a pasta uploads existe
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, UPLOAD_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, `${uniqueSuffix}${ext}`);
+  }
+});
+
+// Configuração do Multer com validações
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB
+    files: 10 // máximo de 10 arquivos por vez
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tipo de arquivo inválido. Apenas JPG, PNG e GIF são permitidos.'));
+    }
+  }
+});
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
 
 // 🔹 Upload de novas fotos
 router.post('/', upload.array('imagens'), async (req: Request, res: Response) => {
@@ -18,14 +51,25 @@ router.post('/', upload.array('imagens'), async (req: Request, res: Response) =>
     return res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
   }
 
+  if (!arquivos || arquivos.length === 0) {
+    return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
+  }
+
   try {
+    // Verificar se a ocorrência existe
+    const ocorrencia = await prisma.ocorrencia.findUnique({
+      where: { id: Number(ocorrenciaId) }
+    });
+
+    if (!ocorrencia) {
+      return res.status(404).json({ error: 'Ocorrência não encontrada.' });
+    }
+
     const fotosCriadas = await Promise.all(
-      arquivos.map((file, i) => {
-        const extensao = path.extname(file.originalname) || '.jpg';
-        const nomeArquivo = `${Date.now()}-${Math.random().toString(36).substring(2)}${extensao}`;
-        const destino = path.join('uploads', nomeArquivo);
-        fs.renameSync(file.path, destino);
+      arquivos.map(async (file, i) => {
+        const nomeArquivo = file.filename;
         const url = `/uploads/${nomeArquivo}`;
+
         return prisma.foto.create({
           data: {
             url,
@@ -38,6 +82,15 @@ router.post('/', upload.array('imagens'), async (req: Request, res: Response) =>
 
     res.status(201).json(fotosCriadas);
   } catch (error) {
+    // Limpar arquivos em caso de erro
+    arquivos.forEach(file => {
+      const filepath = path.join(UPLOAD_DIR, file.filename);
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+      }
+    });
+
+    console.error('Erro ao salvar fotos:', error);
     res.status(500).json({ error: 'Erro ao salvar fotos.', detalhes: String(error) });
   }
 });
@@ -47,6 +100,10 @@ router.put('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const { legenda } = req.body;
 
+  if (!legenda || typeof legenda !== 'string') {
+    return res.status(400).json({ error: 'Legenda inválida.' });
+  }
+
   try {
     const fotoAtualizada = await prisma.foto.update({
       where: { id: Number(id) },
@@ -55,6 +112,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     res.json(fotoAtualizada);
   } catch (error) {
+    console.error('Erro ao atualizar legenda:', error);
     res.status(500).json({ error: 'Erro ao atualizar legenda da foto.', detalhes: String(error) });
   }
 });
@@ -70,16 +128,19 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Foto não encontrada.' });
     }
 
+    // Remover arquivo físico
     if (foto.url) {
-      const caminho = path.join('uploads', path.basename(foto.url));
-      if (fs.existsSync(caminho)) {
-        fs.unlinkSync(caminho);
+      const filename = path.basename(foto.url);
+      const filepath = path.join(UPLOAD_DIR, filename);
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
       }
     }
 
     await prisma.foto.delete({ where: { id: Number(id) } });
     res.status(204).send();
   } catch (error) {
+    console.error('Erro ao deletar foto:', error);
     res.status(500).json({ error: 'Erro ao deletar foto.', detalhes: String(error) });
   }
 });
@@ -87,6 +148,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // 🔹 Listar fotos por ocorrência
 router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response) => {
   const { ocorrenciaId } = req.params;
+
+  if (!ocorrenciaId || isNaN(Number(ocorrenciaId))) {
+    return res.status(400).json({ error: 'ID de ocorrência inválido.' });
+  }
 
   try {
     const fotos = await prisma.foto.findMany({
@@ -96,6 +161,7 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response) 
 
     res.json(fotos);
   } catch (error) {
+    console.error('Erro ao buscar fotos:', error);
     res.status(500).json({ error: 'Erro ao buscar fotos.', detalhes: String(error) });
   }
 });
