@@ -30,17 +30,21 @@ model CampoAdicionalCliente {
 }
 
 model Contrato {
-  id                Int     @id @default(autoincrement())
-  clienteId         Int
-  nome_interno      String?
-  tipo              String?
-  regiao            String?
-  valor_acionamento String?
-  valor_hora_extra  String?
-  valor_km_extra    String?
-  franquia_horas    String?
-  franquia_km       Int?
-  cliente           Cliente @relation(fields: [clienteId], references: [id])
+  id                   Int      @id @default(autoincrement())
+  clienteId            Int
+  nome_interno         String?
+  tipo                 String?  // padrao_regiao, acl_km, padrao_fixo, valor_fechado
+  regiao              String?  // CAPITAL, GRANDE_SP, INTERIOR, OUTROS_ESTADOS
+  valor_acionamento    Decimal? @db.Decimal(10, 2)
+  valor_nao_recuperado Decimal? @db.Decimal(10, 2)
+  valor_hora_extra     Decimal? @db.Decimal(10, 2)
+  valor_km_extra       Decimal? @db.Decimal(10, 2)
+  franquia_horas       String?
+  franquia_km          Int?
+  valor_km            Decimal? @db.Decimal(10, 2)  // Para contratos ACL
+  valor_base          Decimal? @db.Decimal(10, 2)  // Para contratos valor_fechado
+  permite_negociacao   Boolean? @default(false)    // Para contratos valor_fechado
+  cliente              Cliente  @relation(fields: [clienteId], references: [id])
 
   @@index([clienteId], map: "Contrato_clienteId_fkey")
 }
