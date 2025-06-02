@@ -92,7 +92,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       nome, cpf, cod_nome, telefone, email, aprovado,
       tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
       valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
-      funcoes, regioes, tipo_veiculo
+      funcoes, regioes, veiculos
     } = req.body;
 
     // Validações básicas
@@ -167,7 +167,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
           create: processarRegioes(regioes)
         },
         veiculos: {
-          create: processarVeiculos(tipo_veiculo)
+          create: processarVeiculos(veiculos)
         }
       },
       include: {
@@ -204,7 +204,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     nome, cpf, cod_nome, telefone, email, aprovado,
     tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
     valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
-    funcoes, regioes, tipo_veiculo
+    funcoes, regioes, veiculos
   } = req.body;
 
   try {
@@ -238,9 +238,11 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     // Deletar registros relacionados existentes
     console.log('Deletando registros relacionados antigos...');
-    await prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
-    await prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
-    await prisma.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
+    await Promise.all([
+      prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+      prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+      prisma.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
+    ]);
 
     console.log('Atualizando prestador com novos dados...');
     const atualizado = await prisma.prestador.update({
@@ -271,7 +273,7 @@ router.put('/:id', async (req: Request, res: Response) => {
           create: processarRegioes(regioes)
         },
         veiculos: {
-          create: processarVeiculos(tipo_veiculo)
+          create: processarVeiculos(veiculos)
         }
       },
       include: { 
@@ -336,8 +338,13 @@ router.delete('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    await prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
-    await prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } });
+    // Deletar todos os registros relacionados antes de excluir o prestador
+    await Promise.all([
+      prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+      prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+      prisma.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
+    ]);
+
     await prisma.prestador.delete({ where: { id: Number(id) } });
 
     res.status(204).end();
