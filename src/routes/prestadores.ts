@@ -22,6 +22,7 @@ router.get('/', async (req: Request, res: Response) => {
       funcoes: prestador.funcoes.map(f => f.funcao),
       regioes: prestador.regioes.map(r => r.regiao),
       tipo_veiculo: prestador.veiculos.map(v => v.tipo),
+      veiculos: prestador.veiculos,
       // Formatando valores monetários e numéricos
       valor_acionamento: prestador.valor_acionamento || 0,
       valor_hora_adc: prestador.valor_hora_adc || 0,
@@ -30,6 +31,7 @@ router.get('/', async (req: Request, res: Response) => {
       franquia_horas: prestador.franquia_horas || ''
     }));
 
+    console.log('Prestadores formatados:', prestadoresFormatados);
     res.json(prestadoresFormatados);
   } catch (err) {
     console.error('❌ Erro ao listar prestadores:', err);
@@ -182,9 +184,11 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       ...novo,
       funcoes: novo.funcoes.map(f => f.funcao),
       regioes: novo.regioes.map(r => r.regiao),
-      tipo_veiculo: novo.veiculos.map(v => v.tipo)
+      tipo_veiculo: novo.veiculos.map(v => v.tipo),
+      veiculos: novo.veiculos
     };
 
+    console.log('Prestador criado:', prestadorFormatado);
     res.status(201).json(prestadorFormatado);
   } catch (err) {
     console.error('❌ Erro ao criar prestador:', err);
