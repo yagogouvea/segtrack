@@ -88,8 +88,17 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // Arquivos estáticos
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-app.use("/relatorios-pdf", express.static(path.join(__dirname, "../relatorios-pdf")));
+app.use("/uploads", (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, "../uploads")));
+
+app.use("/relatorios-pdf", (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, "../relatorios-pdf")));
 
 // Rotas da API
 app.use("/api/veiculos", veiculosRoutes);
