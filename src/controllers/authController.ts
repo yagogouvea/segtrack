@@ -9,7 +9,7 @@ interface PrismaUser {
   email: string;
   passwordHash: string;
   role: string;
-  permissions: string[];
+  permissions: string; // Agora é uma string
   active: boolean;
 }
 
@@ -36,7 +36,7 @@ export const login = async (req: Request, res: Response) => {
       found: !!user,
       role: user?.role,
       active: user?.active,
-      permissionsCount: user?.permissions?.length
+      permissions: user?.permissions
     });
 
     if (!user) {
@@ -54,15 +54,9 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Senha incorreta' });
     }
 
-    console.log('Usuário encontrado:', {
-      id: user.id,
-      role: user.role,
-      permissions: user.permissions
-    });
-
     try {
-      // Garante que permissions seja um array
-      const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
+      // Parse as permissões da string JSON
+      const userPermissions = JSON.parse(user.permissions) as string[];
       
       // Converte as permissões do formato array para o formato de objeto
       const permissionsObj = {
@@ -98,8 +92,6 @@ export const login = async (req: Request, res: Response) => {
           delete: true
         };
       }
-
-      console.log('Permissões finais:', permissionsObj);
 
       const token = jwt.sign(
         {
@@ -146,19 +138,21 @@ export const seedAdmin = async (_req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash('123456', 10);
 
+    const permissions = JSON.stringify([
+      'view_users',
+      'create_user',
+      'edit_user',
+      'export_pdf',
+      'view_finance',
+    ]);
+
     const user = await prisma.user.create({
       data: {
         name: 'Admin SEGTRACK',
         email: 'admin@segtrack.com',
         passwordHash: hashedPassword,
         role: 'admin',
-        permissions: [
-          'view_users',
-          'create_user',
-          'edit_user',
-          'export_pdf',
-          'view_finance',
-        ],
+        permissions,
         active: true,
       },
     });
