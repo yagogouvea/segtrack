@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-
-const prisma = new PrismaClient();
 
 // GET /api/users
 export const getUsers = async (_req: Request, res: Response) => {
@@ -18,8 +16,16 @@ export const getUsers = async (_req: Request, res: Response) => {
         active: true,
       },
     });
-    res.json(users);
+
+    // Converte as permissões de volta para array para o frontend
+    const formattedUsers = users.map(user => ({
+      ...user,
+      permissions: JSON.parse(user.permissions as string)
+    }));
+
+    res.json(formattedUsers);
   } catch (error) {
+    console.error('Erro ao buscar usuários:', error);
     res.status(500).json({ message: 'Erro ao buscar usuários', error });
   }
 };
@@ -40,12 +46,15 @@ export const createUser = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Converte as permissões para JSON string
+    const permissionsString = JSON.stringify(permissions || []);
+
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
         role,
-        permissions,
+        permissions: permissionsString,
         active,
         passwordHash: hashedPassword,
       },
@@ -53,6 +62,7 @@ export const createUser = async (req: Request, res: Response) => {
 
     res.status(201).json({ message: 'Usuário criado com sucesso', id: newUser.id });
   } catch (error) {
+    console.error('Erro ao criar usuário:', error);
     res.status(500).json({ message: 'Erro ao criar usuário', error });
   }
 };
@@ -60,22 +70,36 @@ export const createUser = async (req: Request, res: Response) => {
 // PUT /api/users/:id
 export const updateUser = async (req: Request, res: Response) => {
   const userId = req.params.id;
-  const { name, email, role, permissions, active } = req.body;
+  const { name, email, password, role, permissions, active } = req.body;
 
   try {
-    await prisma.user.update({
+    const updateData: any = {
+      name,
+      email,
+      role,
+      permissions: JSON.stringify(permissions || []),
+      active,
+    };
+
+    // Se uma nova senha foi fornecida, atualiza a senha
+    if (password) {
+      updateData.passwordHash = await bcrypt.hash(password, 10);
+    }
+
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: {
-        name,
-        email,
-        role,
-        permissions,
-        active,
-      },
+      data: updateData,
     });
 
-    res.json({ message: 'Usuário atualizado com sucesso' });
+    res.json({ 
+      message: 'Usuário atualizado com sucesso',
+      user: {
+        ...updatedUser,
+        permissions: JSON.parse(updatedUser.permissions as string)
+      }
+    });
   } catch (error) {
+    console.error('Erro ao atualizar usuário:', error);
     res.status(500).json({ message: 'Erro ao atualizar usuário', error });
   }
 };
