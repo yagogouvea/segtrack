@@ -2,7 +2,16 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/db';
- // Usa instância compartilhada
+
+interface PrismaUser {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  role: string;
+  permissions: string[];
+  active: boolean;
+}
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -19,7 +28,7 @@ export const login = async (req: Request, res: Response) => {
         permissions: true,
         active: true
       }
-    });
+    }) as PrismaUser | null;
 
     if (!user) {
       return res.status(401).json({ message: 'Usuário não encontrado' });
@@ -34,24 +43,33 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Senha incorreta' });
     }
 
+    console.log('Usuário encontrado:', {
+      id: user.id,
+      role: user.role,
+      permissions: user.permissions
+    });
+
     // Converte as permissões do formato array para o formato de objeto
     const permissionsObj = {
       users: {
-        read: user.permissions.includes('view_users'),
-        create: user.permissions.includes('create_user'),
-        update: user.permissions.includes('edit_user'),
-        delete: user.permissions.includes('delete_user')
+        read: user.permissions?.includes('view_users') || false,
+        create: user.permissions?.includes('create_user') || false,
+        update: user.permissions?.includes('edit_user') || false,
+        delete: user.permissions?.includes('delete_user') || false
       },
       ocorrencias: {
-        read: user.permissions.includes('view_ocorrencias'),
-        create: user.permissions.includes('create_ocorrencia'),
-        update: user.permissions.includes('edit_ocorrencia'),
-        delete: user.permissions.includes('delete_ocorrencia')
+        read: user.permissions?.includes('view_ocorrencias') || false,
+        create: user.permissions?.includes('create_ocorrencia') || false,
+        update: user.permissions?.includes('edit_ocorrencia') || false,
+        delete: user.permissions?.includes('delete_ocorrencia') || false
       }
     };
 
+    console.log('Permissões convertidas:', permissionsObj);
+
     // Se o usuário for admin, todas as permissões são true
     if (user.role === 'admin') {
+      console.log('Usuário é admin, atribuindo todas as permissões');
       permissionsObj.users = {
         read: true,
         create: true,
@@ -65,6 +83,8 @@ export const login = async (req: Request, res: Response) => {
         delete: true
       };
     }
+
+    console.log('Permissões finais:', permissionsObj);
 
     const token = jwt.sign(
       {

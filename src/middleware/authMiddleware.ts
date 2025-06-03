@@ -1,18 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+type ResourceType = 'users' | 'ocorrencias';
+type ActionType = 'read' | 'create' | 'update' | 'delete';
+
 interface UserPermissions {
-  users?: {
-    read: boolean;
-    create: boolean;
-    update: boolean;
-    delete: boolean;
-  };
-  ocorrencias?: {
-    read: boolean;
-    create: boolean;
-    update: boolean;
-    delete: boolean;
+  [key: string]: {
+    [key: string]: boolean;
   };
 }
 
@@ -53,13 +47,21 @@ export function verifyToken(req: Request, res: Response, next: NextFunction) {
 // ✅ Exporta como função nomeada
 export function checkPermissions(requiredPermissions: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
+    console.log('Verificando permissões:', {
+      requiredPermissions,
+      userRole: req.user?.role,
+      userPermissions: req.user?.permissions
+    });
+
     if (!req.user) {
+      console.log('Usuário não autenticado');
       return res.status(401).json({ message: 'Usuário não autenticado' });
     }
 
     const isAdmin = req.user.role === 'admin';
     
     if (isAdmin) {
+      console.log('Usuário é admin, permissão concedida');
       return next();
     }
 
@@ -67,8 +69,16 @@ export function checkPermissions(requiredPermissions: string[]) {
     const hasAllPermissions = requiredPermissions.every(permission => {
       const [resource, action] = permission.split(':');
       
+      console.log('Verificando permissão específica:', {
+        permission,
+        resource,
+        action,
+        userHasPermission: req.user?.permissions?.[resource]?.[action]
+      });
+
       // Verifica se o recurso e ação são válidos
       if (!resource || !action) {
+        console.log('Recurso ou ação inválidos');
         return false;
       }
 
@@ -77,9 +87,11 @@ export function checkPermissions(requiredPermissions: string[]) {
     });
 
     if (hasAllPermissions) {
+      console.log('Usuário tem todas as permissões necessárias');
       return next();
     }
 
+    console.log('Permissão negada');
     return res.status(403).json({ message: 'Permissão negada' });
   };
 }
