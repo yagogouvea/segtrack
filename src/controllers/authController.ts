@@ -17,6 +17,8 @@ export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   try {
+    console.log('Tentativa de login para:', email);
+
     const user = await prisma.user.findUnique({ 
       where: { email },
       select: {
@@ -30,6 +32,13 @@ export const login = async (req: Request, res: Response) => {
       }
     }) as PrismaUser | null;
 
+    console.log('Resultado da busca do usuário:', {
+      found: !!user,
+      role: user?.role,
+      active: user?.active,
+      permissionsCount: user?.permissions?.length
+    });
+
     if (!user) {
       return res.status(401).json({ message: 'Usuário não encontrado' });
     }
@@ -39,6 +48,8 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
+    console.log('Resultado da verificação de senha:', { isMatch });
+
     if (!isMatch) {
       return res.status(401).json({ message: 'Senha incorreta' });
     }
@@ -49,64 +60,71 @@ export const login = async (req: Request, res: Response) => {
       permissions: user.permissions
     });
 
-    // Converte as permissões do formato array para o formato de objeto
-    const permissionsObj = {
-      users: {
-        read: user.permissions?.includes('view_users') || false,
-        create: user.permissions?.includes('create_user') || false,
-        update: user.permissions?.includes('edit_user') || false,
-        delete: user.permissions?.includes('delete_user') || false
-      },
-      ocorrencias: {
-        read: user.permissions?.includes('view_ocorrencias') || false,
-        create: user.permissions?.includes('create_ocorrencia') || false,
-        update: user.permissions?.includes('edit_ocorrencia') || false,
-        delete: user.permissions?.includes('delete_ocorrencia') || false
+    try {
+      // Converte as permissões do formato array para o formato de objeto
+      const permissionsObj = {
+        users: {
+          read: Array.isArray(user.permissions) && user.permissions.includes('view_users'),
+          create: Array.isArray(user.permissions) && user.permissions.includes('create_user'),
+          update: Array.isArray(user.permissions) && user.permissions.includes('edit_user'),
+          delete: Array.isArray(user.permissions) && user.permissions.includes('delete_user')
+        },
+        ocorrencias: {
+          read: Array.isArray(user.permissions) && user.permissions.includes('view_ocorrencias'),
+          create: Array.isArray(user.permissions) && user.permissions.includes('create_ocorrencia'),
+          update: Array.isArray(user.permissions) && user.permissions.includes('edit_ocorrencia'),
+          delete: Array.isArray(user.permissions) && user.permissions.includes('delete_ocorrencia')
+        }
+      };
+
+      console.log('Permissões convertidas:', permissionsObj);
+
+      // Se o usuário for admin, todas as permissões são true
+      if (user.role === 'admin') {
+        console.log('Usuário é admin, atribuindo todas as permissões');
+        permissionsObj.users = {
+          read: true,
+          create: true,
+          update: true,
+          delete: true
+        };
+        permissionsObj.ocorrencias = {
+          read: true,
+          create: true,
+          update: true,
+          delete: true
+        };
       }
-    };
 
-    console.log('Permissões convertidas:', permissionsObj);
+      console.log('Permissões finais:', permissionsObj);
 
-    // Se o usuário for admin, todas as permissões são true
-    if (user.role === 'admin') {
-      console.log('Usuário é admin, atribuindo todas as permissões');
-      permissionsObj.users = {
-        read: true,
-        create: true,
-        update: true,
-        delete: true
-      };
-      permissionsObj.ocorrencias = {
-        read: true,
-        create: true,
-        update: true,
-        delete: true
-      };
+      const token = jwt.sign(
+        {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          permissions: permissionsObj
+        },
+        process.env.JWT_SECRET as string,
+        { expiresIn: '12h' }
+      );
+
+      console.log('Token gerado com sucesso');
+
+      res.json({ 
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          permissions: permissionsObj
+        }
+      });
+    } catch (conversionError) {
+      console.error('Erro na conversão de permissões:', conversionError);
+      throw conversionError;
     }
-
-    console.log('Permissões finais:', permissionsObj);
-
-    const token = jwt.sign(
-      {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-        permissions: permissionsObj
-      },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '12h' }
-    );
-
-    res.json({ 
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        permissions: permissionsObj
-      }
-    });
   } catch (error) {
     console.error("Erro no login:", error);
     res.status(500).json({ message: 'Erro interno no login', error });
