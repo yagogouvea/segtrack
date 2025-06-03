@@ -61,19 +61,22 @@ export const login = async (req: Request, res: Response) => {
     });
 
     try {
+      // Garante que permissions seja um array
+      const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
+      
       // Converte as permissões do formato array para o formato de objeto
       const permissionsObj = {
         users: {
-          read: Array.isArray(user.permissions) && user.permissions.includes('view_users'),
-          create: Array.isArray(user.permissions) && user.permissions.includes('create_user'),
-          update: Array.isArray(user.permissions) && user.permissions.includes('edit_user'),
-          delete: Array.isArray(user.permissions) && user.permissions.includes('delete_user')
+          read: userPermissions.includes('view_users'),
+          create: userPermissions.includes('create_user'),
+          update: userPermissions.includes('edit_user'),
+          delete: userPermissions.includes('delete_user')
         },
         ocorrencias: {
-          read: Array.isArray(user.permissions) && user.permissions.includes('view_ocorrencias'),
-          create: Array.isArray(user.permissions) && user.permissions.includes('create_ocorrencia'),
-          update: Array.isArray(user.permissions) && user.permissions.includes('edit_ocorrencia'),
-          delete: Array.isArray(user.permissions) && user.permissions.includes('delete_ocorrencia')
+          read: userPermissions.includes('view_ocorrencias'),
+          create: userPermissions.includes('create_ocorrencia'),
+          update: userPermissions.includes('edit_ocorrencia'),
+          delete: userPermissions.includes('delete_ocorrencia')
         }
       };
 
