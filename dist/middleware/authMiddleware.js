@@ -25,12 +25,42 @@ function verifyToken(req, res, next) {
 // ✅ Exporta como função nomeada
 function checkPermissions(requiredPermissions) {
     return (req, res, next) => {
-        const userPerms = req.user?.permissions || [];
-        const isAdmin = req.user?.role === 'admin';
-        const hasPermission = requiredPermissions.some((perm) => userPerms.includes(perm));
-        if (isAdmin || hasPermission) {
+        console.log('Verificando permissões:', {
+            requiredPermissions,
+            userRole: req.user?.role,
+            userPermissions: req.user?.permissions
+        });
+        if (!req.user) {
+            console.log('Usuário não autenticado');
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+        const isAdmin = req.user.role === 'admin';
+        if (isAdmin) {
+            console.log('Usuário é admin, permissão concedida');
             return next();
         }
+        // Verifica se o usuário tem todas as permissões necessárias
+        const hasAllPermissions = requiredPermissions.every(permission => {
+            const [resource, action] = permission.split(':');
+            console.log('Verificando permissão específica:', {
+                permission,
+                resource,
+                action,
+                userHasPermission: req.user?.permissions?.[resource]?.[action]
+            });
+            // Verifica se o recurso e ação são válidos
+            if (!resource || !action) {
+                console.log('Recurso ou ação inválidos');
+                return false;
+            }
+            // Verifica se o usuário tem a permissão específica
+            return req.user?.permissions?.[resource]?.[action] || false;
+        });
+        if (hasAllPermissions) {
+            console.log('Usuário tem todas as permissões necessárias');
+            return next();
+        }
+        console.log('Permissão negada');
         return res.status(403).json({ message: 'Permissão negada' });
     };
 }

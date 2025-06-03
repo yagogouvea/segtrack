@@ -1,10 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from './lib/db';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 
 dotenv.config();
-
-const prisma = new PrismaClient();
 
 async function createTestUser() {
   try {
@@ -33,36 +31,35 @@ async function createTestUser() {
     }
 
     // Cria novo usuário
-    const hashedPassword = await bcrypt.hash('123456', 10);
+    const hashedPassword = await bcrypt.hash('test123', 10);
     
+    // Define as permissões como array e converte para JSON string
+    const permissions = JSON.stringify([
+      'view_users',
+      'create_user',
+      'edit_user',
+      'delete_user',
+      'view_ocorrencias',
+      'create_ocorrencia',
+      'edit_ocorrencia',
+      'delete_ocorrencia'
+    ]);
+
     const user = await prisma.user.create({
       data: {
-        name: 'Yago',
-        email: 'yago@segtrackpr.com.br',
+        name: 'Test User',
+        email: 'test@example.com',
         passwordHash: hashedPassword,
-        role: 'admin',
-        permissions: [
-          'view_users',
-          'create_user',
-          'edit_user',
-          'delete_user',
-          'view_ocorrencias',
-          'create_ocorrencia',
-          'edit_ocorrencia',
-          'delete_ocorrencia'
-        ],
+        role: 'user',
+        permissions,
         active: true
       }
     });
 
-    console.log('Usuário criado com sucesso:', {
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
+    console.log('Test user created:', user);
 
   } catch (error) {
-    console.error('Erro ao criar usuário:', error);
+    console.error('Error creating test user:', error);
   } finally {
     await prisma.$disconnect();
   }

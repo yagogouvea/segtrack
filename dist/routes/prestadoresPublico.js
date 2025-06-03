@@ -31,17 +31,28 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
     }
     try {
+        // Verificar se já existe um prestador com este CPF
+        const existente = await prisma.prestador.findFirst({
+            where: { cpf: cpf.replace(/\D/g, '') }
+        });
+        if (existente) {
+            return res.status(400).json({ error: 'Já existe um prestador cadastrado com este CPF.' });
+        }
         console.log('Criando prestador com os dados:', {
             nome, cpf, cod_nome, telefone, email,
             tipo_pix, chave_pix, cep,
             qtdFuncoes: funcoes.length,
             qtdRegioes: regioes.length,
-            qtdVeiculos: tipo_veiculo.length
+            qtdVeiculos: tipo_veiculo.length,
+            veiculos: tipo_veiculo.map(tipo => ({ tipo }))
         });
+        // Garantir que tipo_veiculo é um array
+        const veiculosParaCriar = Array.isArray(tipo_veiculo) ?
+            tipo_veiculo.map(tipo => ({ tipo })) : [];
         const novoPrestador = await prisma.prestador.create({
             data: {
                 nome,
-                cpf,
+                cpf: cpf.replace(/\D/g, ''),
                 cod_nome,
                 telefone,
                 email,
@@ -66,7 +77,7 @@ router.post('/', async (req, res) => {
                     create: regioes.map((regiao) => ({ regiao }))
                 },
                 veiculos: {
-                    create: tipo_veiculo.map((tipo) => ({ tipo }))
+                    create: veiculosParaCriar
                 }
             },
             include: {
@@ -75,8 +86,16 @@ router.post('/', async (req, res) => {
                 veiculos: true
             }
         });
-        console.log('Prestador criado com sucesso:', novoPrestador);
-        res.status(201).json(novoPrestador);
+        // Formatar a resposta para incluir tipo_veiculo
+        const prestadorFormatado = {
+            ...novoPrestador,
+            funcoes: novoPrestador.funcoes.map(f => f.funcao),
+            regioes: novoPrestador.regioes.map(r => r.regiao),
+            tipo_veiculo: novoPrestador.veiculos.map(v => v.tipo),
+            veiculos: novoPrestador.veiculos
+        };
+        console.log('Prestador criado com sucesso:', prestadorFormatado);
+        res.status(201).json(prestadorFormatado);
     }
     catch (error) {
         console.error('Erro ao cadastrar prestador público:', error);

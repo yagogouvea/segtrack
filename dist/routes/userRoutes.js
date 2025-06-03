@@ -37,12 +37,12 @@ const express_1 = require("express");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const userController = __importStar(require("../controllers/userController"));
 const router = (0, express_1.Router)();
-// Listar todos os usuários (requere permissão 'view_users')
-router.get('/', authMiddleware_1.verifyToken, (0, authMiddleware_1.checkPermissions)(['view_users']), userController.getUsers);
-// Criar novo usuário (requere permissão 'create_user')
-router.post('/', authMiddleware_1.verifyToken, (0, authMiddleware_1.checkPermissions)(['create_user']), userController.createUser);
-// Atualizar usuário existente (requere permissão 'edit_user')
-router.put('/:id', authMiddleware_1.verifyToken, (0, authMiddleware_1.checkPermissions)(['edit_user']), userController.updateUser);
-// Excluir usuário (requere permissão 'delete_user')
-router.delete('/:id', authMiddleware_1.verifyToken, (0, authMiddleware_1.checkPermissions)(['delete_user']), userController.deleteUser);
+// Listar todos os usuários (requere permissão users:read)
+router.get('/', authMiddleware_1.verifyToken, (0, authMiddleware_1.checkPermissions)(['users:read']), userController.getUsers);
+// Criar novo usuário (requere permissão users:create)
+router.post('/', authMiddleware_1.verifyToken, (0, authMiddleware_1.checkPermissions)(['users:create']), userController.createUser);
+// Atualizar usuário existente (requere permissão users:update)
+router.put('/:id', authMiddleware_1.verifyToken, (0, authMiddleware_1.checkPermissions)(['users:update']), userController.updateUser);
+// Excluir usuário (requere permissão users:delete)
+router.delete('/:id', authMiddleware_1.verifyToken, (0, authMiddleware_1.checkPermissions)(['users:delete']), userController.deleteUser);
 exports.default = router;
