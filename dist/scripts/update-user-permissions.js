@@ -4,9 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const db_1 = __importDefault(require("../lib/db"));
-async function fixYagoPermissions() {
+async function updateUserPermissions() {
     try {
-        // Define admin permissions in the correct object format
+        const user = await db_1.default.user.findUnique({
+            where: {
+                email: 'yago@segtrackpr.com.br'
+            }
+        });
+        if (!user) {
+            console.error('❌ Usuário yago não encontrado');
+            return;
+        }
         const adminPermissions = {
             users: {
                 read: true,
@@ -14,14 +22,14 @@ async function fixYagoPermissions() {
                 update: true,
                 delete: true
             },
+            dashboard: {
+                read: true
+            },
             ocorrencias: {
                 read: true,
                 create: true,
                 update: true,
                 delete: true
-            },
-            dashboard: {
-                read: true
             },
             prestadores: {
                 read: true,
@@ -31,9 +39,7 @@ async function fixYagoPermissions() {
             },
             relatorios: {
                 read: true,
-                create: true,
-                update: true,
-                delete: true
+                create: true
             },
             clientes: {
                 read: true,
@@ -42,8 +48,7 @@ async function fixYagoPermissions() {
                 delete: true
             }
         };
-        // Update Yago's permissions
-        const updatedUser = await db_1.default.user.update({
+        await db_1.default.user.update({
             where: {
                 email: 'yago@segtrackpr.com.br'
             },
@@ -52,18 +57,13 @@ async function fixYagoPermissions() {
                 permissions: JSON.stringify(adminPermissions)
             }
         });
-        console.log('✅ Permissões do usuário Yago atualizadas com sucesso:', {
-            id: updatedUser.id,
-            email: updatedUser.email,
-            role: updatedUser.role,
-            permissions: JSON.parse(updatedUser.permissions)
-        });
+        console.log('✅ Permissões atualizadas com sucesso');
     }
     catch (error) {
-        console.error('❌ Erro ao atualizar permissões do Yago:', error);
+        console.error('❌ Erro ao atualizar permissões:', error);
     }
     finally {
         await db_1.default.$disconnect();
     }
 }
-fixYagoPermissions();
+updateUserPermissions();

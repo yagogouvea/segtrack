@@ -4,14 +4,29 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.updateUser = exports.createUser = exports.getUsers = void 0;
-const client_1 = require("@prisma/client");
+const db_1 = __importDefault(require("../lib/db"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const library_1 = require("@prisma/client/runtime/library");
-const prisma = new client_1.PrismaClient();
+// Função auxiliar para converter permissões de objeto para array
+function permissionsObjectToArray(permissionsObj) {
+    const permissions = [];
+    // Mapeia as permissões do objeto para o formato de array
+    Object.entries(permissionsObj).forEach(([module, actions]) => {
+        Object.entries(actions).forEach(([action, enabled]) => {
+            if (enabled) {
+                if (action === 'read')
+                    permissions.push(`view_${module}`);
+                else
+                    permissions.push(`${action}_${module.slice(0, -1)}`);
+            }
+        });
+    });
+    return permissions;
+}
 // GET /api/users
 const getUsers = async (_req, res) => {
     try {
-        const users = await prisma.user.findMany({
+        const users = await db_1.default.user.findMany({
             select: {
                 id: true,
                 name: true,
@@ -21,9 +36,18 @@ const getUsers = async (_req, res) => {
                 active: true,
             },
         });
-        res.json(users);
+        // Converte as permissões de volta para array para o frontend
+        const formattedUsers = users.map((user) => {
+            const permissionsObj = JSON.parse(user.permissions);
+            return {
+                ...user,
+                permissions: permissionsObjectToArray(permissionsObj)
+            };
+        });
+        res.json(formattedUsers);
     }
     catch (error) {
+        console.error('Erro ao buscar usuários:', error);
         res.status(500).json({ message: 'Erro ao buscar usuários', error });
     }
 };
@@ -35,17 +59,19 @@ const createUser = async (req, res) => {
         return res.status(400).json({ message: 'Nome, email, senha e perfil são obrigatórios.' });
     }
     try {
-        const existingUser = await prisma.user.findUnique({ where: { email } });
+        const existingUser = await db_1.default.user.findUnique({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ message: 'Este e-mail já está cadastrado.' });
         }
         const hashedPassword = await bcrypt_1.default.hash(password, 10);
-        const newUser = await prisma.user.create({
+        // Converte as permissões para JSON string
+        const permissionsString = JSON.stringify(permissions || []);
+        const newUser = await db_1.default.user.create({
             data: {
                 name,
                 email,
                 role,
-                permissions,
+                permissions: permissionsString,
                 active,
                 passwordHash: hashedPassword,
             },
@@ -53,6 +79,7 @@ const createUser = async (req, res) => {
         res.status(201).json({ message: 'Usuário criado com sucesso', id: newUser.id });
     }
     catch (error) {
+        console.error('Erro ao criar usuário:', error);
         res.status(500).json({ message: 'Erro ao criar usuário', error });
     }
 };
@@ -60,22 +87,66 @@ exports.createUser = createUser;
 // PUT /api/users/:id
 const updateUser = async (req, res) => {
     const userId = req.params.id;
-    const { name, email, role, permissions, active } = req.body;
+    const { name, email, password, role, permissions, active } = req.body;
     try {
-        await prisma.user.update({
-            where: { id: userId },
-            data: {
-                name,
-                email,
-                role,
-                permissions,
-                active,
-            },
+        console.log('Atualizando usuário:', {
+            userId,
+            name,
+            email,
+            role,
+            hasPassword: !!password,
+            permissions,
+            active
         });
-        res.json({ message: 'Usuário atualizado com sucesso' });
+        // Verifica se o usuário existe
+        const existingUser = await db_1.default.user.findUnique({
+            where: { id: userId }
+        });
+        if (!existingUser) {
+            console.error('Usuário não encontrado:', userId);
+            return res.status(404).json({ message: 'Usuário não encontrado' });
+        }
+        const updateData = {
+            name,
+            email,
+            role,
+            permissions: JSON.stringify(permissions || []),
+            active,
+        };
+        // Se uma nova senha foi fornecida, atualiza a senha
+        if (password) {
+            console.log('Atualizando senha do usuário');
+            updateData.passwordHash = await bcrypt_1.default.hash(password, 10);
+        }
+        console.log('Dados para atualização:', {
+            ...updateData,
+            passwordHash: updateData.passwordHash ? '[HASH]' : undefined
+        });
+        const updatedUser = await db_1.default.user.update({
+            where: { id: userId },
+            data: updateData,
+        });
+        console.log('Usuário atualizado com sucesso:', {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            role: updatedUser.role
+        });
+        // Converte as permissões de volta para array para o frontend
+        const permissionsObj = JSON.parse(updatedUser.permissions);
+        res.json({
+            message: 'Usuário atualizado com sucesso',
+            user: {
+                ...updatedUser,
+                permissions: permissionsObjectToArray(permissionsObj)
+            }
+        });
     }
     catch (error) {
-        res.status(500).json({ message: 'Erro ao atualizar usuário', error });
+        console.error('Erro detalhado ao atualizar usuário:', error);
+        res.status(500).json({
+            message: 'Erro ao atualizar usuário',
+            error: error instanceof Error ? error.message : 'Erro desconhecido'
+        });
     }
 };
 exports.updateUser = updateUser;
@@ -84,7 +155,7 @@ const deleteUser = async (req, res) => {
     const userId = req.params.id;
     console.log("🧪 Tentando excluir usuário:", userId);
     try {
-        await prisma.user.delete({
+        await db_1.default.user.delete({
             where: { id: userId },
         });
         res.json({ message: 'Usuário excluído com sucesso' });

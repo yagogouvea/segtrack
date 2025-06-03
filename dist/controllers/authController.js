@@ -7,6 +7,22 @@ exports.seedAdmin = exports.login = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = __importDefault(require("../lib/db"));
+// Função auxiliar para converter permissões de objeto para array
+function permissionsObjectToArray(permissionsObj) {
+    const permissions = [];
+    // Mapeia as permissões do objeto para o formato de array
+    Object.entries(permissionsObj).forEach(([module, actions]) => {
+        Object.entries(actions).forEach(([action, enabled]) => {
+            if (enabled) {
+                if (action === 'read')
+                    permissions.push(`view_${module}`);
+                else
+                    permissions.push(`${action}_${module.slice(0, -1)}`);
+            }
+        });
+    });
+    return permissions;
+}
 const login = async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -42,44 +58,13 @@ const login = async (req, res) => {
         }
         try {
             // Parse as permissões da string JSON
-            const userPermissions = JSON.parse(user.permissions);
-            // Converte as permissões do formato array para o formato de objeto
-            const permissionsObj = {
-                users: {
-                    read: userPermissions.includes('view_users'),
-                    create: userPermissions.includes('create_user'),
-                    update: userPermissions.includes('edit_user'),
-                    delete: userPermissions.includes('delete_user')
-                },
-                ocorrencias: {
-                    read: userPermissions.includes('view_ocorrencias'),
-                    create: userPermissions.includes('create_ocorrencia'),
-                    update: userPermissions.includes('edit_ocorrencia'),
-                    delete: userPermissions.includes('delete_ocorrencia')
-                }
-            };
+            const permissionsObj = JSON.parse(user.permissions);
             console.log('Permissões convertidas:', permissionsObj);
-            // Se o usuário for admin, todas as permissões são true
-            if (user.role === 'admin') {
-                console.log('Usuário é admin, atribuindo todas as permissões');
-                permissionsObj.users = {
-                    read: true,
-                    create: true,
-                    update: true,
-                    delete: true
-                };
-                permissionsObj.ocorrencias = {
-                    read: true,
-                    create: true,
-                    update: true,
-                    delete: true
-                };
-            }
             const token = jsonwebtoken_1.default.sign({
                 id: user.id,
                 name: user.name,
                 role: user.role,
-                permissions: permissionsObj
+                permissions: permissionsObjectToArray(permissionsObj)
             }, process.env.JWT_SECRET, { expiresIn: '12h' });
             console.log('Token gerado com sucesso');
             res.json({
@@ -89,7 +74,7 @@ const login = async (req, res) => {
                     name: user.name,
                     email: user.email,
                     role: user.role,
-                    permissions: permissionsObj
+                    permissions: permissionsObjectToArray(permissionsObj)
                 }
             });
         }

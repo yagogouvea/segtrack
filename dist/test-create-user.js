@@ -9,27 +9,9 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 async function createTestUser() {
     try {
-        console.log('Criando usuário de teste...');
-        // Verifica se o usuário já existe
-        const existingUser = await db_1.default.user.findUnique({
-            where: { email: 'yago@segtrackpr.com.br' }
-        });
-        if (existingUser) {
-            console.log('Usuário já existe, atualizando senha...');
-            const hashedPassword = await bcrypt_1.default.hash('123456', 10);
-            await db_1.default.user.update({
-                where: { email: 'yago@segtrackpr.com.br' },
-                data: {
-                    passwordHash: hashedPassword,
-                    active: true,
-                    role: 'admin'
-                }
-            });
-            console.log('Senha atualizada com sucesso!');
-            return;
-        }
-        // Cria novo usuário
-        const hashedPassword = await bcrypt_1.default.hash('test123', 10);
+        const email = 'yago@segtrackpr.com.br';
+        const password = '123456';
+        console.log('Criando/atualizando usuário:', email);
         // Define as permissões como array e converte para JSON string
         const permissions = JSON.stringify([
             'view_users',
@@ -41,20 +23,50 @@ async function createTestUser() {
             'edit_ocorrencia',
             'delete_ocorrencia'
         ]);
-        const user = await db_1.default.user.create({
-            data: {
-                name: 'Test User',
-                email: 'test@example.com',
-                passwordHash: hashedPassword,
-                role: 'user',
-                permissions,
-                active: true
-            }
+        // Verifica se o usuário já existe
+        const existingUser = await db_1.default.user.findUnique({
+            where: { email }
         });
-        console.log('Test user created:', user);
+        const hashedPassword = await bcrypt_1.default.hash(password, 10);
+        if (existingUser) {
+            console.log('Usuário já existe, atualizando...');
+            const updatedUser = await db_1.default.user.update({
+                where: { email },
+                data: {
+                    name: 'Yago',
+                    passwordHash: hashedPassword,
+                    active: true,
+                    role: 'admin',
+                    permissions
+                }
+            });
+            console.log('Usuário atualizado com sucesso:', {
+                id: updatedUser.id,
+                email: updatedUser.email,
+                role: updatedUser.role
+            });
+        }
+        else {
+            console.log('Criando novo usuário...');
+            const newUser = await db_1.default.user.create({
+                data: {
+                    name: 'Yago',
+                    email,
+                    passwordHash: hashedPassword,
+                    role: 'admin',
+                    permissions,
+                    active: true
+                }
+            });
+            console.log('Usuário criado com sucesso:', {
+                id: newUser.id,
+                email: newUser.email,
+                role: newUser.role
+            });
+        }
     }
     catch (error) {
-        console.error('Error creating test user:', error);
+        console.error('Erro ao criar/atualizar usuário:', error);
     }
     finally {
         await db_1.default.$disconnect();
