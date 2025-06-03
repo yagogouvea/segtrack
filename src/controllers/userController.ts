@@ -12,16 +12,26 @@ interface UserWithPermissions {
   active: boolean;
 }
 
+interface PermissionsObject {
+  [key: string]: {
+    [key: string]: boolean;
+  };
+}
+
 // Função auxiliar para converter permissões de objeto para array
-function permissionsObjectToArray(permissionsObj: any): string[] {
+function permissionsObjectToArray(permissionsObj: PermissionsObject): string[] {
   const permissions: string[] = [];
   
   // Mapeia as permissões do objeto para o formato de array
   Object.entries(permissionsObj).forEach(([module, actions]) => {
-    Object.entries(actions as Record<string, boolean>).forEach(([action, enabled]) => {
+    Object.entries(actions).forEach(([action, enabled]) => {
       if (enabled) {
         if (action === 'read') permissions.push(`view_${module}`);
-        else permissions.push(`${action}_${module.slice(0, -1)}`);
+        else if (module.endsWith('s')) {
+          permissions.push(`${action}_${module.slice(0, -1)}`);
+        } else {
+          permissions.push(`${action}_${module}`);
+        }
       }
     });
   });
@@ -45,10 +55,30 @@ export const getUsers = async (_req: Request, res: Response) => {
 
     // Converte as permissões de volta para array para o frontend
     const formattedUsers = users.map((user: UserWithPermissions) => {
-      const permissionsObj = JSON.parse(user.permissions);
+      let permissions: string[] = [];
+      try {
+        const permissionsObj = JSON.parse(user.permissions) as PermissionsObject;
+        permissions = user.role === 'admin' 
+          ? Object.keys(permissionsObj).reduce((acc: string[], module) => {
+              const actions = permissionsObj[module];
+              Object.keys(actions).forEach(action => {
+                if (action === 'read') acc.push(`view_${module}`);
+                else if (module.endsWith('s')) {
+                  acc.push(`${action}_${module.slice(0, -1)}`);
+                } else {
+                  acc.push(`${action}_${module}`);
+                }
+              });
+              return acc;
+            }, [])
+          : permissionsObjectToArray(permissionsObj);
+      } catch (e) {
+        console.error('Erro ao converter permissões:', e);
+      }
+
       return {
         ...user,
-        permissions: permissionsObjectToArray(permissionsObj)
+        permissions
       };
     });
 
@@ -75,15 +105,23 @@ export const createUser = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Converte as permissões para JSON string
-    const permissionsString = JSON.stringify(permissions || []);
+    // Se for admin, garante todas as permissões
+    const permissionsToSave: PermissionsObject = role === 'admin' ? {
+      users: { read: true, create: true, update: true, delete: true },
+      ocorrencias: { read: true, create: true, update: true, delete: true },
+      dashboard: { read: true },
+      prestadores: { read: true, create: true, update: true, delete: true },
+      relatorios: { read: true, create: true, update: true, delete: true },
+      clientes: { read: true, create: true, update: true, delete: true },
+      financeiro: { read: true }
+    } : permissions;
 
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
         role,
-        permissions: permissionsString,
+        permissions: JSON.stringify(permissionsToSave),
         active,
         passwordHash: hashedPassword,
       },
@@ -122,11 +160,22 @@ export const updateUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
 
+    // Se for admin, garante todas as permissões
+    const permissionsToSave: PermissionsObject = role === 'admin' ? {
+      users: { read: true, create: true, update: true, delete: true },
+      ocorrencias: { read: true, create: true, update: true, delete: true },
+      dashboard: { read: true },
+      prestadores: { read: true, create: true, update: true, delete: true },
+      relatorios: { read: true, create: true, update: true, delete: true },
+      clientes: { read: true, create: true, update: true, delete: true },
+      financeiro: { read: true }
+    } : permissions;
+
     const updateData: any = {
       name,
       email,
       role,
-      permissions: JSON.stringify(permissions || []),
+      permissions: JSON.stringify(permissionsToSave),
       active,
     };
 
@@ -153,28 +202,38 @@ export const updateUser = async (req: Request, res: Response) => {
     });
 
     // Converte as permissões de volta para array para o frontend
-    const permissionsObj = JSON.parse(updatedUser.permissions);
+    const permissionsObj = JSON.parse(updatedUser.permissions) as PermissionsObject;
+    const formattedPermissions = role === 'admin'
+      ? Object.keys(permissionsObj).reduce((acc: string[], module) => {
+          const actions = permissionsObj[module];
+          Object.keys(actions).forEach(action => {
+            if (action === 'read') acc.push(`view_${module}`);
+            else if (module.endsWith('s')) {
+              acc.push(`${action}_${module.slice(0, -1)}`);
+            } else {
+              acc.push(`${action}_${module}`);
+            }
+          });
+          return acc;
+        }, [])
+      : permissionsObjectToArray(permissionsObj);
     
     res.json({ 
       message: 'Usuário atualizado com sucesso',
       user: {
         ...updatedUser,
-        permissions: permissionsObjectToArray(permissionsObj)
+        permissions: formattedPermissions
       }
     });
   } catch (error) {
-    console.error('Erro detalhado ao atualizar usuário:', error);
-    res.status(500).json({ 
-      message: 'Erro ao atualizar usuário', 
-      error: error instanceof Error ? error.message : 'Erro desconhecido' 
-    });
+    console.error('Erro ao atualizar usuário:', error);
+    res.status(500).json({ message: 'Erro ao atualizar usuário', error });
   }
 };
 
 // DELETE /api/users/:id
 export const deleteUser = async (req: Request, res: Response) => {
   const userId = req.params.id;
-  console.log("🧪 Tentando excluir usuário:", userId);
 
   try {
     await prisma.user.delete({
@@ -182,12 +241,12 @@ export const deleteUser = async (req: Request, res: Response) => {
     });
 
     res.json({ message: 'Usuário excluído com sucesso' });
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ message: 'Usuário não encontrado no banco de dados.' });
+      res.status(404).json({ message: 'Usuário não encontrado' });
+    } else {
+      console.error('Erro ao excluir usuário:', error);
+      res.status(500).json({ message: 'Erro ao excluir usuário', error });
     }
-
-    console.error("❌ Erro inesperado ao excluir:", error);
-    res.status(500).json({ message: 'Erro ao excluir usuário', error });
   }
 };
