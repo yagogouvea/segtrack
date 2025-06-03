@@ -72,17 +72,58 @@ export const login = async (req: Request, res: Response) => {
     }
 
     try {
-      // Parse as permissões da string JSON
-      const permissionsObj = JSON.parse(user.permissions);
+      let permissions;
       
-      console.log('Permissões convertidas:', permissionsObj);
+      // Se for admin, define todas as permissões como true
+      if (user.role === 'admin') {
+        permissions = {
+          users: {
+            read: true,
+            create: true,
+            update: true,
+            delete: true
+          },
+          ocorrencias: {
+            read: true,
+            create: true,
+            update: true,
+            delete: true
+          },
+          dashboard: {
+            read: true
+          },
+          prestadores: {
+            read: true,
+            create: true,
+            update: true,
+            delete: true
+          },
+          relatorios: {
+            read: true,
+            create: true,
+            update: true,
+            delete: true
+          },
+          clientes: {
+            read: true,
+            create: true,
+            update: true,
+            delete: true
+          }
+        };
+      } else {
+        // Para usuários não-admin, usa as permissões do banco
+        permissions = JSON.parse(user.permissions);
+      }
+      
+      console.log('Permissões do usuário:', permissions);
 
       const token = jwt.sign(
         {
           id: user.id,
           name: user.name,
           role: user.role,
-          permissions: permissionsObjectToArray(permissionsObj)
+          permissions: permissions
         },
         process.env.JWT_SECRET as string,
         { expiresIn: '12h' }
@@ -97,7 +138,7 @@ export const login = async (req: Request, res: Response) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          permissions: permissionsObjectToArray(permissionsObj)
+          permissions: permissions
         }
       });
     } catch (conversionError) {
