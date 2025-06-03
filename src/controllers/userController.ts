@@ -73,6 +73,26 @@ export const updateUser = async (req: Request, res: Response) => {
   const { name, email, password, role, permissions, active } = req.body;
 
   try {
+    console.log('Atualizando usuário:', {
+      userId,
+      name,
+      email,
+      role,
+      hasPassword: !!password,
+      permissions,
+      active
+    });
+
+    // Verifica se o usuário existe
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!existingUser) {
+      console.error('Usuário não encontrado:', userId);
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
     const updateData: any = {
       name,
       email,
@@ -83,12 +103,24 @@ export const updateUser = async (req: Request, res: Response) => {
 
     // Se uma nova senha foi fornecida, atualiza a senha
     if (password) {
+      console.log('Atualizando senha do usuário');
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
+
+    console.log('Dados para atualização:', {
+      ...updateData,
+      passwordHash: updateData.passwordHash ? '[HASH]' : undefined
+    });
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
+    });
+
+    console.log('Usuário atualizado com sucesso:', {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role
     });
 
     res.json({ 
@@ -99,8 +131,11 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao atualizar usuário:', error);
-    res.status(500).json({ message: 'Erro ao atualizar usuário', error });
+    console.error('Erro detalhado ao atualizar usuário:', error);
+    res.status(500).json({ 
+      message: 'Erro ao atualizar usuário', 
+      error: error instanceof Error ? error.message : 'Erro desconhecido' 
+    });
   }
 };
 
