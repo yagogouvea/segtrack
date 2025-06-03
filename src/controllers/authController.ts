@@ -9,7 +9,7 @@ interface PrismaUser {
   email: string;
   passwordHash: string;
   role: string;
-  permissions: string; // Agora é uma string
+  permissions: string;
   active: boolean;
 }
 
@@ -56,42 +56,9 @@ export const login = async (req: Request, res: Response) => {
 
     try {
       // Parse as permissões da string JSON
-      const userPermissions = JSON.parse(user.permissions) as string[];
+      const permissionsObj = JSON.parse(user.permissions);
       
-      // Converte as permissões do formato array para o formato de objeto
-      const permissionsObj = {
-        users: {
-          read: userPermissions.includes('view_users'),
-          create: userPermissions.includes('create_user'),
-          update: userPermissions.includes('edit_user'),
-          delete: userPermissions.includes('delete_user')
-        },
-        ocorrencias: {
-          read: userPermissions.includes('view_ocorrencias'),
-          create: userPermissions.includes('create_ocorrencia'),
-          update: userPermissions.includes('edit_ocorrencia'),
-          delete: userPermissions.includes('delete_ocorrencia')
-        }
-      };
-
       console.log('Permissões convertidas:', permissionsObj);
-
-      // Se o usuário for admin, todas as permissões são true
-      if (user.role === 'admin') {
-        console.log('Usuário é admin, atribuindo todas as permissões');
-        permissionsObj.users = {
-          read: true,
-          create: true,
-          update: true,
-          delete: true
-        };
-        permissionsObj.ocorrencias = {
-          read: true,
-          create: true,
-          update: true,
-          delete: true
-        };
-      }
 
       const token = jwt.sign(
         {
