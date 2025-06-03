@@ -13,6 +13,23 @@ interface PrismaUser {
   active: boolean;
 }
 
+// Função auxiliar para converter permissões de objeto para array
+function permissionsObjectToArray(permissionsObj: any): string[] {
+  const permissions: string[] = [];
+  
+  // Mapeia as permissões do objeto para o formato de array
+  Object.entries(permissionsObj).forEach(([module, actions]) => {
+    Object.entries(actions as Record<string, boolean>).forEach(([action, enabled]) => {
+      if (enabled) {
+        if (action === 'read') permissions.push(`view_${module}`);
+        else permissions.push(`${action}_${module.slice(0, -1)}`);
+      }
+    });
+  });
+
+  return permissions;
+}
+
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -65,7 +82,7 @@ export const login = async (req: Request, res: Response) => {
           id: user.id,
           name: user.name,
           role: user.role,
-          permissions: permissionsObj
+          permissions: permissionsObjectToArray(permissionsObj)
         },
         process.env.JWT_SECRET as string,
         { expiresIn: '12h' }
@@ -80,7 +97,7 @@ export const login = async (req: Request, res: Response) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          permissions: permissionsObj
+          permissions: permissionsObjectToArray(permissionsObj)
         }
       });
     } catch (conversionError) {

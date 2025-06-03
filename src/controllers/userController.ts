@@ -3,6 +3,32 @@ import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
+interface UserWithPermissions {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  permissions: string;
+  active: boolean;
+}
+
+// Função auxiliar para converter permissões de objeto para array
+function permissionsObjectToArray(permissionsObj: any): string[] {
+  const permissions: string[] = [];
+  
+  // Mapeia as permissões do objeto para o formato de array
+  Object.entries(permissionsObj).forEach(([module, actions]) => {
+    Object.entries(actions as Record<string, boolean>).forEach(([action, enabled]) => {
+      if (enabled) {
+        if (action === 'read') permissions.push(`view_${module}`);
+        else permissions.push(`${action}_${module.slice(0, -1)}`);
+      }
+    });
+  });
+
+  return permissions;
+}
+
 // GET /api/users
 export const getUsers = async (_req: Request, res: Response) => {
   try {
@@ -18,10 +44,13 @@ export const getUsers = async (_req: Request, res: Response) => {
     });
 
     // Converte as permissões de volta para array para o frontend
-    const formattedUsers = users.map(user => ({
-      ...user,
-      permissions: JSON.parse(user.permissions as string)
-    }));
+    const formattedUsers = users.map((user: UserWithPermissions) => {
+      const permissionsObj = JSON.parse(user.permissions);
+      return {
+        ...user,
+        permissions: permissionsObjectToArray(permissionsObj)
+      };
+    });
 
     res.json(formattedUsers);
   } catch (error) {
@@ -123,11 +152,14 @@ export const updateUser = async (req: Request, res: Response) => {
       role: updatedUser.role
     });
 
+    // Converte as permissões de volta para array para o frontend
+    const permissionsObj = JSON.parse(updatedUser.permissions);
+    
     res.json({ 
       message: 'Usuário atualizado com sucesso',
       user: {
         ...updatedUser,
-        permissions: JSON.parse(updatedUser.permissions as string)
+        permissions: permissionsObjectToArray(permissionsObj)
       }
     });
   } catch (error) {
