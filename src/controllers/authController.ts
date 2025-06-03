@@ -8,10 +8,25 @@ export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ 
+      where: { email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        passwordHash: true,
+        role: true,
+        permissions: true,
+        active: true
+      }
+    });
 
     if (!user) {
       return res.status(401).json({ message: 'Usuário não encontrado' });
+    }
+
+    if (!user.active) {
+      return res.status(403).json({ message: 'Usuário desativado. Entre em contato com o administrador.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
@@ -19,18 +34,59 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Senha incorreta' });
     }
 
+    // Converte as permissões do formato array para o formato de objeto
+    const permissionsObj = {
+      users: {
+        read: user.permissions.includes('view_users'),
+        create: user.permissions.includes('create_user'),
+        update: user.permissions.includes('edit_user'),
+        delete: user.permissions.includes('delete_user')
+      },
+      ocorrencias: {
+        read: user.permissions.includes('view_ocorrencias'),
+        create: user.permissions.includes('create_ocorrencia'),
+        update: user.permissions.includes('edit_ocorrencia'),
+        delete: user.permissions.includes('delete_ocorrencia')
+      }
+    };
+
+    // Se o usuário for admin, todas as permissões são true
+    if (user.role === 'admin') {
+      permissionsObj.users = {
+        read: true,
+        create: true,
+        update: true,
+        delete: true
+      };
+      permissionsObj.ocorrencias = {
+        read: true,
+        create: true,
+        update: true,
+        delete: true
+      };
+    }
+
     const token = jwt.sign(
       {
         id: user.id,
         name: user.name,
         role: user.role,
-        permissions: user.permissions,
+        permissions: permissionsObj
       },
       process.env.JWT_SECRET as string,
       { expiresIn: '12h' }
     );
 
-    res.json({ token });
+    res.json({ 
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        permissions: permissionsObj
+      }
+    });
   } catch (error) {
     console.error("Erro no login:", error);
     res.status(500).json({ message: 'Erro interno no login', error });

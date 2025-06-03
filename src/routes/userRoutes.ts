@@ -4,16 +4,16 @@ import * as userController from '../controllers/userController';
 
 const router: Router = Router();
 
-// Listar todos os usuários (requere permissão 'view_users')
-router.get('/', verifyToken, checkPermissions(['view_users']), userController.getUsers);
+// Listar todos os usuários (requere permissão users:read)
+router.get('/', verifyToken, checkPermissions(['users:read']), userController.getUsers);
 
-// Criar novo usuário (requere permissão 'create_user')
-router.post('/', verifyToken, checkPermissions(['create_user']), userController.createUser);
+// Criar novo usuário (requere permissão users:create)
+router.post('/', verifyToken, checkPermissions(['users:create']), userController.createUser);
 
-// Atualizar usuário existente (requere permissão 'edit_user')
-router.put('/:id', verifyToken, checkPermissions(['edit_user']), userController.updateUser);
+// Atualizar usuário existente (requere permissão users:update)
+router.put('/:id', verifyToken, checkPermissions(['users:update']), userController.updateUser);
 
-// Excluir usuário (requere permissão 'delete_user')
-router.delete('/:id', verifyToken, checkPermissions(['delete_user']), userController.deleteUser);
+// Excluir usuário (requere permissão users:delete)
+router.delete('/:id', verifyToken, checkPermissions(['users:delete']), userController.deleteUser);
 
 export default router;

@@ -1,10 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+interface UserPermissions {
+  users?: {
+    read: boolean;
+    create: boolean;
+    update: boolean;
+    delete: boolean;
+  };
+  ocorrencias?: {
+    read: boolean;
+    create: boolean;
+    update: boolean;
+    delete: boolean;
+  };
+}
+
 interface DecodedUser {
   id: string;
   role: string;
-  permissions: string[];
+  name: string;
+  permissions: UserPermissions;
 }
 
 // Estendendo o tipo Request para incluir `req.user`
@@ -37,11 +53,30 @@ export function verifyToken(req: Request, res: Response, next: NextFunction) {
 // ✅ Exporta como função nomeada
 export function checkPermissions(requiredPermissions: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userPerms = req.user?.permissions || [];
-    const isAdmin = req.user?.role === 'admin';
-    const hasPermission = requiredPermissions.some((perm) => userPerms.includes(perm));
+    if (!req.user) {
+      return res.status(401).json({ message: 'Usuário não autenticado' });
+    }
 
-    if (isAdmin || hasPermission) {
+    const isAdmin = req.user.role === 'admin';
+    
+    if (isAdmin) {
+      return next();
+    }
+
+    // Verifica se o usuário tem todas as permissões necessárias
+    const hasAllPermissions = requiredPermissions.every(permission => {
+      const [resource, action] = permission.split(':');
+      
+      // Verifica se o recurso e ação são válidos
+      if (!resource || !action) {
+        return false;
+      }
+
+      // Verifica se o usuário tem a permissão específica
+      return req.user?.permissions?.[resource]?.[action] || false;
+    });
+
+    if (hasAllPermissions) {
       return next();
     }
 
