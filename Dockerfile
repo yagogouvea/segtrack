@@ -10,12 +10,12 @@ RUN apt-get update -y && apt-get install -y openssl ca-certificates
 # Copy package files and prisma schema
 COPY package*.json ./
 COPY tsconfig.json ./
-COPY prisma ./prisma
+COPY prisma ./prisma/
 
 # Install dependencies
 RUN npm ci
 
-# Generate Prisma Client (before copying the rest of the code)
+# Generate Prisma Client
 RUN npx prisma generate
 
 # Copy source code
@@ -45,6 +45,9 @@ RUN mkdir -p uploads relatorios-pdf
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOST=0.0.0.0
+
+# Generate Prisma Client again in production
+RUN npx prisma generate
 
 # Expose the port
 EXPOSE 8080
