@@ -137,12 +137,14 @@ router.get('/',
       console.log('Iniciando busca de ocorrências com filtros:', { id, placa, cliente, prestador, inicio, fim });
       
       // Test database connection before proceeding
-      const isConnected = await prisma.$queryRaw`SELECT 1`;
-      if (!isConnected) {
-        console.error('❌ Falha na conexão com o banco de dados');
+      try {
+        await prisma.$connect();
+        console.log('✅ Conexão com o banco de dados estabelecida');
+      } catch (connError) {
+        console.error('❌ Erro na conexão com o banco:', connError);
         return res.status(500).json({ 
           error: 'Erro de conexão com o banco de dados',
-          details: process.env.NODE_ENV === 'development' ? 'Database connection failed' : undefined
+          details: process.env.NODE_ENV === 'development' ? String(connError) : undefined
         });
       }
 
@@ -205,13 +207,13 @@ router.get('/',
         
         if (error.message.includes('Prisma Client')) {
           return res.status(500).json({
-            error: 'Erro no cliente Prisma',
+            error: 'Erro no cliente do banco de dados',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
           });
         }
       }
 
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Erro ao buscar ocorrências',
         details: process.env.NODE_ENV === 'development' ? String(error) : undefined
       });

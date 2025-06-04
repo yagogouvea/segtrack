@@ -13,8 +13,11 @@ let isConnected = false;
 export async function testConnection(): Promise<void> {
   try {
     await prisma.$connect();
+    await prisma.$queryRaw`SELECT 1`;
+    isConnected = true;
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso');
   } catch (error) {
+    isConnected = false;
     console.error('❌ Erro ao conectar com o banco de dados:', error);
     throw error;
   }
@@ -67,7 +70,8 @@ prisma.$use(async (params, next) => {
         operation: params.action,
         model: params.model,
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
+        url: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') // Log URL without password
       });
       
       if (retries === MAX_RETRIES) {
@@ -106,7 +110,11 @@ process.on('uncaughtException', (error) => {
 
 // Tenta estabelecer a conexão inicial
 testConnection().catch(error => {
-  console.error('❌ Erro na conexão inicial com o banco de dados:', error);
+  console.error('❌ Erro na conexão inicial com o banco de dados:', {
+    error: error.message,
+    stack: error.stack,
+    url: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') // Log URL without password
+  });
 });
 
 export default prisma;
