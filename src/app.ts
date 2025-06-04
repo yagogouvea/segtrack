@@ -5,6 +5,9 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { testConnection } from './lib/db';
 
+// Importando rotas
+import prestadoresPublicoRoutes from './routes/prestadoresPublico';
+
 const app = express();
 
 // Security middleware
@@ -30,6 +33,9 @@ app.options('*', cors());
 
 // Basic middleware
 app.use(express.json());
+
+// Registrando rotas
+app.use('/api/prestadores/publico', prestadoresPublicoRoutes);
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
