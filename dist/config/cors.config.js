@@ -15,15 +15,18 @@ function parseOrigins(originsStr) {
 const DEFAULT_ORIGINS = [
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://segtrack-frontend-2mhd.vercel.app',
-    'https://segtrack123-459783979706.southamerica-east1.run.app'
+    'https://segtrack.comerceoficial.com'
 ];
+// Adiciona a URL do frontend se estiver definida
+if (process.env.FRONTEND_URL) {
+    DEFAULT_ORIGINS.push(process.env.FRONTEND_URL);
+}
 // Configuração do CORS
 exports.corsConfig = {
     // Origens permitidas: combina .env com padrões
     origins: [
         ...parseOrigins(process.env.ALLOWED_ORIGINS),
-        ...(process.env.NODE_ENV === 'development' ? DEFAULT_ORIGINS : DEFAULT_ORIGINS)
+        ...DEFAULT_ORIGINS
     ],
     // Métodos HTTP permitidos
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -54,8 +57,8 @@ exports.corsConfig = {
         // Verifica se é um subdomínio do Vercel
         if (allowVercelSubdomains && origin.endsWith('.vercel.app'))
             return true;
-        // Verifica se é o domínio do Cloud Run
-        if (origin.includes('run.app'))
+        // Verifica se é o domínio do frontend
+        if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)
             return true;
         return false;
     }

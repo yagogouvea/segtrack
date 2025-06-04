@@ -3,7 +3,7 @@ import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+import type { User, Prisma } from '@prisma/client';
 
 interface UserWithPermissions {
   id: string;
@@ -20,14 +20,12 @@ interface PermissionsObject {
   };
 }
 
-// Interface para o objeto de atualização
-interface UserUpdateData {
-  name?: string;
-  email?: string;
-  passwordHash?: string;
-  role?: string;
-  permissions: string; // Sempre requerido
-  active?: boolean;
+// Interface para campos opcionais de atualização
+type UserUpdateFields = Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>;
+
+// Interface para campos obrigatórios de atualização
+interface RequiredUpdateFields {
+  permissions: string;
 }
 
 // Função auxiliar para converter permissões de objeto para array
@@ -210,37 +208,52 @@ export const updateUser = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    // Processar permissions
-    let newPermissions: string = currentUser.permissions;
-    if (data.permissions) {
-      if (Array.isArray(data.permissions)) {
-        newPermissions = JSON.stringify(data.permissions);
-      } else if (typeof data.permissions === 'string') {
-        try {
-          JSON.parse(data.permissions);
-          newPermissions = data.permissions;
-        } catch {
-          newPermissions = JSON.stringify([data.permissions]);
-        }
-      }
+    // Determinar as novas permissões
+    const newPermissions: string = data.permissions 
+      ? Array.isArray(data.permissions)
+        ? JSON.stringify(data.permissions)
+        : typeof data.permissions === 'string'
+          ? (() => {
+              try {
+                JSON.parse(data.permissions);
+                return data.permissions;
+              } catch {
+                return JSON.stringify([data.permissions]);
+              }
+            })()
+          : JSON.stringify([])
+      : currentUser.permissions || JSON.stringify([]);
+
+    // Atualizar primeiro os campos obrigatórios
+    const requiredFields: RequiredUpdateFields = {
+      permissions: newPermissions
+    };
+
+    await prisma.user.update({
+      where: { id },
+      data: requiredFields
+    });
+
+    // Preparar campos opcionais para atualização
+    const optionalFields: UserUpdateFields = {};
+
+    if (data.name) optionalFields.name = data.name;
+    if (data.email) optionalFields.email = data.email;
+    if (data.role) optionalFields.role = data.role;
+    if (data.active !== undefined) optionalFields.active = data.active;
+    if (typeof passwordHash === 'string') optionalFields.passwordHash = passwordHash;
+
+    // Atualizar campos opcionais se houver algum
+    if (Object.keys(optionalFields).length > 0) {
+      await prisma.user.update({
+        where: { id },
+        data: optionalFields as Prisma.UserUpdateInput
+      });
     }
 
-    // Preparar dados de atualização
-    const updateFields = {
-      ...(data.name && { name: data.name }),
-      ...(data.email && { email: data.email }),
-      ...(data.role && { role: data.role }),
-      ...(data.active !== undefined && { active: data.active }),
-      ...(passwordHash && { passwordHash }),
-      permissions: newPermissions
-    } as const;
-
-    // Criar objeto de atualização com tipo explícito
-    const updateInput: Prisma.UserUpdateInput = updateFields;
-
-    const user = await prisma.user.update({
+    // Buscar e retornar o usuário atualizado
+    const updatedUser = await prisma.user.findUnique({
       where: { id },
-      data: updateInput,
       select: {
         id: true,
         name: true,
@@ -253,7 +266,11 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     });
 
-    res.json(user);
+    if (!updatedUser) {
+      throw new Error('Usuário não encontrado após atualização');
+    }
+
+    res.json(updatedUser);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Dados inválidos', details: error.errors });

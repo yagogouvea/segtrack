@@ -57,14 +57,55 @@ const login = async (req, res) => {
             return res.status(401).json({ message: 'Senha incorreta' });
         }
         try {
-            // Parse as permissões da string JSON
-            const permissionsObj = JSON.parse(user.permissions);
-            console.log('Permissões convertidas:', permissionsObj);
+            let permissions;
+            // Se for admin, define todas as permissões como true
+            if (user.role === 'admin') {
+                permissions = {
+                    users: {
+                        read: true,
+                        create: true,
+                        update: true,
+                        delete: true
+                    },
+                    ocorrencias: {
+                        read: true,
+                        create: true,
+                        update: true,
+                        delete: true
+                    },
+                    dashboard: {
+                        read: true
+                    },
+                    prestadores: {
+                        read: true,
+                        create: true,
+                        update: true,
+                        delete: true
+                    },
+                    relatorios: {
+                        read: true,
+                        create: true,
+                        update: true,
+                        delete: true
+                    },
+                    clientes: {
+                        read: true,
+                        create: true,
+                        update: true,
+                        delete: true
+                    }
+                };
+            }
+            else {
+                // Para usuários não-admin, usa as permissões do banco
+                permissions = JSON.parse(user.permissions);
+            }
+            console.log('Permissões do usuário:', permissions);
             const token = jsonwebtoken_1.default.sign({
                 id: user.id,
                 name: user.name,
                 role: user.role,
-                permissions: permissionsObjectToArray(permissionsObj)
+                permissions: permissions
             }, process.env.JWT_SECRET, { expiresIn: '12h' });
             console.log('Token gerado com sucesso');
             res.json({
@@ -74,7 +115,7 @@ const login = async (req, res) => {
                     name: user.name,
                     email: user.email,
                     role: user.role,
-                    permissions: permissionsObjectToArray(permissionsObj)
+                    permissions: permissions
                 }
             });
         }

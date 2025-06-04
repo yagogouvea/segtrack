@@ -38,33 +38,40 @@ const authMiddleware_1 = require("../middleware/authMiddleware");
 const userController = __importStar(require("../controllers/userController"));
 const router = (0, express_1.Router)();
 // Listar todos os usuários (requer permissão de leitura de usuários)
-router.get('/', authMiddleware_1.verifyToken, (req, res, next) => {
+router.get('/', authMiddleware_1.authenticateToken, (req, res, next) => {
     // Se for admin, permite acesso
     if (req.user?.role === 'admin') {
         return next();
     }
     // Caso contrário, verifica permissão específica
-    (0, authMiddleware_1.checkPermissions)(['users:read'])(req, res, next);
+    (0, authMiddleware_1.requirePermission)('users:read')(req, res, next);
 }, userController.getUsers);
-// Criar usuário (requer permissão de criação de usuários)
-router.post('/', authMiddleware_1.verifyToken, (req, res, next) => {
+// Obter usuário específico
+router.get('/:id', authMiddleware_1.authenticateToken, (req, res, next) => {
     if (req.user?.role === 'admin') {
         return next();
     }
-    (0, authMiddleware_1.checkPermissions)(['users:create'])(req, res, next);
+    (0, authMiddleware_1.requirePermission)('users:read')(req, res, next);
+}, userController.getUser);
+// Criar novo usuário
+router.post('/', authMiddleware_1.authenticateToken, (req, res, next) => {
+    if (req.user?.role === 'admin') {
+        return next();
+    }
+    (0, authMiddleware_1.requirePermission)('users:create')(req, res, next);
 }, userController.createUser);
-// Atualizar usuário (requer permissão de atualização de usuários)
-router.put('/:id', authMiddleware_1.verifyToken, (req, res, next) => {
+// Atualizar usuário
+router.put('/:id', authMiddleware_1.authenticateToken, (req, res, next) => {
     if (req.user?.role === 'admin') {
         return next();
     }
-    (0, authMiddleware_1.checkPermissions)(['users:update'])(req, res, next);
+    (0, authMiddleware_1.requirePermission)('users:update')(req, res, next);
 }, userController.updateUser);
 // Excluir usuário (requer permissão de exclusão de usuários)
-router.delete('/:id', authMiddleware_1.verifyToken, (req, res, next) => {
+router.delete('/:id', authMiddleware_1.authenticateToken, (req, res, next) => {
     if (req.user?.role === 'admin') {
         return next();
     }
-    (0, authMiddleware_1.checkPermissions)(['users:delete'])(req, res, next);
+    (0, authMiddleware_1.requirePermission)('users:delete')(req, res, next);
 }, userController.deleteUser);
 exports.default = router;

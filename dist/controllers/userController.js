@@ -3,10 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.getUsers = void 0;
+exports.deleteUser = exports.updateUser = exports.createUser = exports.getUser = exports.getUsers = void 0;
 const db_1 = __importDefault(require("../lib/db"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const library_1 = require("@prisma/client/runtime/library");
+const zod_1 = require("zod");
 // Função auxiliar para converter permissões de objeto para array
 function permissionsObjectToArray(permissionsObj) {
     const permissions = [];
@@ -16,13 +16,26 @@ function permissionsObjectToArray(permissionsObj) {
             if (enabled) {
                 if (action === 'read')
                     permissions.push(`view_${module}`);
-                else
+                else if (module.endsWith('s')) {
                     permissions.push(`${action}_${module.slice(0, -1)}`);
+                }
+                else {
+                    permissions.push(`${action}_${module}`);
+                }
             }
         });
     });
     return permissions;
 }
+// Schema para validação de usuário
+const userSchema = zod_1.z.object({
+    name: zod_1.z.string().min(3),
+    email: zod_1.z.string().email(),
+    password: zod_1.z.string().min(6).optional(),
+    role: zod_1.z.enum(['admin', 'user']),
+    permissions: zod_1.z.array(zod_1.z.string()).or(zod_1.z.string()),
+    active: zod_1.z.boolean().default(true),
+});
 // GET /api/users
 const getUsers = async (_req, res) => {
     try {
@@ -34,138 +47,216 @@ const getUsers = async (_req, res) => {
                 role: true,
                 permissions: true,
                 active: true,
-            },
+                createdAt: true,
+                updatedAt: true
+            }
         });
-        // Converte as permissões de volta para array para o frontend
-        const formattedUsers = users.map((user) => {
-            const permissionsObj = JSON.parse(user.permissions);
-            return {
-                ...user,
-                permissions: permissionsObjectToArray(permissionsObj)
-            };
-        });
-        res.json(formattedUsers);
+        res.json(users);
     }
     catch (error) {
         console.error('Erro ao buscar usuários:', error);
-        res.status(500).json({ message: 'Erro ao buscar usuários', error });
+        res.status(500).json({ error: 'Erro ao buscar usuários' });
     }
 };
 exports.getUsers = getUsers;
-// POST /api/users
-const createUser = async (req, res) => {
-    const { name, email, password, role, permissions, active = true } = req.body;
-    if (!name || !email || !password || !role) {
-        return res.status(400).json({ message: 'Nome, email, senha e perfil são obrigatórios.' });
-    }
+// Buscar usuário específico
+const getUser = async (req, res) => {
+    const { id } = req.params;
     try {
-        const existingUser = await db_1.default.user.findUnique({ where: { email } });
-        if (existingUser) {
-            return res.status(400).json({ message: 'Este e-mail já está cadastrado.' });
-        }
-        const hashedPassword = await bcrypt_1.default.hash(password, 10);
-        // Converte as permissões para JSON string
-        const permissionsString = JSON.stringify(permissions || []);
-        const newUser = await db_1.default.user.create({
-            data: {
-                name,
-                email,
-                role,
-                permissions: permissionsString,
-                active,
-                passwordHash: hashedPassword,
-            },
+        const user = await db_1.default.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                permissions: true,
+                active: true,
+                createdAt: true,
+                updatedAt: true
+            }
         });
-        res.status(201).json({ message: 'Usuário criado com sucesso', id: newUser.id });
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        res.json(user);
     }
     catch (error) {
+        console.error('Erro ao buscar usuário:', error);
+        res.status(500).json({ error: 'Erro ao buscar usuário' });
+    }
+};
+exports.getUser = getUser;
+// POST /api/users
+const createUser = async (req, res) => {
+    try {
+        const data = userSchema.parse(req.body);
+        // Verificar se o email já existe
+        const existingUser = await db_1.default.user.findUnique({
+            where: { email: data.email }
+        });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Email já cadastrado' });
+        }
+        // Hash da senha
+        const passwordHash = data.password ? await bcrypt_1.default.hash(data.password, 10) : undefined;
+        // Garantir que permissions seja uma string JSON válida
+        let permissionsString;
+        if (Array.isArray(data.permissions)) {
+            permissionsString = JSON.stringify(data.permissions);
+        }
+        else if (typeof data.permissions === 'string') {
+            // Verificar se já é um JSON válido
+            try {
+                JSON.parse(data.permissions);
+                permissionsString = data.permissions;
+            }
+            catch {
+                // Se não for JSON válido, converter para array e depois para JSON
+                permissionsString = JSON.stringify([data.permissions]);
+            }
+        }
+        else {
+            permissionsString = '[]';
+        }
+        const user = await db_1.default.user.create({
+            data: {
+                ...data,
+                passwordHash,
+                permissions: permissionsString
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                permissions: true,
+                active: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+        res.status(201).json(user);
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            return res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+        }
         console.error('Erro ao criar usuário:', error);
-        res.status(500).json({ message: 'Erro ao criar usuário', error });
+        res.status(500).json({ error: 'Erro ao criar usuário' });
     }
 };
 exports.createUser = createUser;
 // PUT /api/users/:id
 const updateUser = async (req, res) => {
-    const userId = req.params.id;
-    const { name, email, password, role, permissions, active } = req.body;
+    const { id } = req.params;
     try {
-        console.log('Atualizando usuário:', {
-            userId,
-            name,
-            email,
-            role,
-            hasPassword: !!password,
-            permissions,
-            active
-        });
-        // Verifica se o usuário existe
-        const existingUser = await db_1.default.user.findUnique({
-            where: { id: userId }
-        });
-        if (!existingUser) {
-            console.error('Usuário não encontrado:', userId);
-            return res.status(404).json({ message: 'Usuário não encontrado' });
+        const data = userSchema.partial().parse(req.body);
+        // Se email foi fornecido, verificar se já existe
+        if (data.email) {
+            const existingUser = await db_1.default.user.findFirst({
+                where: {
+                    email: data.email,
+                    NOT: { id }
+                }
+            });
+            if (existingUser) {
+                return res.status(400).json({ error: 'Email já cadastrado por outro usuário' });
+            }
         }
-        const updateData = {
-            name,
-            email,
-            role,
-            permissions: JSON.stringify(permissions || []),
-            active,
+        // Hash da senha se fornecida
+        const passwordHash = data.password ? await bcrypt_1.default.hash(data.password, 10) : undefined;
+        // Buscar usuário atual para manter as permissões existentes
+        const currentUser = await db_1.default.user.findUnique({
+            where: { id },
+            select: { permissions: true }
+        });
+        if (!currentUser) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        // Determinar as novas permissões
+        const newPermissions = data.permissions
+            ? Array.isArray(data.permissions)
+                ? JSON.stringify(data.permissions)
+                : typeof data.permissions === 'string'
+                    ? (() => {
+                        try {
+                            JSON.parse(data.permissions);
+                            return data.permissions;
+                        }
+                        catch {
+                            return JSON.stringify([data.permissions]);
+                        }
+                    })()
+                    : JSON.stringify([])
+            : currentUser.permissions || JSON.stringify([]);
+        // Atualizar primeiro os campos obrigatórios
+        const requiredFields = {
+            permissions: newPermissions
         };
-        // Se uma nova senha foi fornecida, atualiza a senha
-        if (password) {
-            console.log('Atualizando senha do usuário');
-            updateData.passwordHash = await bcrypt_1.default.hash(password, 10);
+        await db_1.default.user.update({
+            where: { id },
+            data: requiredFields
+        });
+        // Preparar campos opcionais para atualização
+        const optionalFields = {};
+        if (data.name)
+            optionalFields.name = data.name;
+        if (data.email)
+            optionalFields.email = data.email;
+        if (data.role)
+            optionalFields.role = data.role;
+        if (data.active !== undefined)
+            optionalFields.active = data.active;
+        if (passwordHash)
+            optionalFields.passwordHash = passwordHash;
+        // Atualizar campos opcionais se houver algum
+        if (Object.keys(optionalFields).length > 0) {
+            await db_1.default.user.update({
+                where: { id },
+                data: optionalFields
+            });
         }
-        console.log('Dados para atualização:', {
-            ...updateData,
-            passwordHash: updateData.passwordHash ? '[HASH]' : undefined
-        });
-        const updatedUser = await db_1.default.user.update({
-            where: { id: userId },
-            data: updateData,
-        });
-        console.log('Usuário atualizado com sucesso:', {
-            id: updatedUser.id,
-            email: updatedUser.email,
-            role: updatedUser.role
-        });
-        // Converte as permissões de volta para array para o frontend
-        const permissionsObj = JSON.parse(updatedUser.permissions);
-        res.json({
-            message: 'Usuário atualizado com sucesso',
-            user: {
-                ...updatedUser,
-                permissions: permissionsObjectToArray(permissionsObj)
+        // Buscar e retornar o usuário atualizado
+        const updatedUser = await db_1.default.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                permissions: true,
+                active: true,
+                createdAt: true,
+                updatedAt: true
             }
         });
+        if (!updatedUser) {
+            throw new Error('Usuário não encontrado após atualização');
+        }
+        res.json(updatedUser);
     }
     catch (error) {
-        console.error('Erro detalhado ao atualizar usuário:', error);
-        res.status(500).json({
-            message: 'Erro ao atualizar usuário',
-            error: error instanceof Error ? error.message : 'Erro desconhecido'
-        });
+        if (error instanceof zod_1.z.ZodError) {
+            return res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+        }
+        console.error('Erro ao atualizar usuário:', error);
+        res.status(500).json({ error: 'Erro ao atualizar usuário' });
     }
 };
 exports.updateUser = updateUser;
 // DELETE /api/users/:id
 const deleteUser = async (req, res) => {
-    const userId = req.params.id;
-    console.log("🧪 Tentando excluir usuário:", userId);
+    const { id } = req.params;
     try {
         await db_1.default.user.delete({
-            where: { id: userId },
+            where: { id }
         });
-        res.json({ message: 'Usuário excluído com sucesso' });
+        res.json({ message: 'Usuário deletado com sucesso' });
     }
     catch (error) {
-        if (error instanceof library_1.PrismaClientKnownRequestError && error.code === 'P2025') {
-            return res.status(404).json({ message: 'Usuário não encontrado no banco de dados.' });
-        }
-        console.error("❌ Erro inesperado ao excluir:", error);
-        res.status(500).json({ message: 'Erro ao excluir usuário', error });
+        console.error('Erro ao deletar usuário:', error);
+        res.status(500).json({ error: 'Erro ao deletar usuário' });
     }
 };
 exports.deleteUser = deleteUser;

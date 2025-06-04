@@ -3,64 +3,88 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyToken = verifyToken;
-exports.checkPermissions = checkPermissions;
+exports.requirePermission = exports.authenticateToken = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-// ✅ Exporta como função nomeada
-function verifyToken(req, res, next) {
-    const authHeader = req.headers.authorization;
+if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET não configurado. Configure esta variável de ambiente antes de iniciar o servidor.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+// Rate limiting para falhas de autenticação
+const failedAuthAttempts = new Map();
+const MAX_FAILED_ATTEMPTS = 5;
+const BLOCK_DURATION = 15 * 60 * 1000; // 15 minutos
+const checkRateLimit = (ip) => {
+    const now = Date.now();
+    const attempts = failedAuthAttempts.get(ip);
+    if (attempts) {
+        if (now - attempts.firstAttempt > BLOCK_DURATION) {
+            failedAuthAttempts.delete(ip);
+            return true;
+        }
+        return attempts.count < MAX_FAILED_ATTEMPTS;
+    }
+    return true;
+};
+const recordFailedAttempt = (ip) => {
+    const now = Date.now();
+    const attempts = failedAuthAttempts.get(ip);
+    if (attempts) {
+        attempts.count++;
+    }
+    else {
+        failedAuthAttempts.set(ip, { count: 1, firstAttempt: now });
+    }
+};
+const authenticateToken = (req, res, next) => {
+    const ip = req.ip || '';
+    if (!checkRateLimit(ip)) {
+        return res.status(429).json({
+            error: 'Muitas tentativas de autenticação. Tente novamente mais tarde.'
+        });
+    }
+    const authHeader = req.headers['authorization'];
     const token = authHeader?.split(' ')[1];
     if (!token) {
-        return res.status(401).json({ message: 'Token não fornecido' });
+        recordFailedAttempt(ip);
+        return res.status(401).json({ error: 'Token não fornecido' });
     }
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
+        const user = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        // Verificar idade do token
+        if (user.iat && Date.now() - user.iat * 1000 > 24 * 60 * 60 * 1000) {
+            return res.status(401).json({ error: 'Token expirado' });
+        }
+        req.user = user;
         next();
     }
-    catch (err) {
-        return res.status(403).json({ message: 'Token inválido ou expirado' });
+    catch (error) {
+        recordFailedAttempt(ip);
+        return res.status(403).json({ error: 'Token inválido' });
     }
-}
-// ✅ Exporta como função nomeada
-function checkPermissions(requiredPermissions) {
+};
+exports.authenticateToken = authenticateToken;
+const requirePermission = (requiredPermission) => {
     return (req, res, next) => {
-        console.log('Verificando permissões:', {
-            requiredPermissions,
-            userRole: req.user?.role,
-            userPermissions: req.user?.permissions
-        });
         if (!req.user) {
-            console.log('Usuário não autenticado');
-            return res.status(401).json({ message: 'Usuário não autenticado' });
+            return res.status(401).json({ error: 'Usuário não autenticado' });
         }
-        const isAdmin = req.user.role === 'admin';
-        if (isAdmin) {
-            console.log('Usuário é admin, permissão concedida');
-            return next();
-        }
-        // Verifica se o usuário tem todas as permissões necessárias
-        const hasAllPermissions = requiredPermissions.every(permission => {
-            const [resource, action] = permission.split(':');
-            console.log('Verificando permissão específica:', {
-                permission,
-                resource,
-                action,
-                userHasPermission: req.user?.permissions?.[resource]?.[action]
-            });
-            // Verifica se o recurso e ação são válidos
-            if (!resource || !action) {
-                console.log('Recurso ou ação inválidos');
-                return false;
+        try {
+            const userPermissions = Array.isArray(req.user.permissions)
+                ? req.user.permissions
+                : JSON.parse(req.user.permissions || '[]');
+            if (!userPermissions.includes(requiredPermission)) {
+                // Se o usuário é admin, permite acesso
+                if (req.user.role === 'admin') {
+                    return next();
+                }
+                return res.status(403).json({ error: 'Permissão negada' });
             }
-            // Verifica se o usuário tem a permissão específica
-            return req.user?.permissions?.[resource]?.[action] || false;
-        });
-        if (hasAllPermissions) {
-            console.log('Usuário tem todas as permissões necessárias');
-            return next();
+            next();
         }
-        console.log('Permissão negada');
-        return res.status(403).json({ message: 'Permissão negada' });
+        catch (error) {
+            console.error('Erro ao verificar permissões:', error);
+            return res.status(500).json({ error: 'Erro ao verificar permissões' });
+        }
     };
-}
+};
+exports.requirePermission = requirePermission;

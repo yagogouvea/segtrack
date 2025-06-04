@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -9,8 +42,14 @@ const db_1 = __importDefault(require("../lib/db"));
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const dataSanitizer_1 = require("../middleware/dataSanitizer");
+const ocorrenciasController = __importStar(require("../controllers/ocorrenciasController"));
 const router = express_1.default.Router();
 const upload = (0, multer_1.default)({ dest: 'uploads/' });
+// Aplicar autenticação e sanitização para todas as rotas de ocorrências
+router.use(authMiddleware_1.authenticateToken);
+router.use((0, dataSanitizer_1.sanitizeResponseData)());
 // 🔹 Atualizar apenas o resultado da ocorrência
 router.put('/:id/resultado', async (req, res) => {
     const { id } = req.params;
@@ -115,7 +154,7 @@ router.post('/:id/encerrar', async (req, res) => {
     }
 });
 // 🔹 Criar nova ocorrência
-router.post('/', async (req, res) => {
+router.post('/', (0, authMiddleware_1.requirePermission)('ocorrencias:create'), async (req, res) => {
     try {
         const dados = ocorrenciaSchema.parse(req.body);
         const { fotos, ...dadosSemFotos } = dados;
@@ -136,7 +175,7 @@ router.post('/', async (req, res) => {
     }
 });
 // 🔹 Buscar ocorrências com filtros
-router.get('/', async (req, res) => {
+router.get('/', (0, authMiddleware_1.requirePermission)('ocorrencias:read'), async (req, res) => {
     const { id, placa, cliente, prestador, inicio, fim } = req.query;
     try {
         const ocorrencias = await db_1.default.ocorrencia.findMany({
@@ -178,7 +217,7 @@ router.get('/', async (req, res) => {
     }
 });
 // 🔹 Buscar ocorrência por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', (0, authMiddleware_1.requirePermission)('ocorrencias:read'), async (req, res) => {
     const { id } = req.params;
     if (isNaN(Number(id)))
         return res.status(400).json({ error: 'ID inválido' });
@@ -275,7 +314,7 @@ router.post('/:id/fotos', upload.array('imagens'), async (req, res) => {
     }
 });
 // 🔹 Atualizar ocorrência
-router.put('/:id', async (req, res) => {
+router.put('/:id', (0, authMiddleware_1.requirePermission)('ocorrencias:update'), async (req, res) => {
     const { id } = req.params;
     if (isNaN(Number(id)))
         return res.status(400).json({ error: 'ID inválido' });
@@ -307,4 +346,6 @@ router.put('/:id', async (req, res) => {
         res.status(400).json({ error: 'Erro ao atualizar ocorrência', detalhes: String(error) });
     }
 });
+// Deletar ocorrência
+router.delete('/:id', (0, authMiddleware_1.requirePermission)('ocorrencias:delete'), ocorrenciasController.deletarOcorrencia);
 exports.default = router;
