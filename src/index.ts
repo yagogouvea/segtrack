@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import cors from 'cors';
-import { corsOptions } from './config/cors.config';
+import corsOptions from './config/cors.config';
 import prisma, { testDatabaseConnection } from "./config/database";
 
 import veiculosRoutes from "./routes/veiculos";
@@ -39,22 +39,6 @@ const app = express();
 
 // Aplicar CORS antes de qualquer middleware ou rota
 app.use(cors(corsOptions));
-
-// Adicionar headers de segurança padrão
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://segtrack.comerceoficial.com');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-  
-  next();
-});
 
 // Log de todas as requisições
 app.use((req, res, next) => {
