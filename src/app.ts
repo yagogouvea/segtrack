@@ -4,6 +4,7 @@ import { testConnection } from './lib/db';
 import { authenticateToken, AuthRequest } from './middleware/authMiddleware';
 import { configureSecurityMiddleware } from './config/security';
 import { sanitizeResponseData } from './middleware/dataSanitizer';
+import cors from 'cors';
 import { corsOptions } from './config/cors.config';
 
 // Importando rotas
@@ -16,7 +17,7 @@ const app = express();
 configureSecurityMiddleware(app);
 
 // Aplicar CORS antes de qualquer outro middleware
-app.use(corsOptions);
+app.use(cors(corsOptions));
 
 // Basic middleware
 app.use(express.json({ limit: '1mb' }));

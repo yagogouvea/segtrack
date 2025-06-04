@@ -1,16 +1,12 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.corsOptions = void 0;
-const cors_1 = __importDefault(require("cors"));
 const allowedOrigins = [
     'https://segtrack.comerceoficial.com',
     'http://localhost:3000', // For local development
     'http://localhost:5173' // For Vite development server
 ];
-exports.corsOptions = (0, cors_1.default)({
+exports.corsOptions = {
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) {
@@ -24,8 +20,19 @@ exports.corsOptions = (0, cors_1.default)({
             callback(new Error('Not allowed by CORS'));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Access-Control-Request-Method',
+        'Access-Control-Request-Headers'
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
     credentials: true,
-    maxAge: 86400 // 24 hours
-});
+    maxAge: 86400, // 24 hours
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};

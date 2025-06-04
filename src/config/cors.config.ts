@@ -1,4 +1,5 @@
 import cors from 'cors';
+import { CorsOptions } from 'cors';
 
 const allowedOrigins = [
   'https://segtrack.comerceoficial.com',
@@ -6,8 +7,8 @@ const allowedOrigins = [
   'http://localhost:5173'   // For Vite development server
 ];
 
-export const corsOptions = cors({
-  origin: (origin, callback) => {
+export const corsOptions: CorsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       return callback(null, true);
@@ -20,8 +21,19 @@ export const corsOptions = cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
   credentials: true,
-  maxAge: 86400 // 24 hours
-}); 
+  maxAge: 86400, // 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}; 

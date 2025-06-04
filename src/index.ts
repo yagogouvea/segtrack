@@ -3,6 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import cors from 'cors';
 import { corsOptions } from './config/cors.config';
 import prisma, { testDatabaseConnection } from "./config/database";
 
@@ -37,13 +38,30 @@ console.log('🔧 Configurando Express...');
 const app = express();
 
 // Aplicar CORS antes de qualquer middleware ou rota
-app.use(corsOptions);
+app.use(cors(corsOptions));
+
+// Adicionar headers de segurança padrão
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://segtrack.comerceoficial.com');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+  
+  next();
+});
 
 // Log de todas as requisições
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   if (process.env.NODE_ENV === 'development') {
     console.log('Request Headers:', req.headers);
+    console.log('Origin:', req.headers.origin);
   }
   next();
 });
@@ -51,6 +69,16 @@ app.use((req, res, next) => {
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Root endpoint para verificar CORS
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok',
+    message: 'API is running',
+    cors: 'enabled',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Middleware básico

@@ -8,6 +8,7 @@ const db_1 = require("./lib/db");
 const authMiddleware_1 = require("./middleware/authMiddleware");
 const security_1 = require("./config/security");
 const dataSanitizer_1 = require("./middleware/dataSanitizer");
+const cors_1 = __importDefault(require("cors"));
 const cors_config_1 = require("./config/cors.config");
 // Importando rotas
 const prestadoresPublico_1 = __importDefault(require("./routes/prestadoresPublico"));
@@ -16,7 +17,7 @@ const app = (0, express_1.default)();
 // Configurações de segurança
 (0, security_1.configureSecurityMiddleware)(app);
 // Aplicar CORS antes de qualquer outro middleware
-app.use(cors_config_1.corsOptions);
+app.use((0, cors_1.default)(cors_config_1.corsOptions));
 // Basic middleware
 app.use(express_1.default.json({ limit: '1mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '1mb' }));

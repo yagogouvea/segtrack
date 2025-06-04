@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const cors_1 = __importDefault(require("cors"));
 const cors_config_1 = require("./config/cors.config");
 const veiculos_1 = __importDefault(require("./routes/veiculos"));
 const clientes_1 = __importDefault(require("./routes/clientes"));
@@ -36,18 +37,41 @@ else {
 console.log('🔧 Configurando Express...');
 const app = (0, express_1.default)();
 // Aplicar CORS antes de qualquer middleware ou rota
-app.use(cors_config_1.corsOptions);
+app.use((0, cors_1.default)(cors_config_1.corsOptions));
+// Adicionar headers de segurança padrão
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'https://segtrack.comerceoficial.com');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+        res.status(204).end();
+        return;
+    }
+    next();
+});
 // Log de todas as requisições
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     if (process.env.NODE_ENV === 'development') {
         console.log('Request Headers:', req.headers);
+        console.log('Origin:', req.headers.origin);
     }
     next();
 });
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+// Root endpoint para verificar CORS
+app.get('/', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        message: 'API is running',
+        cors: 'enabled',
+        timestamp: new Date().toISOString()
+    });
 });
 // Middleware básico
 app.use(express_1.default.json());
