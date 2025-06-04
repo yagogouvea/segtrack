@@ -49,12 +49,12 @@ export interface Ocorrencia {
   atualizado_em: Date;
   data_acionamento?: Date | null;
   fotos?: Foto[];
-  tem_fotos?: boolean;
-  encerradaEm?: Date | null;
 }
 
-export interface OcorrenciaFormatada extends Omit<Ocorrencia, 'inicio' | 'chegada' | 'termino'> {
+export interface OcorrenciaFormatada extends Omit<Ocorrencia, 'inicio' | 'chegada' | 'termino' | 'encerrada_em'> {
   inicio: string | null;
   chegada: string | null;
   termino: string | null;
+  encerradaEm: Date | null;
+  tem_fotos: boolean;
 } 
