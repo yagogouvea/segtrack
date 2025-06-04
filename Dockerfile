@@ -51,7 +51,7 @@ RUN mkdir -p uploads relatorios-pdf && \
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOST=0.0.0.0
-ENV NODE_OPTIONS="--max-old-space-size=512 --max-semi-space-size=64 --optimize-for-size"
+ENV NODE_OPTIONS="--max-old-space-size=512"
 
 # Generate Prisma Client again in production
 RUN npx prisma generate
@@ -66,5 +66,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# Start the application with proper signal handling
-CMD ["node", "--enable-source-maps", "dist/server.js"]
+# Start the application with proper signal handling and garbage collection settings
+CMD ["node", "--enable-source-maps", "--gc-interval=100", "--max-semi-space-size=64", "dist/server.js"]
