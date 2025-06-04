@@ -46,4 +46,13 @@ router.delete('/:id', authenticateToken, (req: AuthRequest, res, next) => {
   requirePermission('users:delete')(req, res, next);
 }, userController.deleteUser);
 
+// Atualizar senha do usuário
+router.put('/:id/password', authenticateToken, (req: AuthRequest, res, next) => {
+  // Permite que o usuário atualize sua própria senha ou que um admin atualize qualquer senha
+  if (req.user?.id === req.params.id || req.user?.role === 'admin') {
+    return next();
+  }
+  requirePermission('users:update')(req, res, next);
+}, userController.updateUserPassword);
+
 export default router;

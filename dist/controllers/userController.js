@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.getUser = exports.getUsers = void 0;
+exports.deleteUser = exports.updateUserPassword = exports.updateUser = exports.createUser = exports.getUser = exports.getUsers = void 0;
 const db_1 = __importDefault(require("../lib/db"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const zod_1 = require("zod");
@@ -31,10 +31,20 @@ function permissionsObjectToArray(permissionsObj) {
 const userSchema = zod_1.z.object({
     name: zod_1.z.string().min(3),
     email: zod_1.z.string().email(),
-    password: zod_1.z.string().min(6).optional(),
+    password: zod_1.z.string().min(6),
     role: zod_1.z.enum(['admin', 'user']),
     permissions: zod_1.z.array(zod_1.z.string()).or(zod_1.z.string()),
-    active: zod_1.z.boolean().default(true),
+    active: zod_1.z.boolean().default(true)
+});
+// Schema para validação de atualização de usuário
+const userUpdateSchema = userSchema.partial().omit({ password: true });
+// Schema para validação de senha
+const passwordUpdateSchema = zod_1.z.object({
+    password: zod_1.z.string().min(6),
+    confirmPassword: zod_1.z.string().min(6)
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"]
 });
 // GET /api/users
 const getUsers = async (_req, res) => {
@@ -98,8 +108,6 @@ const createUser = async (req, res) => {
         if (existingUser) {
             return res.status(400).json({ error: 'Email já cadastrado' });
         }
-        // Hash da senha
-        const passwordHash = data.password ? await bcrypt_1.default.hash(data.password, 10) : undefined;
         // Garantir que permissions seja uma string JSON válida
         let permissionsString;
         if (Array.isArray(data.permissions)) {
@@ -121,9 +129,12 @@ const createUser = async (req, res) => {
         }
         const user = await db_1.default.user.create({
             data: {
-                ...data,
-                passwordHash,
-                permissions: permissionsString
+                name: data.name,
+                email: data.email,
+                passwordHash: await bcrypt_1.default.hash(data.password, 10),
+                role: data.role,
+                permissions: permissionsString,
+                active: data.active
             },
             select: {
                 id: true,
@@ -151,7 +162,7 @@ exports.createUser = createUser;
 const updateUser = async (req, res) => {
     const { id } = req.params;
     try {
-        const data = userSchema.partial().parse(req.body);
+        const data = userUpdateSchema.parse(req.body);
         // Se email foi fornecido, verificar se já existe
         if (data.email) {
             const existingUser = await db_1.default.user.findFirst({
@@ -164,8 +175,6 @@ const updateUser = async (req, res) => {
                 return res.status(400).json({ error: 'Email já cadastrado por outro usuário' });
             }
         }
-        // Hash da senha se fornecida
-        const passwordHash = data.password ? await bcrypt_1.default.hash(data.password, 10) : undefined;
         // Buscar usuário atual para manter as permissões existentes
         const currentUser = await db_1.default.user.findUnique({
             where: { id },
@@ -190,10 +199,11 @@ const updateUser = async (req, res) => {
                     })()
                     : JSON.stringify([])
             : currentUser.permissions || JSON.stringify([]);
-        // Atualizar primeiro os campos obrigatórios
+        // Preparar campos obrigatórios para atualização
         const requiredFields = {
             permissions: newPermissions
         };
+        // Atualizar primeiro os campos obrigatórios
         await db_1.default.user.update({
             where: { id },
             data: requiredFields
@@ -208,8 +218,6 @@ const updateUser = async (req, res) => {
             optionalFields.role = data.role;
         if (data.active !== undefined)
             optionalFields.active = data.active;
-        if (passwordHash)
-            optionalFields.passwordHash = passwordHash;
         // Atualizar campos opcionais se houver algum
         if (Object.keys(optionalFields).length > 0) {
             await db_1.default.user.update({
@@ -245,6 +253,35 @@ const updateUser = async (req, res) => {
     }
 };
 exports.updateUser = updateUser;
+// PUT /api/users/:id/password
+const updateUserPassword = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const data = passwordUpdateSchema.parse(req.body);
+        // Verificar se o usuário existe
+        const user = await db_1.default.user.findUnique({
+            where: { id }
+        });
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        // Atualizar a senha
+        const passwordHash = await bcrypt_1.default.hash(data.password, 10);
+        await db_1.default.user.update({
+            where: { id },
+            data: { passwordHash }
+        });
+        res.json({ message: 'Senha atualizada com sucesso' });
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            return res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+        }
+        console.error('Erro ao atualizar senha:', error);
+        res.status(500).json({ error: 'Erro ao atualizar senha' });
+    }
+};
+exports.updateUserPassword = updateUserPassword;
 // DELETE /api/users/:id
 const deleteUser = async (req, res) => {
     const { id } = req.params;

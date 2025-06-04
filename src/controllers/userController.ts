@@ -21,7 +21,12 @@ interface PermissionsObject {
 }
 
 // Interface para campos opcionais de atualização
-type UserUpdateFields = Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>;
+type UserUpdateFields = Partial<{
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+}>;
 
 // Interface para campos obrigatórios de atualização
 interface RequiredUpdateFields {
@@ -53,10 +58,22 @@ function permissionsObjectToArray(permissionsObj: PermissionsObject): string[] {
 const userSchema = z.object({
   name: z.string().min(3),
   email: z.string().email(),
-  password: z.string().min(6).optional(),
+  password: z.string().min(6),
   role: z.enum(['admin', 'user']),
   permissions: z.array(z.string()).or(z.string()),
-  active: z.boolean().default(true),
+  active: z.boolean().default(true)
+});
+
+// Schema para validação de atualização de usuário
+const userUpdateSchema = userSchema.partial().omit({ password: true });
+
+// Schema para validação de senha
+const passwordUpdateSchema = z.object({
+  password: z.string().min(6),
+  confirmPassword: z.string().min(6)
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"]
 });
 
 // GET /api/users
@@ -126,9 +143,6 @@ export const createUser = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email já cadastrado' });
     }
 
-    // Hash da senha
-    const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : undefined;
-
     // Garantir que permissions seja uma string JSON válida
     let permissionsString: string;
     if (Array.isArray(data.permissions)) {
@@ -148,9 +162,12 @@ export const createUser = async (req: Request, res: Response) => {
 
     const user = await prisma.user.create({
       data: {
-        ...data,
-        passwordHash,
-        permissions: permissionsString
+        name: data.name,
+        email: data.email,
+        passwordHash: await bcrypt.hash(data.password, 10),
+        role: data.role,
+        permissions: permissionsString,
+        active: data.active
       },
       select: {
         id: true,
@@ -179,7 +196,7 @@ export const updateUser = async (req: Request, res: Response) => {
   const { id } = req.params;
   
   try {
-    const data = userSchema.partial().parse(req.body);
+    const data = userUpdateSchema.parse(req.body);
 
     // Se email foi fornecido, verificar se já existe
     if (data.email) {
@@ -194,9 +211,6 @@ export const updateUser = async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Email já cadastrado por outro usuário' });
       }
     }
-
-    // Hash da senha se fornecida
-    const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : undefined;
 
     // Buscar usuário atual para manter as permissões existentes
     const currentUser = await prisma.user.findUnique({
@@ -224,11 +238,12 @@ export const updateUser = async (req: Request, res: Response) => {
           : JSON.stringify([])
       : currentUser.permissions || JSON.stringify([]);
 
-    // Atualizar primeiro os campos obrigatórios
+    // Preparar campos obrigatórios para atualização
     const requiredFields: RequiredUpdateFields = {
       permissions: newPermissions
     };
 
+    // Atualizar primeiro os campos obrigatórios
     await prisma.user.update({
       where: { id },
       data: requiredFields
@@ -241,7 +256,6 @@ export const updateUser = async (req: Request, res: Response) => {
     if (data.email) optionalFields.email = data.email;
     if (data.role) optionalFields.role = data.role;
     if (data.active !== undefined) optionalFields.active = data.active;
-    if (typeof passwordHash === 'string') optionalFields.passwordHash = passwordHash;
 
     // Atualizar campos opcionais se houver algum
     if (Object.keys(optionalFields).length > 0) {
@@ -277,6 +291,39 @@ export const updateUser = async (req: Request, res: Response) => {
     }
     console.error('Erro ao atualizar usuário:', error);
     res.status(500).json({ error: 'Erro ao atualizar usuário' });
+  }
+};
+
+// PUT /api/users/:id/password
+export const updateUserPassword = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  try {
+    const data = passwordUpdateSchema.parse(req.body);
+
+    // Verificar se o usuário existe
+    const user = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Atualizar a senha
+    const passwordHash = await bcrypt.hash(data.password, 10);
+    await prisma.user.update({
+      where: { id },
+      data: { passwordHash }
+    });
+
+    res.json({ message: 'Senha atualizada com sucesso' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+    }
+    console.error('Erro ao atualizar senha:', error);
+    res.status(500).json({ error: 'Erro ao atualizar senha' });
   }
 };
 
