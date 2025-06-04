@@ -43,6 +43,32 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src/config ./dist/config
 
+# Create startup script
+RUN echo '#!/bin/sh\n\
+echo "Starting application..."\n\
+node --enable-source-maps --gc-interval=100 --max-semi-space-size=64 dist/server.js & \n\
+PID=$!\n\
+\n\
+echo "Waiting for application to start..."\n\
+timeout=60\n\
+counter=0\n\
+while [ $counter -lt $timeout ]; do\n\
+    if curl -s http://localhost:${PORT:-8080}/health > /dev/null; then\n\
+        echo "Application successfully started"\n\
+        wait $PID\n\
+        exit $?\n\
+    fi\n\
+    sleep 1\n\
+    counter=$((counter + 1))\n\
+    if [ $((counter % 5)) -eq 0 ]; then\n\
+        echo "Still waiting for application to start... ($counter seconds)"\n\
+    fi\n\
+done\n\
+\n\
+echo "Application failed to start within $timeout seconds"\n\
+kill $PID\n\
+exit 1' > /app/start.sh && chmod +x /app/start.sh
+
 # Create necessary directories with proper permissions
 RUN mkdir -p uploads relatorios-pdf && \
     chown -R node:node /app
@@ -63,8 +89,8 @@ USER node
 EXPOSE 8080
 
 # Health check with proper timeout and interval
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# Start the application with proper signal handling and garbage collection settings
-CMD ["node", "--enable-source-maps", "--gc-interval=100", "--max-semi-space-size=64", "dist/server.js"]
+# Start the application with the startup script
+CMD ["/app/start.sh"]
