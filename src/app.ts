@@ -5,6 +5,7 @@ import { testConnection } from './lib/db';
 import { authenticateToken, AuthRequest } from './middleware/authMiddleware';
 import { corsMiddleware } from './middleware/cors';
 import { configureSecurityMiddleware } from './config/security';
+import { sanitizeResponseData } from './middleware/dataSanitizer';
 
 // Importando rotas
 import prestadoresPublicoRoutes from './routes/prestadoresPublico';
@@ -22,10 +23,13 @@ app.use(corsMiddleware);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Rotas públicas
+// Aplicar sanitização de dados para todas as respostas
+app.use(sanitizeResponseData());
+
+// Rotas públicas (com dados limitados)
 app.use('/api/prestadores/publico', prestadoresPublicoRoutes);
 
-// Rotas protegidas
+// Rotas protegidas (requerem autenticação)
 app.use('/api/protected', authenticateToken, protectedRoutes);
 
 // Health check endpoint (versão segura)

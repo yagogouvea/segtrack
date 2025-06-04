@@ -5,9 +5,16 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { Ocorrencia, Foto, OcorrenciaFormatada } from '../types/ocorrencia';
+import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
+import { sanitizeResponseData } from '../middleware/dataSanitizer';
+import * as ocorrenciasController from '../controllers/ocorrenciasController';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
+
+// Aplicar autenticação e sanitização para todas as rotas de ocorrências
+router.use(authenticateToken);
+router.use(sanitizeResponseData());
 
 // 🔹 Atualizar apenas o resultado da ocorrência
 router.put('/:id/resultado', async (req, res) => {
@@ -121,7 +128,9 @@ router.post('/:id/encerrar', async (req, res) => {
 });
 
 // 🔹 Criar nova ocorrência
-router.post('/', async (req: Request, res: Response) => {
+router.post('/',
+  requirePermission('ocorrencias:create'),
+  async (req: Request, res: Response) => {
   try {
     const dados = ocorrenciaSchema.parse(req.body);
     const { fotos, ...dadosSemFotos } = dados;
@@ -145,7 +154,9 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // 🔹 Buscar ocorrências com filtros
-router.get('/', async (req, res) => {
+router.get('/', 
+  requirePermission('ocorrencias:read'),
+  async (req, res) => {
   const { id, placa, cliente, prestador, inicio, fim } = req.query;
 
   try {
@@ -192,7 +203,9 @@ router.get('/', async (req, res) => {
 });
 
 // 🔹 Buscar ocorrência por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id',
+  requirePermission('ocorrencias:read'),
+  async (req, res) => {
   const { id } = req.params;
   if (isNaN(Number(id))) return res.status(400).json({ error: 'ID inválido' });
 
@@ -297,7 +310,9 @@ router.post('/:id/fotos', upload.array('imagens'), async (req, res) => {
 });
 
 // 🔹 Atualizar ocorrência
-router.put('/:id', async (req, res) => {
+router.put('/:id',
+  requirePermission('ocorrencias:update'),
+  async (req, res) => {
   const { id } = req.params;
   if (isNaN(Number(id))) return res.status(400).json({ error: 'ID inválido' });
 
@@ -331,5 +346,11 @@ router.put('/:id', async (req, res) => {
     res.status(400).json({ error: 'Erro ao atualizar ocorrência', detalhes: String(error) });
   }
 });
+
+// Deletar ocorrência
+router.delete('/:id',
+  requirePermission('ocorrencias:delete'),
+  ocorrenciasController.deletarOcorrencia
+);
 
 export default router;
