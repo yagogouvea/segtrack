@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 
 if (!process.env.JWT_SECRET) {
@@ -18,6 +18,20 @@ export interface AuthUser {
 // Interface para requisições autenticadas
 export interface AuthRequest extends Request {
   user?: AuthUser;
+}
+
+// Helper type for authenticated route handlers
+export type AuthenticatedRequestHandler = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => Promise<void | Response> | void | Response;
+
+// Helper function to properly type authenticated route handlers
+export function createAuthenticatedHandler(handler: AuthenticatedRequestHandler): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    return handler(req as AuthRequest, res, next);
+  };
 }
 
 // Rate limiting para falhas de autenticação

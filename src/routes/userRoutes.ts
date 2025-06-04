@@ -1,58 +1,53 @@
-import { Router } from 'express';
-import { authenticateToken, requirePermission, AuthRequest } from '../middleware/authMiddleware';
+import express from 'express';
+import { requirePermission, AuthRequest, createAuthenticatedHandler } from '../middleware/authMiddleware';
 import * as userController from '../controllers/userController';
 
-const router: Router = Router();
+const router = express.Router();
 
-// Listar todos os usuários (requer permissão de leitura de usuários)
-router.get('/', authenticateToken, (req: AuthRequest, res, next) => {
-  // Se for admin, permite acesso
-  if (req.user?.role === 'admin') {
-    return next();
-  }
-  // Caso contrário, verifica permissão específica
-  requirePermission('users:read')(req, res, next);
-}, userController.getUsers);
+// Get current user
+router.get('/me', 
+  createAuthenticatedHandler(async (req: AuthRequest, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Não autenticado' });
+    }
+    res.json(req.user);
+  })
+);
 
-// Obter usuário específico
-router.get('/:id', authenticateToken, (req: AuthRequest, res, next) => {
-  if (req.user?.role === 'admin') {
-    return next();
-  }
-  requirePermission('users:read')(req, res, next);
-}, userController.getUser);
+// Get all users
+router.get('/', 
+  requirePermission('users:read'),
+  userController.getUsers
+);
 
-// Criar novo usuário
-router.post('/', authenticateToken, (req: AuthRequest, res, next) => {
-  if (req.user?.role === 'admin') {
-    return next();
-  }
-  requirePermission('users:create')(req, res, next);
-}, userController.createUser);
+// Get user by ID
+router.get('/:id',
+  requirePermission('users:read'),
+  userController.getUser
+);
 
-// Atualizar usuário
-router.put('/:id', authenticateToken, (req: AuthRequest, res, next) => {
-  if (req.user?.role === 'admin') {
-    return next();
-  }
-  requirePermission('users:update')(req, res, next);
-}, userController.updateUser);
+// Create user
+router.post('/',
+  requirePermission('users:create'),
+  userController.createUser
+);
 
-// Excluir usuário (requer permissão de exclusão de usuários)
-router.delete('/:id', authenticateToken, (req: AuthRequest, res, next) => {
-  if (req.user?.role === 'admin') {
-    return next();
-  }
-  requirePermission('users:delete')(req, res, next);
-}, userController.deleteUser);
+// Update user
+router.put('/:id',
+  requirePermission('users:update'),
+  userController.updateUser
+);
 
-// Atualizar senha do usuário
-router.put('/:id/password', authenticateToken, (req: AuthRequest, res, next) => {
-  // Permite que o usuário atualize sua própria senha ou que um admin atualize qualquer senha
-  if (req.user?.id === req.params.id || req.user?.role === 'admin') {
-    return next();
-  }
-  requirePermission('users:update')(req, res, next);
-}, userController.updateUserPassword);
+// Delete user
+router.delete('/:id',
+  requirePermission('users:delete'),
+  userController.deleteUser
+);
+
+// Update user password
+router.put('/:id/password',
+  requirePermission('users:update'),
+  userController.updateUserPassword
+);
 
 export default router;

@@ -123,17 +123,27 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const prestadores = await prisma.prestador.findMany({
-      where: { ativo: true },
+      where: { aprovado: true },
       select: {
         id: true,
         nome: true,
-        tipo: true,
         cidade: true,
         estado: true,
-        avaliacao: true
+        funcoes: {
+          select: {
+            funcao: true
+          }
+        }
       }
     });
-    res.json(prestadores);
+
+    // Transform the response to include functions in a flattened format
+    const formattedPrestadores = prestadores.map(p => ({
+      ...p,
+      funcoes: p.funcoes.map(f => f.funcao)
+    }));
+
+    res.json(formattedPrestadores);
   } catch (error) {
     console.error('Erro ao buscar prestadores:', error);
     res.status(500).json({ error: 'Erro ao buscar prestadores' });
@@ -145,15 +155,18 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const prestador = await prisma.prestador.findUnique({
-      where: { id },
+      where: { id: Number(id) },
       select: {
         id: true,
         nome: true,
-        tipo: true,
         cidade: true,
         estado: true,
-        avaliacao: true,
-        descricao: true
+        funcoes: {
+          select: {
+            funcao: true
+          }
+        },
+        aprovado: true
       }
     });
 
@@ -161,7 +174,13 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Prestador não encontrado' });
     }
 
-    res.json(prestador);
+    // Transform the response to include functions in a flattened format
+    const formattedPrestador = {
+      ...prestador,
+      funcoes: prestador.funcoes.map(f => f.funcao)
+    };
+
+    res.json(formattedPrestador);
   } catch (error) {
     console.error('Erro ao buscar prestador:', error);
     res.status(500).json({ error: 'Erro ao buscar prestador' });
