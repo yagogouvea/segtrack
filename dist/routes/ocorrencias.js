@@ -46,6 +46,17 @@ const authMiddleware_1 = require("../middleware/authMiddleware");
 const dataSanitizer_1 = require("../middleware/dataSanitizer");
 const ocorrenciasController = __importStar(require("../controllers/ocorrenciasController"));
 const router = express_1.default.Router();
+// Garantir que o diretório de uploads existe
+const uploadsDir = path_1.default.join(__dirname, '../../uploads');
+if (!fs_1.default.existsSync(uploadsDir)) {
+    try {
+        fs_1.default.mkdirSync(uploadsDir, { recursive: true });
+        console.log('Diretório de uploads criado:', uploadsDir);
+    }
+    catch (error) {
+        console.error('Erro ao criar diretório de uploads:', error);
+    }
+}
 const upload = (0, multer_1.default)({ dest: 'uploads/' });
 // Aplicar autenticação e sanitização para todas as rotas de ocorrências
 router.use(authMiddleware_1.authenticateToken);
@@ -178,6 +189,16 @@ router.post('/', (0, authMiddleware_1.requirePermission)('ocorrencias:create'), 
 router.get('/', (0, authMiddleware_1.requirePermission)('ocorrencias:read'), async (req, res) => {
     const { id, placa, cliente, prestador, inicio, fim } = req.query;
     try {
+        console.log('Iniciando busca de ocorrências com filtros:', { id, placa, cliente, prestador, inicio, fim });
+        // Test database connection before proceeding
+        const isConnected = await db_1.default.$queryRaw `SELECT 1`;
+        if (!isConnected) {
+            console.error('❌ Falha na conexão com o banco de dados');
+            return res.status(500).json({
+                error: 'Erro de conexão com o banco de dados',
+                details: process.env.NODE_ENV === 'development' ? 'Database connection failed' : undefined
+            });
+        }
         const ocorrencias = await db_1.default.ocorrencia.findMany({
             where: {
                 ...(id ? { id: Number(id) } : {}),
@@ -198,6 +219,7 @@ router.get('/', (0, authMiddleware_1.requirePermission)('ocorrencias:read'), asy
                 fotos: true
             }
         });
+        console.log(`✅ Encontradas ${ocorrencias.length} ocorrências`);
         const formatarData = (data) => data ? new Date(data).toISOString().slice(0, 16) : null;
         const formatadas = ocorrencias.map((o) => ({
             ...o,
@@ -210,10 +232,35 @@ router.get('/', (0, authMiddleware_1.requirePermission)('ocorrencias:read'), asy
             chegada: formatarData(o.chegada || null),
             termino: formatarData(o.termino || null)
         }));
+        console.log('✅ Ocorrências formatadas com sucesso');
         res.json(formatadas);
     }
     catch (error) {
-        res.status(500).json({ error: 'Erro ao buscar ocorrências', detalhes: String(error) });
+        console.error('❌ Erro detalhado ao buscar ocorrências:', {
+            error,
+            stack: error instanceof Error ? error.stack : undefined,
+            message: error instanceof Error ? error.message : String(error),
+            query: req.query
+        });
+        // Check for specific error types
+        if (error instanceof Error) {
+            if (error.message.includes('connect ECONNREFUSED')) {
+                return res.status(500).json({
+                    error: 'Erro de conexão com o banco de dados',
+                    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+                });
+            }
+            if (error.message.includes('Prisma Client')) {
+                return res.status(500).json({
+                    error: 'Erro no cliente Prisma',
+                    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+                });
+            }
+        }
+        res.status(500).json({
+            error: 'Erro ao buscar ocorrências',
+            details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+        });
     }
 });
 // 🔹 Buscar ocorrência por ID
