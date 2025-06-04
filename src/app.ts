@@ -1,71 +1,78 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { testConnection } from './lib/db';
+import { authenticateToken, AuthRequest } from './middleware/authMiddleware';
+import { corsMiddleware } from './middleware/cors';
+import { configureSecurityMiddleware } from './config/security';
 
 // Importando rotas
 import prestadoresPublicoRoutes from './routes/prestadoresPublico';
+import protectedRoutes from './routes/protectedRoutes';
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+// Configurações de segurança
+configureSecurityMiddleware(app);
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-
-// Pre-flight requests
-app.options('*', cors());
+app.use(corsMiddleware);
 
 // Basic middleware
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Registrando rotas
+// Rotas públicas
 app.use('/api/prestadores/publico', prestadoresPublicoRoutes);
 
-// Health check endpoint
+// Rotas protegidas
+app.use('/api/protected', authenticateToken, protectedRoutes);
+
+// Health check endpoint (versão segura)
 app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.status(200).json({ status: 'healthy' });
 });
 
-// Request logging middleware
+// Request logging middleware (versão segura)
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  const sanitizedUrl = req.url.replace(/[<>]/g, '');
+  const sanitizedMethod = req.method.replace(/[<>]/g, '');
+  console.log(`${new Date().toISOString()} - ${sanitizedMethod} ${sanitizedUrl}`);
   next();
 });
 
-// Global error handler
+// Global error handler (versão segura)
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err);
+  console.error('Erro:', {
+    name: err.name,
+    message: err.message.replace(/[<>]/g, ''),
+    timestamp: new Date().toISOString()
+  });
   
   if (err instanceof z.ZodError) {
     return res.status(400).json({
       error: 'Dados inválidos',
-      details: err.errors
+      details: err.errors.map(e => ({
+        message: e.message.replace(/[<>]/g, ''),
+        path: e.path
+      }))
     });
   }
   
   res.status(500).json({
     error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    message: process.env.NODE_ENV === 'development' 
+      ? err.message.replace(/[<>]/g, '')
+      : undefined
   });
 });
 
 // Test database connection on startup
-testConnection().catch(console.error);
+testConnection().catch(error => {
+  console.error('Erro ao conectar com o banco de dados:', {
+    message: error.message.replace(/[<>]/g, ''),
+    timestamp: new Date().toISOString()
+  });
+});
 
 export default app; 

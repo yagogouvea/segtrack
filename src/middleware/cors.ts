@@ -1,54 +1,89 @@
 import { Request, Response, NextFunction } from 'express';
 
+// Lista de origens permitidas
 export const ALLOWED_ORIGINS = [
   'https://segtrack-frontend-2mhd.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000'
+].filter(Boolean);
+
+// Métodos HTTP permitidos
+export const ALLOWED_METHODS = [
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+  'OPTIONS'
 ];
 
-export const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'];
-
+// Headers permitidos
 export const ALLOWED_HEADERS = [
   'Content-Type',
   'Authorization',
   'X-Requested-With',
   'Accept',
-  'Origin',
-  'Access-Control-Request-Method',
-  'Access-Control-Request-Headers'
+  'Origin'
 ];
+
+// Rate limiting por origem
+const requestCounts = new Map<string, { count: number; timestamp: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minuto
+const MAX_REQUESTS_PER_WINDOW = 100;
 
 export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
   const origin = req.headers.origin;
+  const ip = req.ip;
 
-  // Log da requisição para debug
-  console.log(`🌐 [CORS] ${req.method} ${req.path} - Origin: ${origin || 'No origin'}`);
+  // Rate limiting
+  const now = Date.now();
+  const requestData = requestCounts.get(ip) || { count: 0, timestamp: now };
 
-  // Sempre incluir headers básicos de CORS
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
-
-  // Verificar se a origem é permitida
-  if (origin && (ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app'))) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (!origin) {
-    // Para requisições sem origem (ex: Postman, curl)
-    res.setHeader('Access-Control-Allow-Origin', '*');
+  if (now - requestData.timestamp > RATE_LIMIT_WINDOW) {
+    requestCounts.set(ip, { count: 1, timestamp: now });
   } else {
-    console.warn(`❌ [CORS] Origem bloqueada: ${origin}`);
+    requestData.count++;
+    if (requestData.count > MAX_REQUESTS_PER_WINDOW) {
+      return res.status(429).json({
+        error: 'Too Many Requests',
+        message: 'Por favor, aguarde um momento antes de fazer mais requisições.'
+      });
+    }
+    requestCounts.set(ip, requestData);
+  }
+
+  // Verificação de origem
+  if (!origin) {
     return res.status(403).json({
       error: 'CORS Error',
-      message: `Origin '${origin}' não permitida`,
-      allowedOrigins: ALLOWED_ORIGINS
+      message: 'Origem não fornecida'
     });
   }
 
-  // Tratamento especial para requisições OPTIONS (preflight)
+  // Verificar se a origem é permitida
+  if (!ALLOWED_ORIGINS.includes(origin) && !origin.endsWith('.vercel.app')) {
+    console.warn(`❌ [CORS] Origem bloqueada: ${origin}`);
+    return res.status(403).json({
+      error: 'CORS Error',
+      message: 'Origem não permitida'
+    });
+  }
+
+  // Configurar headers CORS
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', ALLOWED_METHODS.join(', '));
+  res.setHeader('Access-Control-Allow-Headers', ALLOWED_HEADERS.join(', '));
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '3600');
+
+  // Headers de segurança adicionais
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Tratamento de preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Methods', ALLOWED_METHODS.join(', '));
-    res.setHeader('Access-Control-Allow-Headers', ALLOWED_HEADERS.join(', '));
-    
-    console.log('✅ [CORS] Respondendo preflight OPTIONS');
     return res.status(204).end();
   }
 
