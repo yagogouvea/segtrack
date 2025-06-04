@@ -120,16 +120,28 @@ export const createUser = async (req: Request, res: Response) => {
     // Hash da senha
     const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : undefined;
 
-    // Converter permissions para string se for array
-    const permissions = Array.isArray(data.permissions) 
-      ? JSON.stringify(data.permissions)
-      : data.permissions;
+    // Garantir que permissions seja uma string JSON válida
+    let permissionsString: string;
+    if (Array.isArray(data.permissions)) {
+      permissionsString = JSON.stringify(data.permissions);
+    } else if (typeof data.permissions === 'string') {
+      // Verificar se já é um JSON válido
+      try {
+        JSON.parse(data.permissions);
+        permissionsString = data.permissions;
+      } catch {
+        // Se não for JSON válido, converter para array e depois para JSON
+        permissionsString = JSON.stringify([data.permissions]);
+      }
+    } else {
+      permissionsString = '[]';
+    }
 
     const user = await prisma.user.create({
       data: {
         ...data,
         passwordHash,
-        permissions
+        permissions: permissionsString
       },
       select: {
         id: true,
@@ -177,20 +189,37 @@ export const updateUser = async (req: Request, res: Response) => {
     // Hash da senha se fornecida
     const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : undefined;
 
-    // Converter permissions para string se for array
-    const permissions = data.permissions 
-      ? Array.isArray(data.permissions) 
-        ? JSON.stringify(data.permissions)
-        : data.permissions
-      : undefined;
+    // Criar objeto de atualização apenas com campos definidos
+    const updateData: Record<string, any> = {
+      // Garantir que permissions tenha sempre um valor padrão
+      permissions: '[]'
+    };
+
+    if (data.name) updateData.name = data.name;
+    if (data.email) updateData.email = data.email;
+    if (data.role) updateData.role = data.role;
+    if (data.active !== undefined) updateData.active = data.active;
+    if (passwordHash) updateData.passwordHash = passwordHash;
+
+    // Processar permissions se fornecido
+    if (data.permissions) {
+      if (Array.isArray(data.permissions)) {
+        updateData.permissions = JSON.stringify(data.permissions);
+      } else if (typeof data.permissions === 'string') {
+        try {
+          // Verifica se é um JSON válido
+          JSON.parse(data.permissions);
+          updateData.permissions = data.permissions;
+        } catch {
+          // Se não for JSON válido, converte para array
+          updateData.permissions = JSON.stringify([data.permissions]);
+        }
+      }
+    }
 
     const user = await prisma.user.update({
       where: { id },
-      data: {
-        ...data,
-        passwordHash: passwordHash ?? undefined,
-        permissions: permissions ?? undefined
-      },
+      data: updateData,
       select: {
         id: true,
         name: true,
