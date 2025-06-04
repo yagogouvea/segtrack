@@ -1,16 +1,106 @@
 // backend/src/lib/db.ts
 import { PrismaClient } from '@prisma/client';
+import dns from 'dns';
+import net from 'net';
+import { promisify } from 'util';
+
+const dnsLookup = promisify(dns.lookup);
+const MAX_CONNECTION_ATTEMPTS = 10;
+const BASE_DELAY = 1000; // 1 segundo
 
 // Configuração do Prisma com retry e logs
 const prisma = new PrismaClient({
-  log: ['error', 'warn', 'info', 'query'],
-  errorFormat: 'pretty'
+  log: [
+    { level: 'query', emit: 'event' },
+    { level: 'error', emit: 'stdout' },
+    { level: 'info', emit: 'stdout' },
+    { level: 'warn', emit: 'stdout' }
+  ],
+});
+
+// Log de todas as queries para debug
+prisma.$on('query', (e) => {
+  console.log('Query:', e);
 });
 
 let isConnected = false;
 let lastError: Error | null = null;
 let connectionAttempts = 0;
-const MAX_CONNECTION_ATTEMPTS = 10;
+
+// Função para testar conectividade com o host
+async function testHostConnectivity(host: string, port: number): Promise<string> {
+  try {
+    const socket = new net.Socket();
+    
+    const connectPromise = new Promise((resolve, reject) => {
+      socket.connect(port, host, () => {
+        socket.end();
+        resolve(true);
+      });
+      
+      socket.on('error', (err) => {
+        reject(err);
+      });
+    });
+    
+    await connectPromise;
+    return 'Host acessível';
+  } catch (error: any) {
+    return `Erro ao conectar: ${error.message}`;
+  }
+}
+
+// Função para extrair informações da DATABASE_URL
+function parseDatabaseUrl(url: string): { host: string; port: number } | null {
+  try {
+    const matches = url.match(/mysql:\/\/[^@]+@([^:]+):(\d+)\//);
+    if (matches) {
+      return {
+        host: matches[1],
+        port: parseInt(matches[2], 10)
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Função para diagnóstico de rede
+async function performNetworkDiagnostics(): Promise<object> {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    return { error: 'DATABASE_URL não definida' };
+  }
+
+  const dbInfo = parseDatabaseUrl(url);
+  if (!dbInfo) {
+    return { error: 'Não foi possível extrair informações da DATABASE_URL' };
+  }
+
+  try {
+    const { host, port } = dbInfo;
+    
+    // DNS lookup
+    const dnsResult = await dnsLookup(host);
+    
+    // Teste de conectividade
+    const connectivityResult = await testHostConnectivity(host, port);
+    
+    return {
+      host,
+      port,
+      ip: dnsResult.address,
+      family: `IPv${dnsResult.family}`,
+      connectivity: connectivityResult
+    };
+  } catch (error: any) {
+    return {
+      error: 'Erro no diagnóstico de rede',
+      details: error.message
+    };
+  }
+}
 
 // Função para analisar erros específicos do MySQL
 function analyzeMySQLError(error: any): string {
@@ -28,8 +118,14 @@ function analyzeMySQLError(error: any): string {
       return 'Banco de dados não existe. Verifique o nome do banco na URL.';
     case 'ENOTFOUND':
       return 'Host não encontrado. Verifique o endereço do servidor.';
+    case 'PROTOCOL_CONNECTION_LOST':
+      return 'Conexão perdida com o servidor MySQL.';
+    case 'ECONNRESET':
+      return 'Conexão resetada pelo servidor.';
+    case 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR':
+      return 'Erro fatal na conexão MySQL.';
     default:
-      return `Erro desconhecido: ${error.message}`;
+      return `Erro desconhecido (${errorCode}): ${error.message}`;
   }
 }
 
@@ -37,62 +133,54 @@ function analyzeMySQLError(error: any): string {
 export async function testConnection(): Promise<void> {
   try {
     connectionAttempts++;
-    console.log(`🔄 Tentativa de conexão #${connectionAttempts}`);
+    console.log(`\n🔄 Iniciando tentativa de conexão #${connectionAttempts}`);
     
     // Verifica se atingiu o número máximo de tentativas
     if (connectionAttempts > MAX_CONNECTION_ATTEMPTS) {
-      throw new Error(`Número máximo de tentativas (${MAX_CONNECTION_ATTEMPTS}) excedido. Reinicie o servidor.`);
+      throw new Error(`Número máximo de tentativas (${MAX_CONNECTION_ATTEMPTS}) excedido.`);
     }
     
-    // Verifica variáveis de ambiente
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL não está definida');
-    }
-
-    // Log da URL do banco (sem senha)
-    const dbUrlParts = process.env.DATABASE_URL.split('@');
-    if (dbUrlParts.length > 1) {
-      const safeUrl = `mysql://<credentials>@${dbUrlParts[1]}`;
-      console.log('🔌 Tentando conectar ao banco:', safeUrl);
-    }
-
+    // Diagnóstico de rede
+    console.log('🔍 Realizando diagnóstico de rede...');
+    const diagnostics = await performNetworkDiagnostics();
+    console.log('📊 Resultado do diagnóstico:', diagnostics);
+    
     // Tenta conectar
+    console.log('🔌 Iniciando conexão com o banco...');
     await prisma.$connect();
     
     // Testa a conexão com queries simples
+    console.log('🔍 Testando queries...');
     const [timeResult, versionResult] = await Promise.all([
       prisma.$queryRaw`SELECT NOW() as server_time`,
       prisma.$queryRaw`SELECT VERSION() as version`
     ]);
     
-    console.log('✅ Teste de conexão bem sucedido:', {
+    console.log('✅ Conexão estabelecida com sucesso:', {
       serverTime: timeResult,
-      mysqlVersion: versionResult
+      mysqlVersion: versionResult,
+      attempt: connectionAttempts
     });
     
     isConnected = true;
     lastError = null;
-    console.log(`✅ Conexão com o banco de dados estabelecida com sucesso (tentativa #${connectionAttempts})`);
   } catch (error: any) {
     isConnected = false;
     lastError = error;
     
     const errorAnalysis = analyzeMySQLError(error);
     
-    // Log detalhado do erro
-    console.error('❌ Erro ao conectar com o banco de dados:', {
+    console.error('\n❌ Erro de conexão:', {
       attempt: connectionAttempts,
       errorMessage: error.message,
       errorCode: error.code,
       errorNumber: error.number,
-      errorType: error.name,
       analysis: errorAnalysis,
-      stack: error.stack
+      stack: error.stack?.split('\n')
     });
 
-    // Se atingiu o limite de tentativas, para de tentar
     if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
-      console.error(`⛔ Número máximo de tentativas (${MAX_CONNECTION_ATTEMPTS}) atingido. Necessário reiniciar o servidor.`);
+      console.error(`\n⛔ Limite de ${MAX_CONNECTION_ATTEMPTS} tentativas atingido. Reinicie o servidor.`);
     }
 
     throw error;
@@ -133,48 +221,33 @@ export async function disconnectPrisma() {
 // Middleware para adicionar retry na conexão
 prisma.$use(async (params, next) => {
   const MAX_RETRIES = 3;
-  const BASE_DELAY = 1000; // 1 segundo
   let retries = 0;
   
   while (retries < MAX_RETRIES) {
     try {
-      // Se não estiver conectado, tenta reconectar
       if (!isConnected) {
-        console.log('⚠️ Conexão não estabelecida, tentando reconectar...');
+        console.log('\n⚠️ Conexão não estabelecida, tentando reconectar...');
         await testConnection();
       }
 
-      const result = await next(params);
-      if (retries > 0) {
-        console.log(`✅ Operação bem-sucedida após ${retries} tentativas`);
-      }
-      return result;
+      return await next(params);
     } catch (error: any) {
       retries++;
       isConnected = false;
       lastError = error;
       
       const errorAnalysis = analyzeMySQLError(error);
-      
-      const errorDetails = {
+      console.error(`\n❌ Erro na operação (tentativa ${retries}/${MAX_RETRIES}):`, {
         operation: params.action,
         model: params.model,
         errorMessage: error.message,
         errorCode: error.code,
-        errorNumber: error.number,
-        errorType: error.name,
-        analysis: errorAnalysis,
-        attempt: retries,
-        maxRetries: MAX_RETRIES
-      };
+        analysis: errorAnalysis
+      });
       
-      console.error(`❌ Erro na tentativa ${retries}/${MAX_RETRIES}:`, errorDetails);
+      if (retries === MAX_RETRIES) throw error;
       
-      if (retries === MAX_RETRIES) {
-        throw error;
-      }
-      
-      const delay = BASE_DELAY * Math.pow(2, retries - 1); // Backoff exponencial
+      const delay = BASE_DELAY * Math.pow(2, retries - 1);
       console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
