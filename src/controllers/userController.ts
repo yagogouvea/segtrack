@@ -3,7 +3,7 @@ import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { z } from 'zod';
-import { Prisma, User } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
 interface UserWithPermissions {
   id: string;
@@ -211,34 +211,36 @@ export const updateUser = async (req: Request, res: Response) => {
     }
 
     // Processar permissions
-    const permissions = data.permissions 
-      ? Array.isArray(data.permissions)
-        ? JSON.stringify(data.permissions)
-        : typeof data.permissions === 'string'
-          ? (() => {
-              try {
-                JSON.parse(data.permissions);
-                return data.permissions;
-              } catch {
-                return JSON.stringify([data.permissions]);
-              }
-            })()
-          : currentUser.permissions
-      : currentUser.permissions;
+    let newPermissions: string = currentUser.permissions;
+    if (data.permissions) {
+      if (Array.isArray(data.permissions)) {
+        newPermissions = JSON.stringify(data.permissions);
+      } else if (typeof data.permissions === 'string') {
+        try {
+          JSON.parse(data.permissions);
+          newPermissions = data.permissions;
+        } catch {
+          newPermissions = JSON.stringify([data.permissions]);
+        }
+      }
+    }
 
-    // Criar objeto de atualização usando o tipo do Prisma
-    const updateData = Prisma.validator<Prisma.UserUpdateInput>()({
+    // Preparar dados de atualização
+    const updateFields = {
       ...(data.name && { name: data.name }),
       ...(data.email && { email: data.email }),
       ...(data.role && { role: data.role }),
       ...(data.active !== undefined && { active: data.active }),
       ...(passwordHash && { passwordHash }),
-      permissions // Sempre incluído pois tem um valor válido
-    });
+      permissions: newPermissions
+    } as const;
+
+    // Criar objeto de atualização com tipo explícito
+    const updateInput: Prisma.UserUpdateInput = updateFields;
 
     const user = await prisma.user.update({
       where: { id },
-      data: updateData,
+      data: updateInput,
       select: {
         id: true,
         name: true,
