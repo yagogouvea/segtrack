@@ -55,6 +55,6 @@ export interface OcorrenciaFormatada extends Omit<Ocorrencia, 'inicio' | 'chegad
   inicio: string | null;
   chegada: string | null;
   termino: string | null;
-  encerradaEm: Date | null;
+  encerradaEm: Date | null | undefined;
   tem_fotos: boolean;
 } 

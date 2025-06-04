@@ -171,19 +171,21 @@ router.get('/',
 
       console.log(`✅ Encontradas ${ocorrencias.length} ocorrências`);
 
-      const formatarData = (data: Date | null) =>
-        data ? new Date(data).toISOString().slice(0, 16) : null;
+      const formatarData = (data: Date | null | undefined): string | null => {
+        if (!data) return null;
+        return new Date(data).toISOString().slice(0, 16);
+      };
 
       const formatadas = ocorrencias.map((o: Ocorrencia): OcorrenciaFormatada => ({
         ...o,
         fotos: o.fotos ?? [],
         tem_fotos: (o.fotos && o.fotos.length > 0) || false,
         despesas_detalhadas: o.despesas_detalhadas ?? [],
-        encerradaEm: o.encerrada_em,
+        encerradaEm: o.encerrada_em ?? null,
         resultado: o.resultado ?? '',
-        inicio: formatarData(o.inicio || null),
-        chegada: formatarData(o.chegada || null),
-        termino: formatarData(o.termino || null)
+        inicio: formatarData(o.inicio),
+        chegada: formatarData(o.chegada),
+        termino: formatarData(o.termino)
       }));
 
       console.log('✅ Ocorrências formatadas com sucesso');
@@ -280,15 +282,20 @@ router.get('/encerradas', async (_req, res) => {
       include: { fotos: true }
     });
 
+    const formatarData = (data: Date | null | undefined): string | null => {
+      if (!data) return null;
+      return new Date(data).toISOString().slice(0, 16);
+    };
+
     const formatadas = encerradas.map((o: Ocorrencia): OcorrenciaFormatada => ({
       ...o,
       fotos: o.fotos ?? [],
       tem_fotos: (o.fotos && o.fotos.length > 0) || false,
       despesas_detalhadas: o.despesas_detalhadas ?? [],
-      encerradaEm: o.encerrada_em,
-      inicio: o.inicio ? new Date(o.inicio).toISOString().slice(0, 16) : null,
-      chegada: o.chegada ? new Date(o.chegada).toISOString().slice(0, 16) : null,
-      termino: o.termino ? new Date(o.termino).toISOString().slice(0, 16) : null
+      encerradaEm: o.encerrada_em ?? null,
+      inicio: formatarData(o.inicio),
+      chegada: formatarData(o.chegada),
+      termino: formatarData(o.termino)
     }));
 
     res.json(formatadas);
