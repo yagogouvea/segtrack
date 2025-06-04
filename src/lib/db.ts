@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 
 // Configuração do Prisma com retry e logs
 const prisma = new PrismaClient({
-  log: ['error', 'warn'],
+  log: ['error', 'warn', 'info', 'query'],
   errorFormat: 'pretty',
 });
 
@@ -11,10 +11,16 @@ const prisma = new PrismaClient({
 export async function testConnection() {
   try {
     await prisma.$connect();
-    console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
+    // Teste simples de query
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('✅ Conexão com o banco de dados estabelecida e testada com sucesso!');
     return true;
   } catch (error) {
-    console.error('❌ Erro ao conectar com o banco de dados:', error);
+    console.error('❌ Erro ao conectar com o banco de dados:', {
+      error,
+      stack: error instanceof Error ? error.stack : undefined,
+      message: error instanceof Error ? error.message : String(error)
+    });
     return false;
   }
 }
@@ -41,14 +47,27 @@ prisma.$use(async (params, next) => {
   
   while (retries < MAX_RETRIES) {
     try {
-      return await next(params);
+      const result = await next(params);
+      if (retries > 0) {
+        console.log(`✅ Operação bem-sucedida após ${retries} tentativas`);
+      }
+      return result;
     } catch (error: any) {
       retries++;
+      console.error(`❌ Erro na tentativa ${retries}/${MAX_RETRIES}:`, {
+        operation: params.action,
+        model: params.model,
+        error: error.message,
+        stack: error.stack
+      });
+      
       if (retries === MAX_RETRIES) {
         throw error;
       }
-      console.log(`Tentativa ${retries} de ${MAX_RETRIES} falhou. Tentando novamente...`);
-      await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Espera exponencial
+      
+      const delay = 1000 * Math.pow(2, retries - 1); // Backoff exponencial
+      console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 });
@@ -56,6 +75,22 @@ prisma.$use(async (params, next) => {
 // Gerenciamento de conexão global
 process.on('beforeExit', async () => {
   await disconnectPrisma();
+});
+
+// Tratamento de erros não capturados
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', {
+    promise,
+    reason,
+    stack: reason instanceof Error ? reason.stack : undefined
+  });
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', {
+    error,
+    stack: error.stack
+  });
 });
 
 export default prisma;

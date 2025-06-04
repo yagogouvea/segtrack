@@ -10,6 +10,18 @@ import { sanitizeResponseData } from '../middleware/dataSanitizer';
 import * as ocorrenciasController from '../controllers/ocorrenciasController';
 
 const router = express.Router();
+
+// Garantir que o diretório de uploads existe
+const uploadsDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  try {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    console.log('Diretório de uploads criado:', uploadsDir);
+  } catch (error) {
+    console.error('Erro ao criar diretório de uploads:', error);
+  }
+}
+
 const upload = multer({ dest: 'uploads/' });
 
 // Aplicar autenticação e sanitização para todas as rotas de ocorrências
@@ -160,6 +172,8 @@ router.get('/',
   const { id, placa, cliente, prestador, inicio, fim } = req.query;
 
   try {
+    console.log('Iniciando busca de ocorrências com filtros:', { id, placa, cliente, prestador, inicio, fim });
+    
     const ocorrencias = await prisma.ocorrencia.findMany({
       where: {
         ...(id ? { id: Number(id) } : {}),
@@ -181,6 +195,8 @@ router.get('/',
       }
     });
 
+    console.log(`Encontradas ${ocorrencias.length} ocorrências`);
+
     const formatarData = (data: Date | null) =>
       data ? new Date(data).toISOString().slice(0, 16) : null;
 
@@ -196,9 +212,18 @@ router.get('/',
       termino: formatarData(o.termino || null)
     }));
 
+    console.log('Ocorrências formatadas com sucesso');
     res.json(formatadas);
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar ocorrências', detalhes: String(error) });
+    console.error('Erro detalhado ao buscar ocorrências:', {
+      error,
+      stack: error instanceof Error ? error.stack : undefined,
+      message: error instanceof Error ? error.message : String(error)
+    });
+    res.status(500).json({ 
+      error: 'Erro ao buscar ocorrências',
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    });
   }
 });
 
