@@ -3,14 +3,15 @@ import { CorsOptions } from 'cors';
 
 const allowedOrigins = [
   'https://segtrack.comerceoficial.com',
-  'http://localhost:3000',  // For local development
-  'http://localhost:5173',  // For Vite development server
-  'http://localhost:8080'   // For additional local development
+  'https://www.segtrack.comerceoficial.com',
+  'http://localhost:3000',  // Para desenvolvimento local
+  'http://localhost:5173',  // Para servidor Vite
+  'http://localhost:8080'   // Para desenvolvimento local adicional
 ];
 
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Permitir requisições sem origem (como apps mobile ou requisições curl)
     if (!origin) {
       return callback(null, true);
     }
@@ -18,8 +19,8 @@ const corsOptions: CorsOptions = {
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
-      console.warn(`Origin ${origin} not allowed by CORS`);
-      callback(new Error('Not allowed by CORS'));
+      console.warn(`Origem ${origin} não permitida por CORS`);
+      callback(new Error('Não permitido por CORS'));
     }
   },
   credentials: true,
@@ -32,7 +33,7 @@ const corsOptions: CorsOptions = {
     'Origin'
   ],
   exposedHeaders: ['Content-Length', 'X-Requested-With'],
-  maxAge: 86400 // 24 hours
+  maxAge: 86400 // 24 horas
 };
 
 export default corsOptions; 
