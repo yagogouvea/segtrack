@@ -32,8 +32,8 @@ const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minuto
 const MAX_REQUESTS_PER_WINDOW = 100;
 
 export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
-  const origin = req.headers.origin;
-  const ip = req.ip;
+  const origin = req.headers.origin || '';
+  const ip = req.ip || '';
 
   // Rate limiting
   const now = Date.now();

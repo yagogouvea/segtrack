@@ -10,6 +10,8 @@ interface SanitizedOcorrencia {
   coordenadas?: string;
 }
 
+type SanitizedData = string | number | boolean | null | undefined | SanitizedOcorrencia | Record<string, any>;
+
 export const sanitizeOcorrenciaData = (data: any): SanitizedOcorrencia => {
   return {
     id: data.id,
@@ -45,13 +47,13 @@ export const sanitizeResponseData = () => {
           'chave_pix', 'endereco'
         ];
 
-        const removeSensitiveData = (obj: any) => {
+        const removeSensitiveData = (obj: any): SanitizedData => {
           if (Array.isArray(obj)) {
             return obj.map(item => removeSensitiveData(item));
           }
           
           if (obj && typeof obj === 'object') {
-            const sanitized = { ...obj };
+            const sanitized: Record<string, any> = { ...obj };
             sensitiveFields.forEach(field => {
               if (field in sanitized) {
                 if (typeof sanitized[field] === 'string') {

@@ -14,6 +14,7 @@ export interface AuthRequest extends Request {
     email: string;
     permissions: string[];
     lastTokenRefresh?: number;
+    role?: string;
   };
 }
 
@@ -48,7 +49,7 @@ const recordFailedAttempt = (ip: string) => {
 };
 
 export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const ip = req.ip;
+  const ip = req.ip || '';
   
   if (!checkRateLimit(ip)) {
     return res.status(429).json({ 
@@ -57,7 +58,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
   }
 
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = authHeader?.split(' ')[1];
 
   if (!token) {
     recordFailedAttempt(ip);
@@ -69,6 +70,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
       id: string;
       email: string;
       permissions: string[];
+      role?: string;
       iat?: number;
     };
     
@@ -97,6 +99,10 @@ export const requirePermission = (requiredPermission: string) => {
         : JSON.parse(req.user.permissions || '[]');
 
       if (!userPermissions.includes(requiredPermission)) {
+        // Se o usuário é admin, permite acesso
+        if (req.user.role === 'admin') {
+          return next();
+        }
         return res.status(403).json({ error: 'Permissão negada' });
       }
 
