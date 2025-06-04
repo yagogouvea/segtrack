@@ -10,6 +10,28 @@ const prisma = new PrismaClient({
 let isConnected = false;
 let lastError: Error | null = null;
 let connectionAttempts = 0;
+const MAX_CONNECTION_ATTEMPTS = 10;
+
+// Função para analisar erros específicos do MySQL
+function analyzeMySQLError(error: any): string {
+  const errorCode = error.code || '';
+  const errorNumber = error.number || '';
+  
+  switch (errorCode) {
+    case 'ECONNREFUSED':
+      return 'Conexão recusada. Verifique se o banco de dados está rodando e acessível.';
+    case 'ER_ACCESS_DENIED_ERROR':
+      return 'Acesso negado. Verifique as credenciais do banco de dados.';
+    case 'ETIMEDOUT':
+      return 'Timeout na conexão. Verifique a rede e as regras de firewall.';
+    case 'ER_BAD_DB_ERROR':
+      return 'Banco de dados não existe. Verifique o nome do banco na URL.';
+    case 'ENOTFOUND':
+      return 'Host não encontrado. Verifique o endereço do servidor.';
+    default:
+      return `Erro desconhecido: ${error.message}`;
+  }
+}
 
 // Função para testar a conexão com o banco de dados
 export async function testConnection(): Promise<void> {
@@ -17,17 +39,36 @@ export async function testConnection(): Promise<void> {
     connectionAttempts++;
     console.log(`🔄 Tentativa de conexão #${connectionAttempts}`);
     
+    // Verifica se atingiu o número máximo de tentativas
+    if (connectionAttempts > MAX_CONNECTION_ATTEMPTS) {
+      throw new Error(`Número máximo de tentativas (${MAX_CONNECTION_ATTEMPTS}) excedido. Reinicie o servidor.`);
+    }
+    
     // Verifica variáveis de ambiente
     if (!process.env.DATABASE_URL) {
       throw new Error('DATABASE_URL não está definida');
     }
 
+    // Log da URL do banco (sem senha)
+    const dbUrlParts = process.env.DATABASE_URL.split('@');
+    if (dbUrlParts.length > 1) {
+      const safeUrl = `mysql://<credentials>@${dbUrlParts[1]}`;
+      console.log('🔌 Tentando conectar ao banco:', safeUrl);
+    }
+
     // Tenta conectar
     await prisma.$connect();
     
-    // Testa a conexão com uma query simples
-    const result = await prisma.$queryRaw`SELECT NOW() as server_time`;
-    console.log('✅ Teste de conexão bem sucedido:', result);
+    // Testa a conexão com queries simples
+    const [timeResult, versionResult] = await Promise.all([
+      prisma.$queryRaw`SELECT NOW() as server_time`,
+      prisma.$queryRaw`SELECT VERSION() as version`
+    ]);
+    
+    console.log('✅ Teste de conexão bem sucedido:', {
+      serverTime: timeResult,
+      mysqlVersion: versionResult
+    });
     
     isConnected = true;
     lastError = null;
@@ -36,16 +77,23 @@ export async function testConnection(): Promise<void> {
     isConnected = false;
     lastError = error;
     
+    const errorAnalysis = analyzeMySQLError(error);
+    
     // Log detalhado do erro
     console.error('❌ Erro ao conectar com o banco de dados:', {
       attempt: connectionAttempts,
       errorMessage: error.message,
       errorCode: error.code,
+      errorNumber: error.number,
       errorType: error.name,
-      stack: error.stack,
-      // Remove senha da URL antes de logar
-      databaseUrl: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@')
+      analysis: errorAnalysis,
+      stack: error.stack
     });
+
+    // Se atingiu o limite de tentativas, para de tentar
+    if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+      console.error(`⛔ Número máximo de tentativas (${MAX_CONNECTION_ATTEMPTS}) atingido. Necessário reiniciar o servidor.`);
+    }
 
     throw error;
   }
@@ -63,9 +111,11 @@ export function getConnectionStatus() {
     lastError: lastError ? {
       message: lastError.message,
       code: (lastError as any).code,
-      type: lastError.name
+      type: lastError.name,
+      analysis: analyzeMySQLError(lastError)
     } : null,
-    attempts: connectionAttempts
+    attempts: connectionAttempts,
+    maxAttempts: MAX_CONNECTION_ATTEMPTS
   };
 }
 
@@ -104,12 +154,16 @@ prisma.$use(async (params, next) => {
       isConnected = false;
       lastError = error;
       
+      const errorAnalysis = analyzeMySQLError(error);
+      
       const errorDetails = {
         operation: params.action,
         model: params.model,
         errorMessage: error.message,
         errorCode: error.code,
+        errorNumber: error.number,
         errorType: error.name,
+        analysis: errorAnalysis,
         attempt: retries,
         maxRetries: MAX_RETRIES
       };
@@ -139,6 +193,7 @@ process.on('beforeExit', async () => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection:', {
     reason,
+    analysis: reason instanceof Error ? analyzeMySQLError(reason) : 'Erro desconhecido',
     stack: reason instanceof Error ? reason.stack : undefined
   });
   isConnected = false;
@@ -147,6 +202,7 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', {
     error: error.message,
+    analysis: analyzeMySQLError(error),
     stack: error.stack
   });
   isConnected = false;
@@ -158,6 +214,7 @@ testConnection().catch(error => {
     message: error.message,
     code: error.code,
     type: error.name,
+    analysis: analyzeMySQLError(error),
     stack: error.stack
   });
 });
