@@ -3,6 +3,7 @@ import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { z } from 'zod';
+import { Prisma, User } from '@prisma/client';
 
 interface UserWithPermissions {
   id: string;
@@ -17,6 +18,16 @@ interface PermissionsObject {
   [key: string]: {
     [key: string]: boolean;
   };
+}
+
+// Interface para o objeto de atualização
+interface UserUpdateData {
+  name?: string;
+  email?: string;
+  passwordHash?: string;
+  role?: string;
+  permissions: string; // Sempre requerido
+  active?: boolean;
 }
 
 // Função auxiliar para converter permissões de objeto para array
@@ -189,33 +200,41 @@ export const updateUser = async (req: Request, res: Response) => {
     // Hash da senha se fornecida
     const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : undefined;
 
-    // Criar objeto de atualização apenas com campos definidos
-    const updateData: Record<string, any> = {
-      // Garantir que permissions tenha sempre um valor padrão
-      permissions: '[]'
-    };
+    // Buscar usuário atual para manter as permissões existentes
+    const currentUser = await prisma.user.findUnique({
+      where: { id },
+      select: { permissions: true }
+    });
 
-    if (data.name) updateData.name = data.name;
-    if (data.email) updateData.email = data.email;
-    if (data.role) updateData.role = data.role;
-    if (data.active !== undefined) updateData.active = data.active;
-    if (passwordHash) updateData.passwordHash = passwordHash;
-
-    // Processar permissions se fornecido
-    if (data.permissions) {
-      if (Array.isArray(data.permissions)) {
-        updateData.permissions = JSON.stringify(data.permissions);
-      } else if (typeof data.permissions === 'string') {
-        try {
-          // Verifica se é um JSON válido
-          JSON.parse(data.permissions);
-          updateData.permissions = data.permissions;
-        } catch {
-          // Se não for JSON válido, converte para array
-          updateData.permissions = JSON.stringify([data.permissions]);
-        }
-      }
+    if (!currentUser) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
     }
+
+    // Processar permissions
+    const permissions = data.permissions 
+      ? Array.isArray(data.permissions)
+        ? JSON.stringify(data.permissions)
+        : typeof data.permissions === 'string'
+          ? (() => {
+              try {
+                JSON.parse(data.permissions);
+                return data.permissions;
+              } catch {
+                return JSON.stringify([data.permissions]);
+              }
+            })()
+          : currentUser.permissions
+      : currentUser.permissions;
+
+    // Criar objeto de atualização usando o tipo do Prisma
+    const updateData = Prisma.validator<Prisma.UserUpdateInput>()({
+      ...(data.name && { name: data.name }),
+      ...(data.email && { email: data.email }),
+      ...(data.role && { role: data.role }),
+      ...(data.active !== undefined && { active: data.active }),
+      ...(passwordHash && { passwordHash }),
+      permissions // Sempre incluído pois tem um valor válido
+    });
 
     const user = await prisma.user.update({
       where: { id },

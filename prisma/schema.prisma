@@ -184,7 +184,7 @@ model User {
   email        String   @unique
   passwordHash String
   role         String
-  permissions  String   @db.Text
+  permissions  String   @default("[]") @db.Text
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
