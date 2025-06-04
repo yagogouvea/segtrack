@@ -1,11 +1,10 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
 import { testConnection } from './lib/db';
-import { authenticateToken, AuthRequest } from './middleware/authMiddleware';
+import { authenticateToken } from './middleware/authMiddleware';
 import { configureSecurityMiddleware } from './config/security';
 import { sanitizeResponseData } from './middleware/dataSanitizer';
 import cors from 'cors';
-import { corsOptions } from './config/cors.config';
+import corsOptions from './config/cors.config';
 
 // Importando rotas
 import prestadoresPublicoRoutes from './routes/prestadoresPublico';

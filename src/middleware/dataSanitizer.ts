@@ -24,57 +24,30 @@ export const sanitizeOcorrenciaData = (data: any): SanitizedOcorrencia => {
   };
 };
 
-export const sanitizeResponseData = () => {
+export function sanitizeResponseData() {
   return (req: Request, res: Response, next: NextFunction) => {
-    const originalJson = res.json;
-    
-    res.json = function (data: any) {
-      // Se a rota contém 'ocorrencias', sanitiza os dados
-      if (req.path.includes('ocorrencias')) {
-        if (Array.isArray(data)) {
-          data = data.map(item => sanitizeOcorrenciaData(item));
-        } else if (data && typeof data === 'object') {
-          data = sanitizeOcorrenciaData(data);
+    // Sanitizar dados da requisição
+    if (req.body) {
+      Object.keys(req.body).forEach(key => {
+        if (typeof req.body[key] === 'string') {
+          req.body[key] = req.body[key]
+            .replace(/[<>]/g, '') // Remove tags HTML
+            .trim();
         }
+      });
+    }
+
+    // Sanitizar dados da resposta
+    const originalSend = res.send;
+    res.send = function(data) {
+      if (typeof data === 'string') {
+        data = data.replace(/[<>]/g, '').trim();
+      } else if (typeof data === 'object' && data !== null) {
+        data = JSON.parse(JSON.stringify(data).replace(/[<>]/g, ''));
       }
-
-      // Remove campos sensíveis gerais
-      if (data && typeof data === 'object') {
-        const sensitiveFields = [
-          'senha', 'password', 'token', 'secret',
-          'placa1', 'placa2', 'placa3', 'placa4',
-          'cpf', 'rg', 'telefone', 'email',
-          'chave_pix', 'endereco'
-        ];
-
-        const removeSensitiveData = (obj: any): SanitizedData => {
-          if (Array.isArray(obj)) {
-            return obj.map(item => removeSensitiveData(item));
-          }
-          
-          if (obj && typeof obj === 'object') {
-            const sanitized: Record<string, any> = { ...obj };
-            sensitiveFields.forEach(field => {
-              if (field in sanitized) {
-                if (typeof sanitized[field] === 'string') {
-                  // Mascara parcialmente os dados sensíveis
-                  sanitized[field] = sanitized[field].replace(/./g, '*');
-                } else {
-                  delete sanitized[field];
-                }
-              }
-            });
-            return sanitized;
-          }
-          return obj;
-        };
-
-        data = removeSensitiveData(data);
-      }
-
-      return originalJson.call(this, data);
+      return originalSend.call(this, data);
     };
 
     next();
   };
-}; 
+} 

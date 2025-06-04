@@ -1,24 +1,35 @@
-import { Router } from 'express';
-import { AuthRequest } from '../middleware/authMiddleware';
-import { requirePermission } from '../middleware/authMiddleware';
+import express, { Request, Response, NextFunction } from 'express';
+import { AuthRequest, AuthUser } from '../middleware/authMiddleware';
 
-const router = Router();
+const router = express.Router();
 
-// Exemplo de rota protegida que requer autenticação
-router.get('/profile', (req: AuthRequest, res) => {
-  // O usuário já está autenticado neste ponto
-  res.json({
-    message: 'Perfil do usuário',
-    user: req.user
-  });
+// Middleware para verificar permissões
+const checkPermission = (requiredPermission: string) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as AuthRequest).user;
+    if (!user) {
+      return res.status(401).json({ error: 'Usuário não autenticado' });
+    }
+
+    if (!user.permissions.includes(requiredPermission)) {
+      return res.status(403).json({ error: 'Permissão negada' });
+    }
+
+    next();
+  };
+};
+
+// Rotas protegidas
+router.get('/me', (req: Request, res: Response) => {
+  const user = (req as AuthRequest).user;
+  res.json(user);
 });
 
-// Exemplo de rota que requer permissão específica
-router.post('/admin-action', requirePermission('ADMIN'), (req: AuthRequest, res) => {
-  res.json({
-    message: 'Ação administrativa realizada com sucesso',
-    user: req.user
-  });
-});
+router.get('/protected-resource', 
+  checkPermission('read:resource'),
+  (req: Request, res: Response) => {
+    res.json({ message: 'Acesso permitido ao recurso protegido' });
+  }
+);
 
 export default router; 

@@ -7,15 +7,17 @@ if (!process.env.JWT_SECRET) {
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  permissions: string[];
+  role?: string;
+  lastTokenRefresh?: number;
+}
+
 // Interface para requisições autenticadas
 export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    permissions: string[];
-    lastTokenRefresh?: number;
-    role?: string;
-  };
+  user?: AuthUser;
 }
 
 // Rate limiting para falhas de autenticação
@@ -48,41 +50,28 @@ const recordFailedAttempt = (ip: string) => {
   }
 };
 
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const ip = req.ip || '';
-  
-  if (!checkRateLimit(ip)) {
-    return res.status(429).json({ 
-      error: 'Muitas tentativas de autenticação. Tente novamente mais tarde.' 
-    });
-  }
-
+export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader?.split(' ')[1];
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    recordFailedAttempt(ip);
     return res.status(401).json({ error: 'Token não fornecido' });
   }
 
   try {
-    const user = jwt.verify(token, JWT_SECRET) as {
-      id: string;
-      email: string;
-      permissions: string[];
-      role?: string;
-      iat?: number;
-    };
-    
-    // Verificar idade do token
-    if (user.iat && Date.now() - user.iat * 1000 > 24 * 60 * 60 * 1000) {
-      return res.status(401).json({ error: 'Token expirado' });
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error('JWT_SECRET não está definido');
+      return res.status(500).json({ error: 'Erro de configuração do servidor' });
     }
 
-    req.user = user;
+    const decoded = jwt.verify(token, secret) as unknown as AuthUser;
+    (req as AuthRequest).user = decoded;
     next();
   } catch (error) {
-    recordFailedAttempt(ip);
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({ error: 'Token expirado' });
+    }
     return res.status(403).json({ error: 'Token inválido' });
   }
 };

@@ -1,9 +1,10 @@
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { PrestadorPublicoInput } from '../types/prestadorPublico';
+import prisma from '../lib/db';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prismaClient = new PrismaClient();
 
 // Cadastro público de prestadores
 router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Response) => {
@@ -39,7 +40,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
 
   try {
     // Verificar se já existe um prestador com este CPF
-    const existente = await prisma.prestador.findFirst({
+    const existente = await prismaClient.prestador.findFirst({
       where: { cpf: cpf.replace(/\D/g, '') }
     });
 
@@ -60,7 +61,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
     const veiculosParaCriar = Array.isArray(tipo_veiculo) ? 
         tipo_veiculo.map(tipo => ({ tipo })) : [];
 
-    const novoPrestador = await prisma.prestador.create({
+    const novoPrestador = await prismaClient.prestador.create({
       data: {
         nome,
         cpf: cpf.replace(/\D/g, ''),
@@ -115,6 +116,55 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
       error: 'Erro ao processar o cadastro.',
       details: error instanceof Error ? error.message : String(error)
     });
+  }
+});
+
+// Listar prestadores públicos
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    const prestadores = await prisma.prestador.findMany({
+      where: { ativo: true },
+      select: {
+        id: true,
+        nome: true,
+        tipo: true,
+        cidade: true,
+        estado: true,
+        avaliacao: true
+      }
+    });
+    res.json(prestadores);
+  } catch (error) {
+    console.error('Erro ao buscar prestadores:', error);
+    res.status(500).json({ error: 'Erro ao buscar prestadores' });
+  }
+});
+
+// Buscar prestador público por ID
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const prestador = await prisma.prestador.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nome: true,
+        tipo: true,
+        cidade: true,
+        estado: true,
+        avaliacao: true,
+        descricao: true
+      }
+    });
+
+    if (!prestador) {
+      return res.status(404).json({ error: 'Prestador não encontrado' });
+    }
+
+    res.json(prestador);
+  } catch (error) {
+    console.error('Erro ao buscar prestador:', error);
+    res.status(500).json({ error: 'Erro ao buscar prestador' });
   }
 });
 

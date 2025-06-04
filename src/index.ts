@@ -1,11 +1,11 @@
 "use strict";
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import cors from 'cors';
 import corsOptions from './config/cors.config';
-import prisma, { testDatabaseConnection } from "./config/database";
+import { testDatabaseConnection } from "./config/database";
 
 import veiculosRoutes from "./routes/veiculos";
 import clientesRoutes from "./routes/clientes";
@@ -51,12 +51,12 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Root endpoint para verificar CORS
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.status(200).json({ 
     status: 'ok',
     message: 'API is running',
@@ -84,7 +84,7 @@ app.use('/api/prestadores-publico', prestadoresPublico);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('❌ Erro não tratado:', err);
   res.status(500).json({
     error: 'Erro interno do servidor',

@@ -3,29 +3,20 @@ import { PrismaClient } from '@prisma/client';
 
 // Configuração do Prisma com retry e logs
 const prisma = new PrismaClient({
-  log: ['error', 'warn', 'info', 'query'],
-  errorFormat: 'pretty',
+  log: ['error', 'warn'],
+  errorFormat: 'pretty'
 });
 
 let isConnected = false;
 
 // Função para testar a conexão com o banco de dados
-export async function testConnection() {
+export async function testConnection(): Promise<void> {
   try {
     await prisma.$connect();
-    // Teste simples de query
-    await prisma.$queryRaw`SELECT 1`;
-    console.log('✅ Conexão com o banco de dados estabelecida e testada com sucesso!');
-    isConnected = true;
-    return true;
+    console.log('✅ Conexão com o banco de dados estabelecida com sucesso');
   } catch (error) {
-    console.error('❌ Erro ao conectar com o banco de dados:', {
-      error,
-      stack: error instanceof Error ? error.stack : undefined,
-      message: error instanceof Error ? error.message : String(error)
-    });
-    isConnected = false;
-    return false;
+    console.error('❌ Erro ao conectar com o banco de dados:', error);
+    throw error;
   }
 }
 
