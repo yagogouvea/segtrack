@@ -12,6 +12,9 @@ import protectedRoutes from './routes/protectedRoutes';
 
 const app = express();
 
+// Configurar trust proxy para Cloud Run
+app.set('trust proxy', true);
+
 // Configurações de segurança
 configureSecurityMiddleware(app);
 
@@ -29,7 +32,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     console.error('⚠️ Request timeout:', {
       method: req.method,
       url: req.url,
-      timeout: timeout
+      timeout: timeout,
+      ip: req.ip,
+      realIp: req.get('x-real-ip'),
+      forwardedFor: req.get('x-forwarded-for')
     });
     res.status(408).json({ error: 'Request timeout' });
   });
@@ -42,7 +48,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   const sanitizedUrl = req.url.replace(/[<>]/g, '');
   const sanitizedMethod = req.method.replace(/[<>]/g, '');
   
-  console.log(`[${new Date().toISOString()}] 📥 Recebendo ${sanitizedMethod} ${sanitizedUrl}`);
+  console.log(`[${new Date().toISOString()}] 📥 Recebendo ${sanitizedMethod} ${sanitizedUrl}`, {
+    ip: req.ip,
+    realIp: req.get('x-real-ip'),
+    forwardedFor: req.get('x-forwarded-for')
+  });
   
   res.on('finish', () => {
     const duration = Date.now() - start;
@@ -65,7 +75,10 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     stack: err.stack,
     url: req.url,
     method: req.method,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    ip: req.ip,
+    realIp: req.get('x-real-ip'),
+    forwardedFor: req.get('x-forwarded-for')
   });
   
   res.status(500).json({
@@ -83,6 +96,7 @@ app.get('/health', async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    console.error('❌ Erro no health check:', error);
     res.status(500).json({ 
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
