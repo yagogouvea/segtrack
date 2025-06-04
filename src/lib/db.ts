@@ -7,6 +7,8 @@ const prisma = new PrismaClient({
   errorFormat: 'pretty',
 });
 
+let isConnected = false;
+
 // Função para testar a conexão com o banco de dados
 export async function testConnection() {
   try {
@@ -14,6 +16,7 @@ export async function testConnection() {
     // Teste simples de query
     await prisma.$queryRaw`SELECT 1`;
     console.log('✅ Conexão com o banco de dados estabelecida e testada com sucesso!');
+    isConnected = true;
     return true;
   } catch (error) {
     console.error('❌ Erro ao conectar com o banco de dados:', {
@@ -21,6 +24,7 @@ export async function testConnection() {
       stack: error instanceof Error ? error.stack : undefined,
       message: error instanceof Error ? error.message : String(error)
     });
+    isConnected = false;
     return false;
   }
 }
@@ -30,10 +34,16 @@ export function getPrismaClient() {
   return prisma;
 }
 
+// Função para verificar o estado da conexão
+export function getConnectionStatus() {
+  return isConnected;
+}
+
 // Função para fechar a conexão com o banco de dados
 export async function disconnectPrisma() {
   try {
     await prisma.$disconnect();
+    isConnected = false;
     console.log('✅ Desconectado do banco de dados com sucesso!');
   } catch (error) {
     console.error('❌ Erro ao desconectar do banco de dados:', error);
@@ -47,6 +57,12 @@ prisma.$use(async (params, next) => {
   
   while (retries < MAX_RETRIES) {
     try {
+      // Se não estiver conectado, tenta reconectar
+      if (!isConnected) {
+        console.log('⚠️ Conexão não estabelecida, tentando reconectar...');
+        await testConnection();
+      }
+
       const result = await next(params);
       if (retries > 0) {
         console.log(`✅ Operação bem-sucedida após ${retries} tentativas`);
@@ -54,6 +70,8 @@ prisma.$use(async (params, next) => {
       return result;
     } catch (error: any) {
       retries++;
+      isConnected = false; // Marca como desconectado em caso de erro
+      
       console.error(`❌ Erro na tentativa ${retries}/${MAX_RETRIES}:`, {
         operation: params.action,
         model: params.model,
@@ -84,6 +102,7 @@ process.on('unhandledRejection', (reason, promise) => {
     reason,
     stack: reason instanceof Error ? reason.stack : undefined
   });
+  isConnected = false; // Marca como desconectado em caso de erro não tratado
 });
 
 process.on('uncaughtException', (error) => {
@@ -91,6 +110,12 @@ process.on('uncaughtException', (error) => {
     error,
     stack: error.stack
   });
+  isConnected = false; // Marca como desconectado em caso de exceção não tratada
+});
+
+// Tenta estabelecer a conexão inicial
+testConnection().catch(error => {
+  console.error('❌ Erro na conexão inicial com o banco de dados:', error);
 });
 
 export default prisma;

@@ -174,6 +174,16 @@ router.get('/',
   try {
     console.log('Iniciando busca de ocorrências com filtros:', { id, placa, cliente, prestador, inicio, fim });
     
+    // Test database connection before proceeding
+    const isConnected = await prisma.$queryRaw`SELECT 1`;
+    if (!isConnected) {
+      console.error('❌ Falha na conexão com o banco de dados');
+      return res.status(500).json({ 
+        error: 'Erro de conexão com o banco de dados',
+        details: process.env.NODE_ENV === 'development' ? 'Database connection failed' : undefined
+      });
+    }
+
     const ocorrencias = await prisma.ocorrencia.findMany({
       where: {
         ...(id ? { id: Number(id) } : {}),
@@ -195,7 +205,7 @@ router.get('/',
       }
     });
 
-    console.log(`Encontradas ${ocorrencias.length} ocorrências`);
+    console.log(`✅ Encontradas ${ocorrencias.length} ocorrências`);
 
     const formatarData = (data: Date | null) =>
       data ? new Date(data).toISOString().slice(0, 16) : null;
@@ -212,14 +222,33 @@ router.get('/',
       termino: formatarData(o.termino || null)
     }));
 
-    console.log('Ocorrências formatadas com sucesso');
+    console.log('✅ Ocorrências formatadas com sucesso');
     res.json(formatadas);
   } catch (error) {
-    console.error('Erro detalhado ao buscar ocorrências:', {
+    console.error('❌ Erro detalhado ao buscar ocorrências:', {
       error,
       stack: error instanceof Error ? error.stack : undefined,
-      message: error instanceof Error ? error.message : String(error)
+      message: error instanceof Error ? error.message : String(error),
+      query: req.query
     });
+
+    // Check for specific error types
+    if (error instanceof Error) {
+      if (error.message.includes('connect ECONNREFUSED')) {
+        return res.status(500).json({
+          error: 'Erro de conexão com o banco de dados',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+      
+      if (error.message.includes('Prisma Client')) {
+        return res.status(500).json({
+          error: 'Erro no cliente Prisma',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+    }
+
     res.status(500).json({ 
       error: 'Erro ao buscar ocorrências',
       details: process.env.NODE_ENV === 'development' ? String(error) : undefined
