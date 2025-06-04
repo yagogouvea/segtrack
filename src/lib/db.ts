@@ -3,22 +3,50 @@ import { PrismaClient } from '@prisma/client';
 
 // Configuração do Prisma com retry e logs
 const prisma = new PrismaClient({
-  log: ['error', 'warn'],
+  log: ['error', 'warn', 'info', 'query'],
   errorFormat: 'pretty'
 });
 
 let isConnected = false;
+let lastError: Error | null = null;
+let connectionAttempts = 0;
 
 // Função para testar a conexão com o banco de dados
 export async function testConnection(): Promise<void> {
   try {
+    connectionAttempts++;
+    console.log(`🔄 Tentativa de conexão #${connectionAttempts}`);
+    
+    // Verifica variáveis de ambiente
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL não está definida');
+    }
+
+    // Tenta conectar
     await prisma.$connect();
-    await prisma.$queryRaw`SELECT 1`;
+    
+    // Testa a conexão com uma query simples
+    const result = await prisma.$queryRaw`SELECT NOW() as server_time`;
+    console.log('✅ Teste de conexão bem sucedido:', result);
+    
     isConnected = true;
-    console.log('✅ Conexão com o banco de dados estabelecida com sucesso');
-  } catch (error) {
+    lastError = null;
+    console.log(`✅ Conexão com o banco de dados estabelecida com sucesso (tentativa #${connectionAttempts})`);
+  } catch (error: any) {
     isConnected = false;
-    console.error('❌ Erro ao conectar com o banco de dados:', error);
+    lastError = error;
+    
+    // Log detalhado do erro
+    console.error('❌ Erro ao conectar com o banco de dados:', {
+      attempt: connectionAttempts,
+      errorMessage: error.message,
+      errorCode: error.code,
+      errorType: error.name,
+      stack: error.stack,
+      // Remove senha da URL antes de logar
+      databaseUrl: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@')
+    });
+
     throw error;
   }
 }
@@ -28,9 +56,17 @@ export function getPrismaClient() {
   return prisma;
 }
 
-// Função para verificar o estado da conexão
+// Função para obter o status detalhado da conexão
 export function getConnectionStatus() {
-  return isConnected;
+  return {
+    isConnected,
+    lastError: lastError ? {
+      message: lastError.message,
+      code: (lastError as any).code,
+      type: lastError.name
+    } : null,
+    attempts: connectionAttempts
+  };
 }
 
 // Função para fechar a conexão com o banco de dados
@@ -47,6 +83,7 @@ export async function disconnectPrisma() {
 // Middleware para adicionar retry na conexão
 prisma.$use(async (params, next) => {
   const MAX_RETRIES = 3;
+  const BASE_DELAY = 1000; // 1 segundo
   let retries = 0;
   
   while (retries < MAX_RETRIES) {
@@ -64,21 +101,26 @@ prisma.$use(async (params, next) => {
       return result;
     } catch (error: any) {
       retries++;
-      isConnected = false; // Marca como desconectado em caso de erro
+      isConnected = false;
+      lastError = error;
       
-      console.error(`❌ Erro na tentativa ${retries}/${MAX_RETRIES}:`, {
+      const errorDetails = {
         operation: params.action,
         model: params.model,
-        error: error.message,
-        stack: error.stack,
-        url: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') // Log URL without password
-      });
+        errorMessage: error.message,
+        errorCode: error.code,
+        errorType: error.name,
+        attempt: retries,
+        maxRetries: MAX_RETRIES
+      };
+      
+      console.error(`❌ Erro na tentativa ${retries}/${MAX_RETRIES}:`, errorDetails);
       
       if (retries === MAX_RETRIES) {
         throw error;
       }
       
-      const delay = 1000 * Math.pow(2, retries - 1); // Backoff exponencial
+      const delay = BASE_DELAY * Math.pow(2, retries - 1); // Backoff exponencial
       console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -87,33 +129,36 @@ prisma.$use(async (params, next) => {
 
 // Gerenciamento de conexão global
 process.on('beforeExit', async () => {
-  await disconnectPrisma();
+  if (isConnected) {
+    await prisma.$disconnect();
+    console.log('✅ Desconectado do banco de dados antes de encerrar');
+  }
 });
 
 // Tratamento de erros não capturados
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', {
-    promise,
+  console.error('❌ Unhandled Rejection:', {
     reason,
     stack: reason instanceof Error ? reason.stack : undefined
   });
-  isConnected = false; // Marca como desconectado em caso de erro não tratado
+  isConnected = false;
 });
 
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', {
-    error,
+    error: error.message,
     stack: error.stack
   });
-  isConnected = false; // Marca como desconectado em caso de exceção não tratada
+  isConnected = false;
 });
 
 // Tenta estabelecer a conexão inicial
 testConnection().catch(error => {
   console.error('❌ Erro na conexão inicial com o banco de dados:', {
-    error: error.message,
-    stack: error.stack,
-    url: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') // Log URL without password
+    message: error.message,
+    code: error.code,
+    type: error.name,
+    stack: error.stack
   });
 });
 
