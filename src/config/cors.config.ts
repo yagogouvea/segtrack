@@ -6,7 +6,8 @@ const allowedOrigins = [
   'https://www.segtrack.comerceoficial.com',
   'http://localhost:3000',  // Para desenvolvimento local
   'http://localhost:5173',  // Para servidor Vite
-  'http://localhost:8080'   // Para desenvolvimento local adicional
+  'http://localhost:8080',   // Para desenvolvimento local adicional
+  '.onrender.com'  // Para permitir previews do Render
 ];
 
 const corsOptions: CorsOptions = {
@@ -16,7 +17,12 @@ const corsOptions: CorsOptions = {
       return callback(null, true);
     }
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    // Verificar se a origem termina com .onrender.com ou está na lista de permitidos
+    if (allowedOrigins.some(allowed => 
+      origin === allowed || 
+      (allowed.startsWith('.') && origin.endsWith(allowed)) ||
+      process.env.NODE_ENV === 'development'
+    )) {
       callback(null, true);
     } else {
       console.warn(`Origem ${origin} não permitida por CORS`);
