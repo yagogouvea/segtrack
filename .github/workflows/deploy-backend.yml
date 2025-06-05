@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy na EC2 (backend)
+    name: 🚀 Deploy na EC2 (backend)
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,11 @@ jobs:
 
       - name: 🚀 Executar deploy backend na EC2
         run: |
+          set -e  # Garante que falhas abortem o job
           ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd /opt/segtrack/backup
+            set -e
+            echo "📦 Conectado ao servidor EC2"
+            cd /opt/segtrack/backup || exit 1
+            echo "🔧 Iniciando script de deploy remoto"
             sudo env $(cat backup.env | xargs) ./execute-deploy.sh
           EOF
