@@ -1,14 +1,11 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { testConnection, disconnectPrisma } from './lib/db';
-import { authenticateToken } from './middleware/authMiddleware';
-import { configureSecurityMiddleware } from './config/security';
-import { sanitizeResponseData } from './middleware/dataSanitizer';
 import cors from 'cors';
-import corsOptions from './config/cors.config';
-
-// Importando rotas
-import prestadoresPublicoRoutes from './routes/prestadoresPublico';
-import protectedRoutes from './routes/protectedRoutes';
+import { testConnection, disconnectPrisma } from './infrastructure/database/connection';
+import { configureSecurityMiddleware } from './infrastructure/middleware/security';
+import { errorHandler } from './infrastructure/middleware/error';
+import { requestLogger } from './infrastructure/middleware/logger';
+import corsOptions from './infrastructure/config/cors';
+import v1Router from './api/v1/routes';
 
 const app = express();
 
@@ -43,49 +40,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Middleware de logging
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-  const sanitizedUrl = req.url.replace(/[<>]/g, '');
-  const sanitizedMethod = req.method.replace(/[<>]/g, '');
-  
-  console.log(`[${new Date().toISOString()}] 📥 Recebendo ${sanitizedMethod} ${sanitizedUrl}`, {
-    ip: req.ip,
-    realIp: req.get('x-real-ip'),
-    forwardedFor: req.get('x-forwarded-for')
-  });
-  
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`[${new Date().toISOString()}] ✅ Completado ${sanitizedMethod} ${sanitizedUrl} em ${duration}ms`);
-  });
-  
-  next();
-});
+app.use(requestLogger);
 
-// Rotas públicas
-app.use('/api/prestadores-publico', prestadoresPublicoRoutes);
-
-// Rotas protegidas
-app.use('/api', authenticateToken, sanitizeResponseData(), protectedRoutes);
-
-// Error handling
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('❌ Erro não tratado:', {
-    error: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-    ip: req.ip,
-    realIp: req.get('x-real-ip'),
-    forwardedFor: req.get('x-forwarded-for')
-  });
-  
-  res.status(500).json({
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
+// Rotas da API v1
+app.use('/api/v1', v1Router);
 
 // Health check endpoint
 app.get('/health', async (_req: Request, res: Response) => {
@@ -104,6 +62,9 @@ app.get('/health', async (_req: Request, res: Response) => {
     });
   }
 });
+
+// Error handling
+app.use(errorHandler);
 
 // Gerenciamento de processo
 process.on('SIGTERM', async () => {
