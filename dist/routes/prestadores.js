@@ -8,7 +8,7 @@ const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // GET - Listar todos os prestadores (completo)
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
     try {
         const prestadores = await prisma.prestador.findMany({
             include: {
@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
     }
 });
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)
-router.get('/popup', async (req, res) => {
+router.get('/popup', async (_req, res) => {
     try {
         const prestadores = await prisma.prestador.findMany({
             select: {
@@ -77,11 +77,11 @@ router.get('/buscar-por-nome/:nome', async (req, res) => {
         if (!prestador) {
             return res.status(404).json({ erro: 'Prestador não encontrado' });
         }
-        res.json(prestador);
+        return res.json(prestador);
     }
     catch (err) {
         console.error('❌ Erro ao buscar prestador por nome:', err);
-        res.status(500).json({ erro: 'Erro ao buscar prestador' });
+        return res.status(500).json({ erro: 'Erro ao buscar prestador' });
     }
 });
 // POST - Criar novo prestador
@@ -299,11 +299,11 @@ router.put('/:id/aprovar', async (req, res) => {
                 aprovado: true
             }
         });
-        res.json(atualizado);
+        return res.json(atualizado);
     }
     catch (err) {
         console.error('❌ Erro ao aprovar prestador:', err);
-        res.status(500).json({ erro: 'Erro ao aprovar prestador' });
+        return res.status(500).json({ erro: 'Erro ao aprovar prestador' });
     }
 });
 // DELETE - Excluir prestador
@@ -325,3 +325,4 @@ router.delete('/:id', async (req, res) => {
     }
 });
 exports.default = router;
+//# sourceMappingURL=prestadores.js.map

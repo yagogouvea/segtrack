@@ -1,4 +1,4 @@
-import prisma from './lib/db';
+import { prisma } from './lib/db';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 
@@ -10,17 +10,24 @@ async function createTestUser() {
     const password = '123456';
     console.log('Criando/atualizando usuário:', email);
     
-    // Define as permissões como array e converte para JSON string
-    const permissions = JSON.stringify([
-      'view_users',
-      'create_user',
-      'edit_user',
-      'delete_user',
-      'view_ocorrencias',
-      'create_ocorrencia',
-      'edit_ocorrencia',
-      'delete_ocorrencia'
-    ]);
+    // Define as permissões no novo formato
+    const permissions = [
+      'create:user',
+      'read:user',
+      'update:user',
+      'delete:user',
+      'create:ocorrencia',
+      'read:ocorrencia',
+      'update:ocorrencia',
+      'delete:ocorrencia',
+      'read:dashboard',
+      'read:relatorio',
+      'create:foto',
+      'read:foto',
+      'update:foto',
+      'delete:foto',
+      'upload:foto'
+    ];
 
     // Verifica se o usuário já existe
     const existingUser = await prisma.user.findUnique({
@@ -39,7 +46,7 @@ async function createTestUser() {
           passwordHash: hashedPassword,
           active: true,
           role: 'admin',
-          permissions
+          permissions: JSON.stringify(permissions)
         }
       });
       
@@ -57,7 +64,7 @@ async function createTestUser() {
           email,
           passwordHash: hashedPassword,
           role: 'admin',
-          permissions,
+          permissions: JSON.stringify(permissions),
           active: true
         }
       });

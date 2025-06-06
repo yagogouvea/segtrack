@@ -1,66 +1,25 @@
-# Build stage
-FROM node:18-slim AS builder
+# Use Node.js LTS version
+FROM node:18-alpine
 
-# Set working directory
-WORKDIR /app
+# Create app directory
+WORKDIR /usr/src/app
 
-# Install OpenSSL and other dependencies
-RUN apt-get update -y && \
-    apt-get install -y openssl ca-certificates curl && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy package files and prisma schema
+# Install app dependencies
 COPY package*.json ./
-COPY tsconfig.json ./
-COPY prisma ./prisma/
-
-# Install dependencies
 RUN npm ci
 
-# Generate Prisma Client
+# Copy prisma schema and generate client
+COPY prisma ./prisma/
 RUN npx prisma generate
 
-# Copy source code
+# Bundle app source
 COPY . .
 
-# Build TypeScript code
+# Build TypeScript
 RUN npm run build
 
-# Production stage
-FROM node:18-slim
-
-WORKDIR /app
-
-# Install production dependencies and cleanup
-RUN apt-get update -y && \
-    apt-get install -y openssl ca-certificates curl && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy built files and dependencies
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/src/config ./dist/config
-
-# Create necessary directories with proper permissions
-RUN mkdir -p uploads relatorios-pdf && \
-    chown -R node:node /app
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=8080
-ENV HOST=0.0.0.0
-ENV NODE_OPTIONS="--max-old-space-size=512"
-
-# Generate Prisma Client again in production
-RUN npx prisma generate
-
-# Switch to non-root user
-USER node
-
-# Expose the port
+# Expose port
 EXPOSE 8080
 
-# Start the application
-CMD ["node", "--enable-source-maps", "dist/server.js"]
+# Start the server
+CMD [ "npm", "start" ]

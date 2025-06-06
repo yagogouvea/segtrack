@@ -35,56 +35,36 @@ const recordFailedAttempt = (ip) => {
         failedAuthAttempts.set(ip, { count: 1, firstAttempt: now });
     }
 };
-const authenticateToken = (req, res, next) => {
-    const ip = req.ip || '';
-    if (!checkRateLimit(ip)) {
-        return res.status(429).json({
-            error: 'Muitas tentativas de autenticação. Tente novamente mais tarde.'
-        });
-    }
-    const authHeader = req.headers['authorization'];
-    const token = authHeader?.split(' ')[1];
-    if (!token) {
-        recordFailedAttempt(ip);
-        return res.status(401).json({ error: 'Token não fornecido' });
-    }
+const authenticateToken = async (req, res, next) => {
     try {
-        const user = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        // Verificar idade do token
-        if (user.iat && Date.now() - user.iat * 1000 > 24 * 60 * 60 * 1000) {
-            return res.status(401).json({ error: 'Token expirado' });
+        const authHeader = req.headers.authorization;
+        const token = authHeader?.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
         }
-        req.user = user;
+        if (!process.env.JWT_SECRET) {
+            console.error('JWT_SECRET não configurado');
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
         next();
     }
     catch (error) {
-        recordFailedAttempt(ip);
-        return res.status(403).json({ error: 'Token inválido' });
+        return res.status(401).json({ error: 'Invalid token' });
     }
 };
 exports.authenticateToken = authenticateToken;
-const requirePermission = (requiredPermission) => {
+const requirePermission = (requiredRole) => {
     return (req, res, next) => {
         if (!req.user) {
-            return res.status(401).json({ error: 'Usuário não autenticado' });
+            return res.status(401).json({ error: 'User not authenticated' });
         }
-        try {
-            const userPermissions = Array.isArray(req.user.permissions)
-                ? req.user.permissions
-                : JSON.parse(req.user.permissions || '[]');
-            if (!userPermissions.includes(requiredPermission)) {
-                // Se o usuário é admin, permite acesso
-                if (req.user.role === 'admin') {
-                    return next();
-                }
-                return res.status(403).json({ error: 'Permissão negada' });
-            }
-            next();
+        if (req.user.role !== requiredRole && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Insufficient permissions' });
         }
-        catch (error) {
-            console.error('Erro ao verificar permissões:', error);
-            return res.status(500).json({ error: 'Erro ao verificar permissões' });
-        }
+        next();
     };
 };
 exports.requirePermission = requirePermission;
+//# sourceMappingURL=authMiddleware.js.map

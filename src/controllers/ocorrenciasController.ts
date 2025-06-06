@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
-import prisma from '../lib/db';
+import { prisma } from '../lib/db';
 import fs from 'fs';
 import path from 'path';
 
-export const deletarOcorrencia = async (req: Request, res: Response) => {
+export const deletarOcorrencia = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   if (isNaN(Number(id))) {
-    return res.status(400).json({ error: 'ID inválido' });
+    res.status(400).json({ error: 'ID inválido' });
+    return;
   }
 
   try {
@@ -17,7 +18,8 @@ export const deletarOcorrencia = async (req: Request, res: Response) => {
     });
 
     if (!ocorrencia) {
-      return res.status(404).json({ error: 'Ocorrência não encontrada' });
+      res.status(404).json({ error: 'Ocorrência não encontrada' });
+      return;
     }
 
     // Deletar os arquivos físicos das fotos

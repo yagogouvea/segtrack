@@ -1,0 +1,229 @@
+import { Request, Response } from 'express';
+import { prisma } from '../lib/prisma';
+import bcrypt from 'bcryptjs';
+import { CreateUserDTO, UpdateUserDTO } from '../types/prisma';
+
+export class UserController {
+  async getCurrentUser(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Usuário não autenticado' });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          permissions: true,
+          active: true
+        }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' });
+        return;
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.error('Erro ao buscar usuário atual:', error);
+      res.status(500).json({ error: 'Erro ao buscar usuário atual' });
+    }
+  }
+
+  async updateCurrentUser(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Usuário não autenticado' });
+        return;
+      }
+
+      const { name, email } = req.body;
+
+      const user = await prisma.user.update({
+        where: { id: req.user.id },
+        data: { name, email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          permissions: true,
+          active: true
+        }
+      });
+
+      res.json(user);
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      res.status(500).json({ error: 'Erro ao atualizar usuário' });
+    }
+  }
+
+  async updatePassword(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Usuário não autenticado' });
+        return;
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' });
+        return;
+      }
+
+      const validPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!validPassword) {
+        res.status(400).json({ error: 'Senha atual incorreta' });
+        return;
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { passwordHash: hashedPassword }
+      });
+
+      res.json({ message: 'Senha atualizada com sucesso' });
+    } catch (error) {
+      console.error('Erro ao atualizar senha:', error);
+      res.status(500).json({ error: 'Erro ao atualizar senha' });
+    }
+  }
+
+  async list(_req: Request, res: Response): Promise<void> {
+    try {
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          permissions: true,
+          active: true
+        }
+      });
+
+      res.json(users);
+    } catch (error) {
+      console.error('Erro ao listar usuários:', error);
+      res.status(500).json({ error: 'Erro ao listar usuários' });
+    }
+  }
+
+  async create(req: Request, res: Response): Promise<void> {
+    try {
+      const data = req.body as CreateUserDTO;
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+
+      const user = await prisma.user.create({
+        data: {
+          name: data.name,
+          email: data.email,
+          passwordHash: hashedPassword,
+          role: data.role,
+          permissions: JSON.stringify(data.permissions || []),
+          active: true
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          permissions: true,
+          active: true
+        }
+      });
+
+      res.status(201).json(user);
+    } catch (error) {
+      console.error('Erro ao criar usuário:', error);
+      res.status(500).json({ error: 'Erro ao criar usuário' });
+    }
+  }
+
+  async getById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          permissions: true,
+          active: true
+        }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' });
+        return;
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.error('Erro ao buscar usuário:', error);
+      res.status(500).json({ error: 'Erro ao buscar usuário' });
+    }
+  }
+
+  async update(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const data = req.body as UpdateUserDTO;
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: {
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          permissions: data.permissions ? JSON.stringify(data.permissions) : undefined,
+          active: data.active
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          permissions: true,
+          active: true
+        }
+      });
+
+      res.json(user);
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      res.status(500).json({ error: 'Erro ao atualizar usuário' });
+    }
+  }
+
+  async delete(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      await prisma.user.delete({
+        where: { id }
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('Erro ao deletar usuário:', error);
+      res.status(500).json({ error: 'Erro ao deletar usuário' });
+    }
+  }
+} 

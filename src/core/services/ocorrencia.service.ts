@@ -1,18 +1,26 @@
-import { PrismaClient, Ocorrencia } from '@prisma/client';
+import { PrismaClient, Prisma, Ocorrencia } from '@prisma/client';
 import { AppError } from '../../shared/errors/AppError';
-import { CreateOcorrenciaDTO, UpdateOcorrenciaDTO } from '../types/ocorrencia.types';
+import { CreateOcorrenciaDTO, UpdateOcorrenciaDTO } from '../../types/prisma';
+
+type OcorrenciaStatus = 'em_andamento' | 'concluida' | 'cancelada' | 'aguardando';
+
+interface ListOcorrenciaFilters {
+  cliente?: string;
+  status?: OcorrenciaStatus;
+  dataInicio?: Date;
+  dataFim?: Date;
+}
 
 export class OcorrenciaService {
-  private prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
+  constructor(private prisma: PrismaClient) {}
 
   async findAll(): Promise<Ocorrencia[]> {
     return this.prisma.ocorrencia.findMany({
       include: {
         fotos: true
+      },
+      orderBy: {
+        criado_em: 'desc'
       }
     });
   }
@@ -26,7 +34,7 @@ export class OcorrenciaService {
     });
 
     if (!ocorrencia) {
-      throw new AppError('Ocorrência não encontrada', 404);
+      return null;
     }
 
     return ocorrencia;
@@ -34,7 +42,17 @@ export class OcorrenciaService {
 
   async create(data: CreateOcorrenciaDTO): Promise<Ocorrencia> {
     return this.prisma.ocorrencia.create({
-      data,
+      data: {
+        ...data,
+        status: data.status || 'em_andamento',
+        despesas_detalhadas: data.despesas_detalhadas ?? Prisma.JsonNull,
+        fotos: data.fotos ? {
+          create: data.fotos.map(foto => ({
+            url: foto.url,
+            legenda: foto.legenda || ''
+          }))
+        } : undefined
+      },
       include: {
         fotos: true
       }
@@ -42,17 +60,19 @@ export class OcorrenciaService {
   }
 
   async update(id: number, data: UpdateOcorrenciaDTO): Promise<Ocorrencia> {
-    const ocorrencia = await this.prisma.ocorrencia.findUnique({
-      where: { id }
-    });
-
-    if (!ocorrencia) {
-      throw new AppError('Ocorrência não encontrada', 404);
-    }
-
     return this.prisma.ocorrencia.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        status: data.status,
+        despesas_detalhadas: data.despesas_detalhadas ?? Prisma.JsonNull,
+        fotos: data.fotos ? {
+          create: data.fotos.map(foto => ({
+            url: foto.url,
+            legenda: foto.legenda || ''
+          }))
+        } : undefined
+      },
       include: {
         fotos: true
       }
@@ -60,45 +80,39 @@ export class OcorrenciaService {
   }
 
   async delete(id: number): Promise<void> {
-    const ocorrencia = await this.prisma.ocorrencia.findUnique({
-      where: { id }
+    await this.prisma.foto.deleteMany({
+      where: { ocorrenciaId: id }
     });
-
-    if (!ocorrencia) {
-      throw new AppError('Ocorrência não encontrada', 404);
-    }
 
     await this.prisma.ocorrencia.delete({
       where: { id }
     });
   }
 
-  async findByStatus(status: string): Promise<Ocorrencia[]> {
+  async findByStatus(status: OcorrenciaStatus): Promise<Ocorrencia[]> {
     return this.prisma.ocorrencia.findMany({
       where: { status },
       include: {
         fotos: true
+      },
+      orderBy: {
+        criado_em: 'desc'
       }
     });
   }
 
   async addPhotos(id: number, fotos: { url: string; legenda: string }[]): Promise<Ocorrencia> {
-    const ocorrencia = await this.prisma.ocorrencia.findUnique({
-      where: { id }
+    return this.prisma.ocorrencia.update({
+      where: { id },
+      data: {
+        fotos: {
+          create: fotos
+        }
+      },
+      include: {
+        fotos: true
+      }
     });
-
-    if (!ocorrencia) {
-      throw new AppError('Ocorrência não encontrada', 404);
-    }
-
-    await this.prisma.foto.createMany({
-      data: fotos.map(foto => ({
-        ...foto,
-        ocorrenciaId: id
-      }))
-    });
-
-    return this.findById(id);
   }
 
   async generateReport(id: number): Promise<{ url: string }> {
@@ -114,5 +128,60 @@ export class OcorrenciaService {
     return {
       url: `/relatorios/${id}.pdf`
     };
+  }
+
+  async list(filters: ListOcorrenciaFilters = {}): Promise<Ocorrencia[]> {
+    const where: Prisma.OcorrenciaWhereInput = {};
+
+    if (filters.cliente) {
+      where.cliente = filters.cliente;
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    if (filters.dataInicio || filters.dataFim) {
+      where.criado_em = {
+        gte: filters.dataInicio,
+        lte: filters.dataFim
+      };
+    }
+
+    return this.prisma.ocorrencia.findMany({
+      where,
+      include: {
+        fotos: true
+      },
+      orderBy: {
+        criado_em: 'desc'
+      }
+    });
+  }
+
+  async getById(id: number): Promise<Ocorrencia | null> {
+    return this.prisma.ocorrencia.findUnique({
+      where: { id },
+      include: {
+        fotos: true
+      }
+    });
+  }
+
+  async addFotos(id: number, urls: string[]): Promise<Ocorrencia> {
+    return this.prisma.ocorrencia.update({
+      where: { id },
+      data: {
+        fotos: {
+          create: urls.map(url => ({
+            url,
+            legenda: ''
+          }))
+        }
+      },
+      include: {
+        fotos: true
+      }
+    });
   }
 } 

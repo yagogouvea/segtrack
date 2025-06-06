@@ -10,8 +10,6 @@ interface SanitizedOcorrencia {
   coordenadas?: string;
 }
 
-type SanitizedData = string | number | boolean | null | undefined | SanitizedOcorrencia | Record<string, any>;
-
 export const sanitizeOcorrenciaData = (data: any): SanitizedOcorrencia => {
   return {
     id: data.id,

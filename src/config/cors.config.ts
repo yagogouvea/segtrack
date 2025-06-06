@@ -1,4 +1,3 @@
-import cors from 'cors';
 import { CorsOptions } from 'cors';
 
 const allowedOrigins = [
@@ -7,7 +6,8 @@ const allowedOrigins = [
   'http://localhost:3000',  // Para desenvolvimento local
   'http://localhost:5173',  // Para servidor Vite
   'http://localhost:8080',   // Para desenvolvimento local adicional
-  '.onrender.com'  // Para permitir previews do Render
+  '.onrender.com',  // Para permitir previews do Render
+  '.amazonaws.com'  // Para permitir domínios AWS
 ];
 
 const corsOptions: CorsOptions = {

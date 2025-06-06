@@ -6,7 +6,7 @@ export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   console.error('❌ Erro capturado:', {
     error: err.message,

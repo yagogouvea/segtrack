@@ -4,10 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const client_1 = require("@prisma/client");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const db_1 = __importDefault(require("../lib/db"));
+const prisma = new client_1.PrismaClient();
 const UPLOAD_DIR = path_1.default.resolve(__dirname, '../../uploads');
 // Garantir que a pasta uploads existe
 if (!fs_1.default.existsSync(UPLOAD_DIR)) {
@@ -27,7 +28,7 @@ const storage = multer_1.default.diskStorage({
 const upload = (0, multer_1.default)({
     storage,
     limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB
+        fileSize: 50 * 1024 * 1024,
         files: 10 // máximo de 10 arquivos por vez
     },
     fileFilter: (_req, file, cb) => {
@@ -47,24 +48,27 @@ router.post('/', upload.array('imagens'), async (req, res) => {
     const arquivos = req.files;
     const legendas = Array.isArray(req.body.legendas) ? req.body.legendas : [req.body.legendas];
     if (!ocorrenciaId) {
-        return res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
+        res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
+        return;
     }
     if (!arquivos || arquivos.length === 0) {
-        return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
+        res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
+        return;
     }
     try {
         // Verificar se a ocorrência existe
-        const ocorrencia = await db_1.default.ocorrencia.findUnique({
+        const ocorrencia = await prisma.ocorrencia.findUnique({
             where: { id: Number(ocorrenciaId) }
         });
         if (!ocorrencia) {
-            return res.status(404).json({ error: 'Ocorrência não encontrada.' });
+            res.status(404).json({ error: 'Ocorrência não encontrada.' });
+            return;
         }
         const fotosCriadas = await Promise.all(arquivos.map(async (file, i) => {
             const nomeArquivo = file.filename;
             // Garantir que a URL comece com /uploads/
             const url = nomeArquivo.startsWith('uploads/') ? `/${nomeArquivo}` : `/uploads/${nomeArquivo}`;
-            return db_1.default.foto.create({
+            return prisma.foto.create({
                 data: {
                     url,
                     legenda: legendas[i] || '',
@@ -93,10 +97,11 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { legenda } = req.body;
     if (!legenda || typeof legenda !== 'string') {
-        return res.status(400).json({ error: 'Legenda inválida.' });
+        res.status(400).json({ error: 'Legenda inválida.' });
+        return;
     }
     try {
-        const fotoAtualizada = await db_1.default.foto.update({
+        const fotoAtualizada = await prisma.foto.update({
             where: { id: Number(id) },
             data: { legenda }
         });
@@ -111,9 +116,10 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const foto = await db_1.default.foto.findUnique({ where: { id: Number(id) } });
+        const foto = await prisma.foto.findUnique({ where: { id: Number(id) } });
         if (!foto) {
-            return res.status(404).json({ error: 'Foto não encontrada.' });
+            res.status(404).json({ error: 'Foto não encontrada.' });
+            return;
         }
         // Remover arquivo físico
         if (foto.url) {
@@ -123,7 +129,7 @@ router.delete('/:id', async (req, res) => {
                 fs_1.default.unlinkSync(filepath);
             }
         }
-        await db_1.default.foto.delete({ where: { id: Number(id) } });
+        await prisma.foto.delete({ where: { id: Number(id) } });
         res.status(204).send();
     }
     catch (error) {
@@ -135,10 +141,11 @@ router.delete('/:id', async (req, res) => {
 router.get('/por-ocorrencia/:ocorrenciaId', async (req, res) => {
     const { ocorrenciaId } = req.params;
     if (!ocorrenciaId || isNaN(Number(ocorrenciaId))) {
-        return res.status(400).json({ error: 'ID de ocorrência inválido.' });
+        res.status(400).json({ error: 'ID de ocorrência inválido.' });
+        return;
     }
     try {
-        const fotos = await db_1.default.foto.findMany({
+        const fotos = await prisma.foto.findMany({
             where: { ocorrenciaId: Number(ocorrenciaId) },
             orderBy: { id: 'asc' }
         });
@@ -150,3 +157,4 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req, res) => {
     }
 });
 exports.default = router;
+//# sourceMappingURL=fotos.js.map

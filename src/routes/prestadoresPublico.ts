@@ -1,13 +1,13 @@
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { PrestadorPublicoInput } from '../types/prestadorPublico';
-import prisma from '../lib/db';
+import { prisma } from '../lib/db';
 
 const router = express.Router();
 const prismaClient = new PrismaClient();
 
 // Cadastro público de prestadores
-router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Response) => {
+router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Response): Promise<void> => {
   console.log('Recebendo requisição de cadastro público:', req.body);
   
   const {
@@ -35,7 +35,8 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
       temRegioes: !!regioes?.length,
       temTipoVeiculo: !!tipo_veiculo?.length
     });
-    return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+    res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+    return;
   }
 
   try {
@@ -45,7 +46,8 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
     });
 
     if (existente) {
-      return res.status(400).json({ error: 'Já existe um prestador cadastrado com este CPF.' });
+      res.status(400).json({ error: 'Já existe um prestador cadastrado com este CPF.' });
+      return;
     }
 
     console.log('Criando prestador com os dados:', {
@@ -54,12 +56,12 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
       qtdFuncoes: funcoes.length,
       qtdRegioes: regioes.length,
       qtdVeiculos: tipo_veiculo.length,
-      veiculos: tipo_veiculo.map(tipo => ({ tipo }))
+      veiculos: tipo_veiculo.map((tipo: string) => ({ tipo }))
     });
 
     // Garantir que tipo_veiculo é um array
     const veiculosParaCriar = Array.isArray(tipo_veiculo) ? 
-        tipo_veiculo.map(tipo => ({ tipo })) : [];
+        tipo_veiculo.map((tipo: string) => ({ tipo })) : [];
 
     const novoPrestador = await prismaClient.prestador.create({
       data: {
@@ -83,10 +85,10 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
         franquia_km: 0,
         franquia_horas: '',
         funcoes: {
-          create: funcoes.map((funcao) => ({ funcao }))
+          create: funcoes.map((funcao: string) => ({ funcao }))
         },
         regioes: {
-          create: regioes.map((regiao) => ({ regiao }))
+          create: regioes.map((regiao: string) => ({ regiao }))
         },
         veiculos: {
           create: veiculosParaCriar
@@ -102,9 +104,9 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
     // Formatar a resposta para incluir tipo_veiculo
     const prestadorFormatado = {
       ...novoPrestador,
-      funcoes: novoPrestador.funcoes.map(f => f.funcao),
-      regioes: novoPrestador.regioes.map(r => r.regiao),
-      tipo_veiculo: novoPrestador.veiculos.map(v => v.tipo),
+      funcoes: novoPrestador.funcoes.map((f: { funcao: string }) => f.funcao),
+      regioes: novoPrestador.regioes.map((r: { regiao: string }) => r.regiao),
+      tipo_veiculo: novoPrestador.veiculos.map((v: { tipo: string }) => v.tipo),
       veiculos: novoPrestador.veiculos
     };
 
@@ -120,7 +122,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
 });
 
 // Listar prestadores públicos
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
     const prestadores = await prisma.prestador.findMany({
       where: { aprovado: true },
@@ -138,9 +140,9 @@ router.get('/', async (_req: Request, res: Response) => {
     });
 
     // Transform the response to include functions in a flattened format
-    const formattedPrestadores = prestadores.map(p => ({
+    const formattedPrestadores = prestadores.map((p: any) => ({
       ...p,
-      funcoes: p.funcoes.map(f => f.funcao)
+      funcoes: p.funcoes.map((f: { funcao: string }) => f.funcao)
     }));
 
     res.json(formattedPrestadores);
@@ -151,7 +153,7 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // Buscar prestador público por ID
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const prestador = await prisma.prestador.findUnique({
@@ -171,13 +173,14 @@ router.get('/:id', async (req: Request, res: Response) => {
     });
 
     if (!prestador) {
-      return res.status(404).json({ error: 'Prestador não encontrado' });
+      res.status(404).json({ error: 'Prestador não encontrado' });
+      return;
     }
 
     // Transform the response to include functions in a flattened format
     const formattedPrestador = {
       ...prestador,
-      funcoes: prestador.funcoes.map(f => f.funcao)
+      funcoes: prestador.funcoes.map((f: { funcao: string }) => f.funcao)
     };
 
     res.json(formattedPrestador);

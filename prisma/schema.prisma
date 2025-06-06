@@ -1,10 +1,39 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["metrics"]
 }
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+enum TipoContrato {
+  padrao_regiao
+  acl_km
+  padrao_fixo
+  valor_fechado
+}
+
+enum RegiaoContrato {
+  CAPITAL
+  GRANDE_SP
+  INTERIOR
+  OUTROS_ESTADOS
+}
+
+enum UserRole {
+  admin
+  manager
+  operator
+  client
+}
+
+enum OcorrenciaStatus {
+  em_andamento
+  concluida
+  cancelada
+  aguardando
 }
 
 model Cliente {
@@ -33,8 +62,8 @@ model Contrato {
   id                   Int      @id @default(autoincrement())
   clienteId            Int
   nome_interno         String?
-  tipo                 String?  // padrao_regiao, acl_km, padrao_fixo, valor_fechado
-  regiao              String?  // CAPITAL, GRANDE_SP, INTERIOR, OUTROS_ESTADOS
+  tipo                 TipoContrato?
+  regiao               RegiaoContrato?
   valor_acionamento    Decimal? @db.Decimal(10, 2)
   valor_nao_recuperado Decimal? @db.Decimal(10, 2)
   valor_hora_extra     Decimal? @db.Decimal(10, 2)
@@ -146,7 +175,7 @@ model Ocorrencia {
   despesas            Float?
   descricao           String?   @db.Text
   resultado           String?
-  status              String    @default("Em andamento")
+  status              OcorrenciaStatus @default(em_andamento)
   encerrada_em        DateTime?
   criado_em           DateTime  @default(now())
   atualizado_em       DateTime  @updatedAt
@@ -155,6 +184,9 @@ model Ocorrencia {
   km_inicial          Float?
   despesas_detalhadas Json?
   fotos               Foto[]
+
+  @@index([placa1])
+  @@index([status])
 }
 
 model Foto {
@@ -183,8 +215,8 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  role         String
-  permissions  String   @default("[]") @db.Text
+  role         UserRole
+  permissions  Json
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

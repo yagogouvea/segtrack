@@ -1,15 +1,24 @@
+import 'dotenv/config';
 import app from './app';
+import logger from './config/logger';
 
-const port = parseInt(process.env.PORT || '8080', 10);
-const host = process.env.HOST || '0.0.0.0';
+const port = parseInt(process.env.PORT || '3001', 10);
 
 // Função para inicializar o servidor
 const startServer = async () => {
   try {
-    const server = app.listen(port, host, () => {
-      console.log(`🚀 Servidor iniciado em http://${host}:${port}`);
-      console.log('Ambiente:', process.env.NODE_ENV);
-      console.log('Memória em uso:', process.memoryUsage());
+    const server = app.listen(port, '0.0.0.0', () => {
+      logger.info(`🚀 Servidor iniciado em http://0.0.0.0:${port}`);
+      logger.info(`Ambiente: ${process.env.NODE_ENV}`);
+      
+      const used = process.memoryUsage();
+      logger.info({
+        rss: used.rss,
+        heapTotal: used.heapTotal,
+        heapUsed: used.heapUsed,
+        external: used.external,
+        arrayBuffers: used.arrayBuffers
+      }, 'Memória em uso');
     });
 
     // Configurar timeouts do servidor

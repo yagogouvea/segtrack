@@ -1,8 +1,10 @@
 import express, { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import prisma from '../lib/db';
+
+const prisma = new PrismaClient();
 
 const UPLOAD_DIR = path.resolve(__dirname, '../../uploads');
 
@@ -42,17 +44,19 @@ const upload = multer({
 const router = express.Router();
 
 // 🔹 Upload de novas fotos
-router.post('/', upload.array('imagens'), async (req: Request, res: Response) => {
+router.post('/', upload.array('imagens'), async (req: Request, res: Response): Promise<void> => {
   const { ocorrenciaId } = req.body;
   const arquivos = req.files as Express.Multer.File[];
   const legendas = Array.isArray(req.body.legendas) ? req.body.legendas : [req.body.legendas];
 
   if (!ocorrenciaId) {
-    return res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
+    res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
+    return;
   }
 
   if (!arquivos || arquivos.length === 0) {
-    return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
+    res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
+    return;
   }
 
   try {
@@ -62,7 +66,8 @@ router.post('/', upload.array('imagens'), async (req: Request, res: Response) =>
     });
 
     if (!ocorrencia) {
-      return res.status(404).json({ error: 'Ocorrência não encontrada.' });
+      res.status(404).json({ error: 'Ocorrência não encontrada.' });
+      return;
     }
 
     const fotosCriadas = await Promise.all(
@@ -100,12 +105,13 @@ router.post('/', upload.array('imagens'), async (req: Request, res: Response) =>
 });
 
 // 🔹 Atualizar legenda da foto
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { legenda } = req.body;
 
   if (!legenda || typeof legenda !== 'string') {
-    return res.status(400).json({ error: 'Legenda inválida.' });
+    res.status(400).json({ error: 'Legenda inválida.' });
+    return;
   }
 
   try {
@@ -122,14 +128,15 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // 🔹 Remover foto
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
   try {
     const foto = await prisma.foto.findUnique({ where: { id: Number(id) } });
 
     if (!foto) {
-      return res.status(404).json({ error: 'Foto não encontrada.' });
+      res.status(404).json({ error: 'Foto não encontrada.' });
+      return;
     }
 
     // Remover arquivo físico
@@ -150,11 +157,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // 🔹 Listar fotos por ocorrência
-router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response) => {
+router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response): Promise<void> => {
   const { ocorrenciaId } = req.params;
 
   if (!ocorrenciaId || isNaN(Number(ocorrenciaId))) {
-    return res.status(400).json({ error: 'ID de ocorrência inválido.' });
+    res.status(400).json({ error: 'ID de ocorrência inválido.' });
+    return;
   }
 
   try {

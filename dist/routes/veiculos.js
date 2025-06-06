@@ -43,17 +43,12 @@ router.get('/:placa', async (req, res) => {
                 }
             });
         }
-        res.json(veiculo);
+        return res.json(veiculo);
     }
-    catch (error) {
-        console.error('❌ Erro ao buscar veículo:', error.message);
-        if (error.response) {
-            console.error('➡️ Erro da API Brasil:', {
-                status: error.response.status,
-                data: error.response.data
-            });
-        }
-        res.status(500).json({ erro: 'Erro ao buscar dados do veículo' });
+    catch (err) {
+        console.error('❌ Erro ao buscar veículo:', err);
+        return res.status(500).json({ erro: 'Erro ao buscar veículo' });
     }
 });
 exports.default = router;
+//# sourceMappingURL=veiculos.js.map

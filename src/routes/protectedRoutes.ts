@@ -1,24 +1,16 @@
-import express from 'express';
-import { requirePermission, AuthRequest, createAuthenticatedHandler } from '../middleware/authMiddleware';
+import { Router } from 'express';
+import { requirePermission } from '../infrastructure/middleware/auth.middleware';
 
-const router = express.Router();
+const router = Router();
 
-// Get current user
-router.get('/me', 
-  createAuthenticatedHandler(async (req: AuthRequest, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Usuário não autenticado' });
-    }
-    res.json(req.user);
-  })
-);
+// Rota protegida que requer permissão específica
+router.get('/admin', requirePermission('read:dashboard'), async (_req, res) => {
+  res.json({ message: 'Acesso permitido - Área administrativa' });
+});
 
-// Protected resource example
-router.get('/protected-resource',
-  requirePermission('resource:read'),
-  createAuthenticatedHandler(async (req: AuthRequest, res) => {
-    res.json({ message: 'Você tem acesso a este recurso protegido' });
-  })
-);
+// Rota protegida que requer outra permissão
+router.get('/manager', requirePermission('read:relatorio'), async (_req, res) => {
+  res.json({ message: 'Acesso permitido - Área gerencial' });
+});
 
 export default router; 

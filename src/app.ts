@@ -1,21 +1,38 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import { testConnection, disconnectPrisma } from './infrastructure/database/connection';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
+import { testConnection, disconnectPrisma } from './lib/prisma';
 import { configureSecurityMiddleware } from './infrastructure/middleware/security';
-import { errorHandler } from './infrastructure/middleware/error';
 import { requestLogger } from './infrastructure/middleware/logger';
 import corsOptions from './infrastructure/config/cors';
 import v1Router from './api/v1/routes';
+import logger from './infrastructure/logger';
+import swaggerUi from 'swagger-ui-express';
+import swaggerDocument from './swagger.json';
 
 const app = express();
 
-// Configurar trust proxy para Cloud Run
+// Configurar trust proxy para Cloud Run/Load Balancer
 app.set('trust proxy', true);
 
-// Configurações de segurança
+// Configurações de segurança básicas
+app.use(helmet());
+app.use(compression());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limite de 100 requisições por IP
+  message: { error: 'Too many requests from this IP, please try again later.' }
+});
+app.use(limiter);
+
+// Configurações de segurança adicionais
 configureSecurityMiddleware(app);
 
-// Aplicar CORS antes de qualquer outro middleware
+// CORS configurado
 app.use(cors(corsOptions));
 
 // Limite de payload
@@ -26,7 +43,7 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 const timeout = 30000; // 30 segundos
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setTimeout(timeout, () => {
-    console.error('⚠️ Request timeout:', {
+    logger.error('Request timeout:', {
       method: req.method,
       url: req.url,
       timeout: timeout,
@@ -42,6 +59,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Middleware de logging
 app.use(requestLogger);
 
+// Documentação Swagger
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // Rotas da API v1
 app.use('/api/v1', v1Router);
 
@@ -51,10 +71,12 @@ app.get('/health', async (_req: Request, res: Response) => {
     await testConnection();
     res.status(200).json({ 
       status: 'healthy',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
     });
   } catch (error) {
-    console.error('❌ Erro no health check:', error);
+    logger.error('Health check failed:', error);
     res.status(500).json({ 
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
@@ -64,37 +86,47 @@ app.get('/health', async (_req: Request, res: Response) => {
 });
 
 // Error handling
-app.use(errorHandler);
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  logger.error('Unhandled error:', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 // Gerenciamento de processo
 process.on('SIGTERM', async () => {
-  console.log('🛑 Recebido sinal SIGTERM, iniciando shutdown graceful...');
+  logger.info('Recebido sinal SIGTERM, iniciando shutdown graceful...');
   await disconnectPrisma();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('🛑 Recebido sinal SIGINT, iniciando shutdown graceful...');
+  logger.info('Recebido sinal SIGINT, iniciando shutdown graceful...');
   await disconnectPrisma();
   process.exit(0);
 });
 
 // Tratamento de erros não capturados
 process.on('uncaughtException', (error) => {
-  console.error('❌ Erro não capturado:', {
+  logger.fatal('Erro não capturado:', {
     error: error.message,
     stack: error.stack,
     timestamp: new Date().toISOString()
   });
   
-  // Tenta desconectar o banco antes de encerrar
   disconnectPrisma().finally(() => {
     process.exit(1);
   });
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Promise rejeitada não tratada:', {
+process.on('unhandledRejection', (reason) => {
+  logger.error('Promise rejeitada não tratada:', {
     reason,
     stack: reason instanceof Error ? reason.stack : undefined,
     timestamp: new Date().toISOString()
@@ -105,12 +137,11 @@ process.on('unhandledRejection', (reason, promise) => {
 const MB = 1024 * 1024;
 setInterval(() => {
   const memoryUsage = process.memoryUsage();
-  console.log('📊 Uso de memória:', {
+  logger.info('Uso de memória:', {
     rss: `${Math.round(memoryUsage.rss / MB)}MB`,
     heapTotal: `${Math.round(memoryUsage.heapTotal / MB)}MB`,
     heapUsed: `${Math.round(memoryUsage.heapUsed / MB)}MB`,
-    external: `${Math.round(memoryUsage.external / MB)}MB`,
-    timestamp: new Date().toISOString()
+    external: `${Math.round(memoryUsage.external / MB)}MB`
   });
 }, 60000); // Log a cada minuto
 

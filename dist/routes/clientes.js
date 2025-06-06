@@ -9,7 +9,7 @@ const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // ✅ NOVA ROTA PARA LISTAR CLIENTES COM ID E NOME
-router.get('/resumo', async (req, res) => {
+router.get('/resumo', async (_req, res) => {
     try {
         const clientes = await prisma.cliente.findMany({
             select: {
@@ -18,24 +18,24 @@ router.get('/resumo', async (req, res) => {
             },
             orderBy: { nome: 'asc' },
         });
-        res.json(clientes);
+        return res.json(clientes);
     }
     catch (err) {
         console.error('Erro ao buscar clientes:', err);
-        res.status(500).json({ erro: 'Erro ao buscar clientes' });
+        return res.status(500).json({ erro: 'Erro ao buscar clientes' });
     }
 });
 // Listar todos os clientes com seus contratos
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
     try {
         const clientes = await prisma.cliente.findMany({
             include: { contratos: true },
         });
-        res.json(clientes);
+        return res.json(clientes);
     }
     catch (err) {
         console.error('Erro ao buscar clientes:', err);
-        res.status(500).json({ erro: 'Erro ao buscar clientes' });
+        return res.status(500).json({ erro: 'Erro ao buscar clientes' });
     }
 });
 // Buscar cliente por ID
@@ -48,11 +48,11 @@ router.get('/:id', async (req, res) => {
         if (!cliente) {
             return res.status(404).json({ erro: 'Cliente não encontrado' });
         }
-        res.json(cliente);
+        return res.json(cliente);
     }
     catch (err) {
         console.error('Erro ao buscar cliente:', err);
-        res.status(500).json({ erro: 'Erro ao buscar cliente' });
+        return res.status(500).json({ erro: 'Erro ao buscar cliente' });
     }
 });
 // Criar novo cliente
@@ -158,3 +158,4 @@ router.delete('/:id', async (req, res) => {
     }
 });
 exports.default = router;
+//# sourceMappingURL=clientes.js.map

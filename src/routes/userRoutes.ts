@@ -1,53 +1,20 @@
-import express from 'express';
-import { requirePermission, AuthRequest, createAuthenticatedHandler } from '../middleware/authMiddleware';
-import * as userController from '../controllers/userController';
+import { Router } from 'express';
+import { requirePermission } from '../infrastructure/middleware/auth.middleware';
+import { UserController } from '../controllers/user.controller';
 
-const router = express.Router();
+const router = Router();
+const controller = new UserController();
 
-// Get current user
-router.get('/me', 
-  createAuthenticatedHandler(async (req: AuthRequest, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Não autenticado' });
-    }
-    res.json(req.user);
-  })
-);
+// Rotas que requerem autenticação
+router.get('/me', controller.getCurrentUser);
+router.put('/me', controller.updateCurrentUser);
+router.put('/me/password', controller.updatePassword);
 
-// Get all users
-router.get('/', 
-  requirePermission('users:read'),
-  userController.getUsers
-);
-
-// Get user by ID
-router.get('/:id',
-  requirePermission('users:read'),
-  userController.getUser
-);
-
-// Create user
-router.post('/',
-  requirePermission('users:create'),
-  userController.createUser
-);
-
-// Update user
-router.put('/:id',
-  requirePermission('users:update'),
-  userController.updateUser
-);
-
-// Delete user
-router.delete('/:id',
-  requirePermission('users:delete'),
-  userController.deleteUser
-);
-
-// Update user password
-router.put('/:id/password',
-  requirePermission('users:update'),
-  userController.updateUserPassword
-);
+// Rotas administrativas
+router.get('/', requirePermission('read:user'), controller.list);
+router.post('/', requirePermission('create:user'), controller.create);
+router.get('/:id', requirePermission('read:user'), controller.getById);
+router.put('/:id', requirePermission('update:user'), controller.update);
+router.delete('/:id', requirePermission('delete:user'), controller.delete);
 
 export default router;

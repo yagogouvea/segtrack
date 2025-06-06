@@ -5,11 +5,9 @@ import fs from "fs";
 import path from "path";
 import cors from 'cors';
 import corsOptions from './config/cors.config';
-import { testDatabaseConnection } from "./config/database";
 
 import veiculosRoutes from "./routes/veiculos";
 import clientesRoutes from "./routes/clientes";
-import prestadoresRoutes from "./routes/prestadores";
 import ocorrenciasRoutes from "./routes/ocorrencias";
 import fotosRoutes from "./routes/fotos";
 import relatoriosRoutes from "./routes/relatorios";
@@ -41,11 +39,11 @@ const app = express();
 app.use(cors(corsOptions));
 
 // Log de todas as requisições
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+app.use((_req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${_req.method} ${_req.url}`);
   if (process.env.NODE_ENV === 'development') {
-    console.log('Request Headers:', req.headers);
-    console.log('Origin:', req.headers.origin);
+    console.log('Request Headers:', _req.headers);
+    console.log('Origin:', _req.headers.origin);
   }
   next();
 });
@@ -72,7 +70,6 @@ app.use(express.urlencoded({ extended: true }));
 // Configurar rotas
 app.use('/api/veiculos', veiculosRoutes);
 app.use('/api/clientes', clientesRoutes);
-app.use('/api/prestadores', prestadoresRoutes);
 app.use('/api/ocorrencias', ocorrenciasRoutes);
 app.use('/api/fotos', fotosRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
@@ -84,7 +81,7 @@ app.use('/api/prestadores-publico', prestadoresPublico);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('❌ Erro não tratado:', err);
   res.status(500).json({
     error: 'Erro interno do servidor',

@@ -1,25 +1,28 @@
-import prisma from '../lib/db';
+import { prisma } from '../lib/db';
 import bcrypt from 'bcrypt';
 
 async function createAdminUser() {
   try {
     const hashedPassword = await bcrypt.hash('admin123', 10);
 
-    // Define as permissões como um objeto e converte para JSON string
-    const permissions = JSON.stringify({
-      users: {
-        create: true,
-        read: true,
-        update: true,
-        delete: true
-      },
-      ocorrencias: {
-        create: true,
-        read: true,
-        update: true,
-        delete: true
-      }
-    });
+    // Define as permissões no novo formato
+    const permissions = [
+      'create:user',
+      'read:user',
+      'update:user',
+      'delete:user',
+      'create:ocorrencia',
+      'read:ocorrencia',
+      'update:ocorrencia',
+      'delete:ocorrencia',
+      'read:dashboard',
+      'read:relatorio',
+      'create:foto',
+      'read:foto',
+      'update:foto',
+      'delete:foto',
+      'upload:foto'
+    ];
 
     const user = await prisma.user.create({
       data: {
@@ -27,7 +30,7 @@ async function createAdminUser() {
         email: 'admin@segtrack.com',
         passwordHash: hashedPassword,
         role: 'admin',
-        permissions,
+        permissions: JSON.stringify(permissions),
         active: true
       }
     });

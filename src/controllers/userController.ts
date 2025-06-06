@@ -1,57 +1,22 @@
 import { Request, Response } from 'express';
-import prisma from '../lib/db';
+import { prisma } from '../lib/db';
 import bcrypt from 'bcrypt';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { z } from 'zod';
-import type { User, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
-interface UserWithPermissions {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  permissions: string;
-  active: boolean;
-}
-
-interface PermissionsObject {
-  [key: string]: {
-    [key: string]: boolean;
-  };
-}
+type UserRole = 'admin' | 'manager' | 'operator' | 'client';
 
 // Interface para campos opcionais de atualização
 type UserUpdateFields = Partial<{
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   active: boolean;
 }>;
 
 // Interface para campos obrigatórios de atualização
 interface RequiredUpdateFields {
   permissions: string;
-}
-
-// Função auxiliar para converter permissões de objeto para array
-function permissionsObjectToArray(permissionsObj: PermissionsObject): string[] {
-  const permissions: string[] = [];
-  
-  // Mapeia as permissões do objeto para o formato de array
-  Object.entries(permissionsObj).forEach(([module, actions]) => {
-    Object.entries(actions).forEach(([action, enabled]) => {
-      if (enabled) {
-        if (action === 'read') permissions.push(`view_${module}`);
-        else if (module.endsWith('s')) {
-          permissions.push(`${action}_${module.slice(0, -1)}`);
-        } else {
-          permissions.push(`${action}_${module}`);
-        }
-      }
-    });
-  });
-
-  return permissions;
 }
 
 // Schema para validação de usuário
@@ -77,7 +42,7 @@ const passwordUpdateSchema = z.object({
 });
 
 // GET /api/users
-export const getUsers = async (_req: Request, res: Response) => {
+export const getUsers = async (_req: Request, res: Response): Promise<void> => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -100,7 +65,7 @@ export const getUsers = async (_req: Request, res: Response) => {
 };
 
 // Buscar usuário específico
-export const getUser = async (req: Request, res: Response) => {
+export const getUser = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
   try {
@@ -119,7 +84,8 @@ export const getUser = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+      res.status(404).json({ error: 'Usuário não encontrado' });
+      return;
     }
 
     res.json(user);
@@ -130,7 +96,7 @@ export const getUser = async (req: Request, res: Response) => {
 };
 
 // POST /api/users
-export const createUser = async (req: Request, res: Response) => {
+export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const data = userSchema.parse(req.body);
     
@@ -140,7 +106,8 @@ export const createUser = async (req: Request, res: Response) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'Email já cadastrado' });
+      res.status(400).json({ error: 'Email já cadastrado' });
+      return;
     }
 
     // Garantir que permissions seja uma string JSON válida
@@ -165,7 +132,7 @@ export const createUser = async (req: Request, res: Response) => {
         name: data.name,
         email: data.email,
         passwordHash: await bcrypt.hash(data.password, 10),
-        role: data.role,
+        role: data.role as UserRole,
         permissions: permissionsString,
         active: data.active
       },
@@ -184,7 +151,8 @@ export const createUser = async (req: Request, res: Response) => {
     res.status(201).json(user);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+      res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+      return;
     }
     console.error('Erro ao criar usuário:', error);
     res.status(500).json({ error: 'Erro ao criar usuário' });
@@ -192,7 +160,7 @@ export const createUser = async (req: Request, res: Response) => {
 };
 
 // PUT /api/users/:id
-export const updateUser = async (req: Request, res: Response) => {
+export const updateUser = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   
   try {
@@ -208,7 +176,8 @@ export const updateUser = async (req: Request, res: Response) => {
       });
 
       if (existingUser) {
-        return res.status(400).json({ error: 'Email já cadastrado por outro usuário' });
+        res.status(400).json({ error: 'Email já cadastrado por outro usuário' });
+        return;
       }
     }
 
@@ -219,28 +188,18 @@ export const updateUser = async (req: Request, res: Response) => {
     });
 
     if (!currentUser) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+      res.status(404).json({ error: 'Usuário não encontrado' });
+      return;
     }
 
     // Determinar as novas permissões
-    const newPermissions: string = data.permissions 
-      ? Array.isArray(data.permissions)
-        ? JSON.stringify(data.permissions)
-        : typeof data.permissions === 'string'
-          ? (() => {
-              try {
-                JSON.parse(data.permissions);
-                return data.permissions;
-              } catch {
-                return JSON.stringify([data.permissions]);
-              }
-            })()
-          : JSON.stringify([])
-      : currentUser.permissions || JSON.stringify([]);
+    const newPermissions: string[] = Array.isArray(data.permissions) ? 
+      data.permissions : 
+      JSON.parse(data.permissions as string);
 
     // Preparar campos obrigatórios para atualização
     const requiredFields: RequiredUpdateFields = {
-      permissions: newPermissions
+      permissions: JSON.stringify(newPermissions)
     };
 
     // Atualizar primeiro os campos obrigatórios
@@ -254,7 +213,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     if (data.name) optionalFields.name = data.name;
     if (data.email) optionalFields.email = data.email;
-    if (data.role) optionalFields.role = data.role;
+    if (data.role) optionalFields.role = data.role as UserRole;
     if (data.active !== undefined) optionalFields.active = data.active;
 
     // Atualizar campos opcionais se houver algum
@@ -281,13 +240,15 @@ export const updateUser = async (req: Request, res: Response) => {
     });
 
     if (!updatedUser) {
-      throw new Error('Usuário não encontrado após atualização');
+      res.status(500).json({ error: 'Usuário não encontrado após atualização' });
+      return;
     }
 
     res.json(updatedUser);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+      res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+      return;
     }
     console.error('Erro ao atualizar usuário:', error);
     res.status(500).json({ error: 'Erro ao atualizar usuário' });
@@ -295,7 +256,7 @@ export const updateUser = async (req: Request, res: Response) => {
 };
 
 // PUT /api/users/:id/password
-export const updateUserPassword = async (req: Request, res: Response) => {
+export const updateUserPassword = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   
   try {
@@ -307,7 +268,8 @@ export const updateUserPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+      res.status(404).json({ error: 'Usuário não encontrado' });
+      return;
     }
 
     // Atualizar a senha
@@ -320,7 +282,8 @@ export const updateUserPassword = async (req: Request, res: Response) => {
     res.json({ message: 'Senha atualizada com sucesso' });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+      res.status(400).json({ error: 'Dados inválidos', details: error.errors });
+      return;
     }
     console.error('Erro ao atualizar senha:', error);
     res.status(500).json({ error: 'Erro ao atualizar senha' });
@@ -328,7 +291,7 @@ export const updateUserPassword = async (req: Request, res: Response) => {
 };
 
 // DELETE /api/users/:id
-export const deleteUser = async (req: Request, res: Response) => {
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
   try {

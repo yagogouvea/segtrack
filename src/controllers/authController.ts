@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import prisma from '../lib/db';
+import { prisma } from '../lib/db';
 
 interface PrismaUser {
   id: string;
@@ -13,163 +13,168 @@ interface PrismaUser {
   active: boolean;
 }
 
-// Função auxiliar para converter permissões de objeto para array
-function permissionsObjectToArray(permissionsObj: any): string[] {
-  const permissions: string[] = [];
-  
-  // Mapeia as permissões do objeto para o formato de array
-  Object.entries(permissionsObj).forEach(([module, actions]) => {
-    Object.entries(actions as Record<string, boolean>).forEach(([action, enabled]) => {
-      if (enabled) {
-        if (action === 'read') permissions.push(`view_${module}`);
-        else permissions.push(`${action}_${module.slice(0, -1)}`);
-      }
-    });
-  });
-
-  return permissions;
-}
-
-export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Validar corpo da requisição
+    if (!req.body.email || !req.body.password) {
+      res.status(400).json({ message: 'Email e senha são obrigatórios' });
+      return;
+    }
+
+    const { email, password } = req.body;
+
+    // Validar JWT_SECRET
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET não está definido no ambiente');
+      res.status(500).json({ message: 'Erro de configuração do servidor' });
+      return;
+    }
+
     console.log('Tentativa de login para:', email);
 
-    const user = await prisma.user.findUnique({ 
-      where: { email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        passwordHash: true,
-        role: true,
-        permissions: true,
-        active: true
-      }
-    }) as PrismaUser | null;
-
-    console.log('Resultado da busca do usuário:', {
-      found: !!user,
-      role: user?.role,
-      active: user?.active,
-      permissions: user?.permissions
-    });
-
-    if (!user) {
-      return res.status(401).json({ message: 'Usuário não encontrado' });
-    }
-
-    if (!user.active) {
-      return res.status(403).json({ message: 'Usuário desativado. Entre em contato com o administrador.' });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    console.log('Resultado da verificação de senha:', { isMatch });
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Senha incorreta' });
-    }
-
     try {
-      let permissions;
-      
-      // Se for admin, define todas as permissões como true
-      if (user.role === 'admin') {
-        permissions = {
-          users: {
-            read: true,
-            create: true,
-            update: true,
-            delete: true
-          },
-          ocorrencias: {
-            read: true,
-            create: true,
-            update: true,
-            delete: true
-          },
-          dashboard: {
-            read: true
-          },
-          prestadores: {
-            read: true,
-            create: true,
-            update: true,
-            delete: true
-          },
-          relatorios: {
-            read: true,
-            create: true,
-            update: true,
-            delete: true
-          },
-          clientes: {
-            read: true,
-            create: true,
-            update: true,
-            delete: true
-          }
-        };
-      } else {
-        // Para usuários não-admin, usa as permissões do banco
-        permissions = JSON.parse(user.permissions);
-      }
-      
-      console.log('Permissões do usuário:', permissions);
-
-      const token = jwt.sign(
-        {
-          id: user.id,
-          name: user.name,
-          role: user.role,
-          permissions: permissions
-        },
-        process.env.JWT_SECRET as string,
-        { expiresIn: '12h' }
-      );
-
-      console.log('Token gerado com sucesso');
-
-      res.json({ 
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          permissions: permissions
+      const user = await prisma.user.findUnique({ 
+        where: { email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          passwordHash: true,
+          role: true,
+          permissions: true,
+          active: true
         }
+      }) as PrismaUser | null;
+
+      console.log('Resultado da busca do usuário:', {
+        found: !!user,
+        role: user?.role,
+        active: user?.active
       });
-    } catch (conversionError) {
-      console.error('Erro na conversão de permissões:', conversionError);
-      throw conversionError;
+
+      if (!user) {
+        res.status(401).json({ message: 'Usuário não encontrado' });
+        return;
+      }
+
+      if (!user.active) {
+        res.status(403).json({ message: 'Usuário desativado. Entre em contato com o administrador.' });
+        return;
+      }
+
+      const isMatch = await bcrypt.compare(password, user.passwordHash);
+      console.log('Resultado da verificação de senha:', { isMatch });
+
+      if (!isMatch) {
+        res.status(401).json({ message: 'Senha incorreta' });
+        return;
+      }
+
+      try {
+        let permissions: string[];
+        
+        // Se for admin, define todas as permissões
+        if (user.role === 'admin') {
+          permissions = [
+            'create:user',
+            'read:user',
+            'update:user',
+            'delete:user',
+            'create:ocorrencia',
+            'read:ocorrencia',
+            'update:ocorrencia',
+            'delete:ocorrencia',
+            'read:dashboard',
+            'read:relatorio',
+            'create:foto',
+            'read:foto',
+            'update:foto',
+            'delete:foto',
+            'upload:foto'
+          ];
+        } else {
+          // Para usuários não-admin, usa as permissões do banco
+          try {
+            permissions = JSON.parse(user.permissions);
+            if (!Array.isArray(permissions)) {
+              throw new Error('Formato de permissões inválido');
+            }
+          } catch (parseError) {
+            console.error('Erro ao converter permissões:', parseError);
+            res.status(500).json({ message: 'Erro ao processar permissões do usuário' });
+            return;
+          }
+        }
+        
+        console.log('Permissões do usuário:', permissions);
+
+        const token = jwt.sign(
+          {
+            id: user.id,
+            name: user.name,
+            role: user.role,
+            permissions: permissions
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: '12h' }
+        );
+
+        console.log('Token gerado com sucesso');
+
+        res.json({ 
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            permissions: permissions
+          }
+        });
+      } catch (conversionError) {
+        console.error('Erro na conversão de permissões:', conversionError);
+        res.status(500).json({ message: 'Erro ao processar permissões' });
+      }
+    } catch (dbError) {
+      console.error('Erro ao buscar usuário:', dbError);
+      res.status(500).json({ message: 'Erro ao buscar usuário' });
     }
   } catch (error) {
     console.error("Erro no login:", error);
-    res.status(500).json({ message: 'Erro interno no login', error });
+    res.status(500).json({ message: 'Erro interno no login' });
   }
 };
 
-export const seedAdmin = async (_req: Request, res: Response) => {
+export const seedAdmin = async (_req: Request, res: Response): Promise<void> => {
   try {
     const existing = await prisma.user.findUnique({
       where: { email: 'admin@segtrack.com' },
     });
 
     if (existing) {
-      return res.status(400).json({ message: 'Usuário já existe' });
+      res.status(400).json({ message: 'Usuário já existe' });
+      return;
     }
 
     const hashedPassword = await bcrypt.hash('123456', 10);
 
-    const permissions = JSON.stringify([
-      'view_users',
-      'create_user',
-      'edit_user',
-      'export_pdf',
-      'view_finance',
-    ]);
+    const permissions = [
+      'create:user',
+      'read:user',
+      'update:user',
+      'delete:user',
+      'create:ocorrencia',
+      'read:ocorrencia',
+      'update:ocorrencia',
+      'delete:ocorrencia',
+      'read:dashboard',
+      'read:relatorio',
+      'create:foto',
+      'read:foto',
+      'update:foto',
+      'delete:foto',
+      'upload:foto'
+    ];
 
     const user = await prisma.user.create({
       data: {
@@ -177,7 +182,7 @@ export const seedAdmin = async (_req: Request, res: Response) => {
         email: 'admin@segtrack.com',
         passwordHash: hashedPassword,
         role: 'admin',
-        permissions,
+        permissions: JSON.stringify(permissions),
         active: true,
       },
     });

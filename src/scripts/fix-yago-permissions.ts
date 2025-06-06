@@ -1,4 +1,4 @@
-import prisma from '../lib/db';
+import { prisma } from '../lib/db';
 
 async function fixYagoPermissions() {
   try {
@@ -54,7 +54,9 @@ async function fixYagoPermissions() {
       id: updatedUser.id,
       email: updatedUser.email,
       role: updatedUser.role,
-      permissions: JSON.parse(updatedUser.permissions)
+      permissions: updatedUser.permissions ? 
+        JSON.parse(updatedUser.permissions as string) : 
+        []
     });
   } catch (error) {
     console.error('❌ Erro ao atualizar permissões do Yago:', error);

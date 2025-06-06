@@ -1,30 +1,26 @@
 import { Router } from 'express';
+import { authenticateToken } from '../../../infrastructure/middleware/auth.middleware';
 import { OcorrenciaController } from '../controllers/ocorrencia.controller';
-import { validateOcorrencia } from '../validators/ocorrencia.validator';
+import multer from 'multer';
+import { uploadConfig } from '../../../config/upload.config';
 
 const router = Router();
 const controller = new OcorrenciaController();
+const upload = multer(uploadConfig);
 
-// Listar ocorrências
+router.use(authenticateToken);
+
+// Listagem e busca
 router.get('/', controller.list);
-
-// Buscar ocorrência por ID
 router.get('/:id', controller.getById);
 
-// Criar nova ocorrência
-router.post('/', validateOcorrencia, controller.create);
-
-// Atualizar ocorrência
-router.put('/:id', validateOcorrencia, controller.update);
-
-// Excluir ocorrência
+// Criação e atualização
+router.post('/', controller.create);
+router.put('/:id', controller.update);
 router.delete('/:id', controller.delete);
 
-// Buscar por status
-router.get('/status/:status', controller.listByStatus);
-
-// Adicionar fotos
-router.post('/:id/fotos', controller.addPhotos);
+// Upload de fotos
+router.post('/:id/fotos', upload.array('fotos'), controller.addPhotos);
 
 // Gerar relatório
 router.post('/:id/relatorio', controller.generateReport);

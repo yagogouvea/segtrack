@@ -8,10 +8,9 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const cors_1 = __importDefault(require("cors"));
-const cors_config_1 = require("./config/cors.config");
+const cors_config_1 = __importDefault(require("./config/cors.config"));
 const veiculos_1 = __importDefault(require("./routes/veiculos"));
 const clientes_1 = __importDefault(require("./routes/clientes"));
-const prestadores_1 = __importDefault(require("./routes/prestadores"));
 const ocorrencias_1 = __importDefault(require("./routes/ocorrencias"));
 const fotos_1 = __importDefault(require("./routes/fotos"));
 const relatorios_1 = __importDefault(require("./routes/relatorios"));
@@ -37,35 +36,22 @@ else {
 console.log('🔧 Configurando Express...');
 const app = (0, express_1.default)();
 // Aplicar CORS antes de qualquer middleware ou rota
-app.use((0, cors_1.default)(cors_config_1.corsOptions));
-// Adicionar headers de segurança padrão
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://segtrack.comerceoficial.com');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    // Handle preflight
-    if (req.method === 'OPTIONS') {
-        res.status(204).end();
-        return;
-    }
-    next();
-});
+app.use((0, cors_1.default)(cors_config_1.default));
 // Log de todas as requisições
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+app.use((_req, _res, next) => {
+    console.log(`[${new Date().toISOString()}] ${_req.method} ${_req.url}`);
     if (process.env.NODE_ENV === 'development') {
-        console.log('Request Headers:', req.headers);
-        console.log('Origin:', req.headers.origin);
+        console.log('Request Headers:', _req.headers);
+        console.log('Origin:', _req.headers.origin);
     }
     next();
 });
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 // Root endpoint para verificar CORS
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     res.status(200).json({
         status: 'ok',
         message: 'API is running',
@@ -79,7 +65,6 @@ app.use(express_1.default.urlencoded({ extended: true }));
 // Configurar rotas
 app.use('/api/veiculos', veiculos_1.default);
 app.use('/api/clientes', clientes_1.default);
-app.use('/api/prestadores', prestadores_1.default);
 app.use('/api/ocorrencias', ocorrencias_1.default);
 app.use('/api/fotos', fotos_1.default);
 app.use('/api/relatorios', relatorios_1.default);
@@ -89,7 +74,7 @@ app.use('/api/prestadores-publico', prestadoresPublico_1.default);
 // Servir arquivos estáticos do diretório de uploads
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
     console.error('❌ Erro não tratado:', err);
     res.status(500).json({
         error: 'Erro interno do servidor',
@@ -105,3 +90,4 @@ app.listen(PORT, () => {
   `);
 });
 exports.default = app;
+//# sourceMappingURL=index.js.map
