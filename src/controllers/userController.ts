@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../lib/db';
+import { ensurePrisma } from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
@@ -44,7 +44,8 @@ const passwordUpdateSchema = z.object({
 // GET /api/users
 export const getUsers = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const users = await prisma.user.findMany({
+    const db = ensurePrisma();
+    const users = await db.user.findMany({
       select: {
         id: true,
         name: true,
@@ -69,7 +70,8 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
   try {
-    const user = await prisma.user.findUnique({
+    const db = ensurePrisma();
+    const user = await db.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -99,9 +101,10 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const data = userSchema.parse(req.body);
+    const db = ensurePrisma();
     
     // Verificar se o email já existe
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await db.user.findUnique({
       where: { email: data.email }
     });
 
@@ -127,7 +130,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       permissionsString = '[]';
     }
 
-    const user = await prisma.user.create({
+    const user = await db.user.create({
       data: {
         name: data.name,
         email: data.email,
@@ -165,10 +168,11 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   
   try {
     const data = userUpdateSchema.parse(req.body);
+    const db = ensurePrisma();
 
     // Se email foi fornecido, verificar se já existe
     if (data.email) {
-      const existingUser = await prisma.user.findFirst({
+      const existingUser = await db.user.findFirst({
         where: {
           email: data.email,
           NOT: { id }
@@ -182,7 +186,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     }
 
     // Buscar usuário atual para manter as permissões existentes
-    const currentUser = await prisma.user.findUnique({
+    const currentUser = await db.user.findUnique({
       where: { id },
       select: { permissions: true }
     });
@@ -202,31 +206,21 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       permissions: JSON.stringify(newPermissions)
     };
 
-    // Atualizar primeiro os campos obrigatórios
-    await prisma.user.update({
-      where: { id },
-      data: requiredFields
-    });
-
     // Preparar campos opcionais para atualização
     const optionalFields: UserUpdateFields = {};
-
     if (data.name) optionalFields.name = data.name;
     if (data.email) optionalFields.email = data.email;
     if (data.role) optionalFields.role = data.role as UserRole;
-    if (data.active !== undefined) optionalFields.active = data.active;
+    if (typeof data.active === 'boolean') optionalFields.active = data.active;
 
-    // Atualizar campos opcionais se houver algum
-    if (Object.keys(optionalFields).length > 0) {
-      await prisma.user.update({
-        where: { id },
-        data: optionalFields as Prisma.UserUpdateInput
-      });
-    }
-
-    // Buscar e retornar o usuário atualizado
-    const updatedUser = await prisma.user.findUnique({
+    // Atualizar usuário
+    const updatedUser = await db.user.update({
       where: { id },
+      data: {
+        ...optionalFields,
+        ...requiredFields,
+        updatedAt: new Date()
+      },
       select: {
         id: true,
         name: true,
@@ -239,11 +233,6 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       }
     });
 
-    if (!updatedUser) {
-      res.status(500).json({ error: 'Usuário não encontrado após atualização' });
-      return;
-    }
-
     res.json(updatedUser);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -255,28 +244,22 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// PUT /api/users/:id/password
+// PATCH /api/users/:id/password
 export const updateUserPassword = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   
   try {
     const data = passwordUpdateSchema.parse(req.body);
+    const db = ensurePrisma();
 
-    // Verificar se o usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id }
-    });
+    const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    if (!user) {
-      res.status(404).json({ error: 'Usuário não encontrado' });
-      return;
-    }
-
-    // Atualizar a senha
-    const passwordHash = await bcrypt.hash(data.password, 10);
-    await prisma.user.update({
+    await db.user.update({
       where: { id },
-      data: { passwordHash }
+      data: {
+        passwordHash: hashedPassword,
+        updatedAt: new Date()
+      }
     });
 
     res.json({ message: 'Senha atualizada com sucesso' });
@@ -295,13 +278,14 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
   const { id } = req.params;
 
   try {
-    await prisma.user.delete({
+    const db = ensurePrisma();
+    await db.user.delete({
       where: { id }
     });
 
-    res.json({ message: 'Usuário deletado com sucesso' });
+    res.json({ message: 'Usuário excluído com sucesso' });
   } catch (error) {
-    console.error('Erro ao deletar usuário:', error);
-    res.status(500).json({ error: 'Erro ao deletar usuário' });
+    console.error('Erro ao excluir usuário:', error);
+    res.status(500).json({ error: 'Erro ao excluir usuário' });
   }
 };

@@ -1,4 +1,4 @@
-import { prisma, testConnection } from '../lib/prisma';
+import { ensurePrisma, testConnection } from '../lib/prisma';
 
 // Log inicial para debug
 console.log('🔄 Iniciando configuração do Prisma...');
@@ -8,4 +8,5 @@ export async function testDatabaseConnection(): Promise<boolean> {
   return testConnection();
 }
 
-export default prisma; 
+// Exportar o cliente Prisma
+export default ensurePrisma(); 

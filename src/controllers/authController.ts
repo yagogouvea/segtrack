@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../lib/db';
+import { ensurePrisma } from '../lib/prisma';
 
 interface PrismaUser {
   id: string;
@@ -33,7 +33,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     console.log('Tentativa de login para:', email);
 
     try {
-      const user = await prisma.user.findUnique({ 
+      const db = ensurePrisma();
+      const user = await db.user.findUnique({ 
         where: { email },
         select: {
           id: true,
@@ -147,7 +148,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const seedAdmin = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const existing = await prisma.user.findUnique({
+    const db = ensurePrisma();
+    const existing = await db.user.findUnique({
       where: { email: 'admin@segtrack.com' },
     });
 
@@ -176,7 +178,7 @@ export const seedAdmin = async (_req: Request, res: Response): Promise<void> => 
       'upload:foto'
     ];
 
-    const user = await prisma.user.create({
+    const user = await db.user.create({
       data: {
         name: 'Admin SEGTRACK',
         email: 'admin@segtrack.com',

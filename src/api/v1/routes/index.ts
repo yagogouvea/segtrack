@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken } from '../../../infrastructure/middleware/auth.middleware';
+import { authenticateToken } from '@/infrastructure/middleware/auth.middleware';
 
 import prestadoresRouter from './prestadores.routes';
 import clientesRouter from './clientes.routes';

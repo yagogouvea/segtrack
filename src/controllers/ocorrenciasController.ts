@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../lib/db';
+import { ensurePrisma } from '../lib/prisma';
 import fs from 'fs';
 import path from 'path';
 
@@ -11,8 +11,9 @@ export const deletarOcorrencia = async (req: Request, res: Response): Promise<vo
   }
 
   try {
+    const db = ensurePrisma();
     // Primeiro, buscar a ocorrência para obter as fotos
-    const ocorrencia = await prisma.ocorrencia.findUnique({
+    const ocorrencia = await db.ocorrencia.findUnique({
       where: { id: Number(id) },
       include: { fotos: true }
     });
@@ -31,7 +32,7 @@ export const deletarOcorrencia = async (req: Request, res: Response): Promise<vo
     }
 
     // Deletar a ocorrência (isso também deletará as fotos devido ao onDelete: Cascade)
-    await prisma.ocorrencia.delete({
+    await db.ocorrencia.delete({
       where: { id: Number(id) }
     });
 

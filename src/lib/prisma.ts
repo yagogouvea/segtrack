@@ -5,6 +5,10 @@ declare global {
 }
 
 const prismaClientSingleton = () => {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('❌ DATABASE_URL não está definida no arquivo .env');
+  }
+
   return new PrismaClient({
     log: process.env.NODE_ENV === 'development' 
       ? ['query', 'error', 'warn'] 
@@ -18,14 +22,40 @@ const prismaClientSingleton = () => {
   });
 };
 
-export const prisma = global.prisma || prismaClientSingleton();
+const prisma = global.prisma ?? prismaClientSingleton();
 
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
 }
 
+export { prisma };
+
+// Função auxiliar para testar a conexão
+export async function testConnection() {
+  try {
+    await prisma.$connect();
+    console.log("✅ Conectado ao banco de dados com sucesso!");
+  } catch (error) {
+    console.error("❌ Erro ao conectar com o banco de dados:", error);
+    throw error;
+  }
+}
+
+// Função para desconectar o Prisma
+export async function disconnectPrisma() {
+  await prisma.$disconnect();
+}
+
+// Função para garantir que o prisma está disponível
+export function ensurePrisma(): PrismaClient {
+  if (!prisma) {
+    throw new Error('Prisma client não está disponível. Verifique se DATABASE_URL está definida no .env');
+  }
+  return prisma;
+}
+
 // Middleware para retry em operações do banco
-prisma.$use(async (params, next) => {
+prisma?.$use(async (params, next) => {
   const MAX_RETRIES = 3;
   const BASE_DELAY = 1000; // 1 segundo
   let lastError;
@@ -53,31 +83,7 @@ prisma.$use(async (params, next) => {
   throw lastError;
 });
 
-// Função para testar a conexão com o banco de dados
-export async function testConnection() {
-  try {
-    await prisma.$connect();
-    console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
-    return true;
-  } catch (error) {
-    console.error('❌ Erro ao conectar com o banco de dados:', error);
-    return false;
-  }
-}
-
-// Função para desconectar do banco de dados
-export async function disconnectPrisma() {
-  try {
-    await prisma.$disconnect();
-    console.log('✅ Desconectado do banco de dados com sucesso!');
-  } catch (error) {
-    console.error('❌ Erro ao desconectar do banco de dados:', error);
-  }
-}
-
 // Garantir que desconectamos do banco antes de encerrar
 process.on('beforeExit', async () => {
   await disconnectPrisma();
 });
-
-export default prisma;

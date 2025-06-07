@@ -1,4 +1,4 @@
-import { prisma } from '../../lib/prisma';
+import { ensurePrisma } from '../../lib/prisma';
 import bcrypt from 'bcrypt';
 
 type UserRole = 'admin' | 'manager' | 'operator' | 'client';
@@ -21,7 +21,8 @@ interface UpdateUserData {
 
 export class UserService {
   async list() {
-    return prisma.user.findMany({
+    const db = ensurePrisma();
+    return db.user.findMany({
       select: {
         id: true,
         name: true,
@@ -36,7 +37,8 @@ export class UserService {
   }
 
   async findById(id: string) {
-    return prisma.user.findUnique({
+    const db = ensurePrisma();
+    return db.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -51,10 +53,18 @@ export class UserService {
     });
   }
 
+  async findByEmail(email: string) {
+    const db = ensurePrisma();
+    return db.user.findUnique({
+      where: { email }
+    });
+  }
+
   async create(data: CreateUserData) {
+    const db = ensurePrisma();
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    return prisma.user.create({
+    return db.user.create({
       data: {
         name: data.name,
         email: data.email,
@@ -77,7 +87,8 @@ export class UserService {
   }
 
   async update(id: string, data: UpdateUserData) {
-    return prisma.user.update({
+    const db = ensurePrisma();
+    return db.user.update({
       where: { id },
       data: {
         name: data.name,
@@ -100,13 +111,15 @@ export class UserService {
   }
 
   async delete(id: string) {
-    return prisma.user.delete({
+    const db = ensurePrisma();
+    return db.user.delete({
       where: { id }
     });
   }
 
   async changePassword(id: string, currentPassword: string, newPassword: string) {
-    const user = await prisma.user.findUnique({
+    const db = ensurePrisma();
+    const user = await db.user.findUnique({
       where: { id },
       select: { passwordHash: true }
     });
@@ -122,9 +135,21 @@ export class UserService {
 
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
     
-    return prisma.user.update({
+    return db.user.update({
       where: { id },
       data: { passwordHash: newPasswordHash }
+    });
+  }
+
+  async updatePassword(id: string, newPassword: string) {
+    const db = ensurePrisma();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    return db.user.update({
+      where: { id },
+      data: {
+        passwordHash: hashedPassword
+      }
     });
   }
 } 

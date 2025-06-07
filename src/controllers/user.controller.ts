@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
-import { prisma } from '../lib/prisma';
+import { prisma, ensurePrisma } from '@/lib/prisma';
+import { hashPassword } from '@/utils/auth';
+import { validateUserData } from '@/utils/validation';
+import logger from '@/infrastructure/logger';
 import bcrypt from 'bcryptjs';
 import { CreateUserDTO, UpdateUserDTO } from '../types/prisma';
+import { Prisma } from '@prisma/client';
 
 export class UserController {
   async getCurrentUser(req: Request, res: Response): Promise<void> {
@@ -30,7 +34,7 @@ export class UserController {
 
       res.json(user);
     } catch (error) {
-      console.error('Erro ao buscar usuário atual:', error);
+      logger.error('Erro ao buscar usuário atual:', error);
       res.status(500).json({ error: 'Erro ao buscar usuário atual' });
     }
   }
@@ -59,7 +63,7 @@ export class UserController {
 
       res.json(user);
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
+      logger.error('Erro ao atualizar usuário:', error);
       res.status(500).json({ error: 'Erro ao atualizar usuário' });
     }
   }
@@ -97,7 +101,7 @@ export class UserController {
 
       res.json({ message: 'Senha atualizada com sucesso' });
     } catch (error) {
-      console.error('Erro ao atualizar senha:', error);
+      logger.error('Erro ao atualizar senha:', error);
       res.status(500).json({ error: 'Erro ao atualizar senha' });
     }
   }
@@ -117,7 +121,7 @@ export class UserController {
 
       res.json(users);
     } catch (error) {
-      console.error('Erro ao listar usuários:', error);
+      logger.error('Erro ao listar usuários:', error);
       res.status(500).json({ error: 'Erro ao listar usuários' });
     }
   }
@@ -148,7 +152,7 @@ export class UserController {
 
       res.status(201).json(user);
     } catch (error) {
-      console.error('Erro ao criar usuário:', error);
+      logger.error('Erro ao criar usuário:', error);
       res.status(500).json({ error: 'Erro ao criar usuário' });
     }
   }
@@ -176,7 +180,7 @@ export class UserController {
 
       res.json(user);
     } catch (error) {
-      console.error('Erro ao buscar usuário:', error);
+      logger.error('Erro ao buscar usuário:', error);
       res.status(500).json({ error: 'Erro ao buscar usuário' });
     }
   }
@@ -207,7 +211,7 @@ export class UserController {
 
       res.json(user);
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
+      logger.error('Erro ao atualizar usuário:', error);
       res.status(500).json({ error: 'Erro ao atualizar usuário' });
     }
   }
@@ -222,8 +226,216 @@ export class UserController {
 
       res.status(204).send();
     } catch (error) {
-      console.error('Erro ao deletar usuário:', error);
+      logger.error('Erro ao deletar usuário:', error);
       res.status(500).json({ error: 'Erro ao deletar usuário' });
+    }
+  }
+
+  async getUserById(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.params.id;
+      const db = ensurePrisma();
+
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          permissions: true,
+          active: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' });
+        return;
+      }
+
+      res.json(user);
+    } catch (error) {
+      logger.error('Erro ao buscar usuário:', error);
+      res.status(500).json({ error: 'Erro ao buscar usuário' });
+    }
+  }
+
+  async updateUser(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.params.id;
+      const db = ensurePrisma();
+
+      const updateData: Prisma.UserUpdateInput = {
+        ...req.body,
+        updatedAt: new Date()
+      };
+
+      const user = await db.user.update({
+        where: { id: userId },
+        data: updateData
+      });
+
+      res.json(user);
+    } catch (error) {
+      logger.error('Erro ao atualizar usuário:', error);
+      res.status(500).json({ error: 'Erro ao atualizar usuário' });
+    }
+  }
+
+  async getUserProfile(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Usuário não autenticado' });
+        return;
+      }
+
+      const db = ensurePrisma();
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          permissions: true,
+          active: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' });
+        return;
+      }
+
+      // Atualizar último acesso
+      await db.user.update({
+        where: { id: userId },
+        data: { updatedAt: new Date() }
+      });
+
+      res.json(user);
+    } catch (error) {
+      logger.error('Erro ao buscar perfil do usuário:', error);
+      res.status(500).json({ error: 'Erro ao buscar perfil do usuário' });
+    }
+  }
+
+  async getAllUsers(_req: Request, res: Response): Promise<void> {
+    try {
+      const db = ensurePrisma();
+      const users = await db.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          permissions: true,
+          active: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      res.json(users);
+    } catch (error) {
+      logger.error('Erro ao listar usuários:', error);
+      res.status(500).json({ error: 'Erro ao listar usuários' });
+    }
+  }
+
+  async createUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, passwordHash, name, role, permissions } = req.body;
+
+      // Validação dos dados
+      const validationError = validateUserData({ email, passwordHash, name, role });
+      if (validationError) {
+        res.status(400).json({ error: validationError });
+        return;
+      }
+
+      const db = ensurePrisma();
+      const userData: Prisma.UserCreateInput = {
+        email,
+        name,
+        passwordHash: await hashPassword(passwordHash),
+        role,
+        permissions: permissions || '[]',
+        active: true
+      };
+
+      const user = await db.user.create({
+        data: userData
+      });
+
+      // Remove senha do objeto retornado
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error: any) {
+      logger.error('Erro ao criar usuário:', error);
+      if (error.code === 'P2002') {
+        res.status(400).json({ error: 'Email já está em uso' });
+      } else {
+        res.status(500).json({ error: 'Erro ao criar usuário' });
+      }
+    }
+  }
+
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.params.id;
+      const { newPassword } = req.body;
+
+      if (!newPassword || newPassword.length < 6) {
+        res.status(400).json({ error: 'Nova senha deve ter pelo menos 6 caracteres' });
+        return;
+      }
+
+      const db = ensurePrisma();
+      const user = await db.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' });
+        return;
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+
+      await db.user.update({
+        where: { id: userId },
+        data: {
+          passwordHash: hashedPassword,
+          updatedAt: new Date()
+        }
+      });
+
+      res.json({ message: 'Senha atualizada com sucesso' });
+    } catch (error) {
+      logger.error('Erro ao resetar senha:', error);
+      res.status(500).json({ error: 'Erro ao resetar senha' });
+    }
+  }
+
+  async deleteUser(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.params.id;
+      const db = ensurePrisma();
+
+      await db.user.delete({
+        where: { id: userId }
+      });
+
+      res.json({ message: 'Usuário excluído com sucesso' });
+    } catch (error) {
+      logger.error('Erro ao excluir usuário:', error);
+      res.status(500).json({ error: 'Erro ao excluir usuário' });
     }
   }
 } 

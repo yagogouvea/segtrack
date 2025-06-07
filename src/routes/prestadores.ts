@@ -1,13 +1,13 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { ensurePrisma } from '../lib/prisma';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET - Listar todos os prestadores (completo)
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const prestadores = await prisma.prestador.findMany({
+    const db = ensurePrisma();
+    const prestadores = await db.prestador.findMany({
       include: { 
         funcoes: true, 
         regioes: true,
@@ -42,7 +42,8 @@ router.get('/', async (_req: Request, res: Response) => {
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)
 router.get('/popup', async (_req: Request, res: Response) => {
   try {
-    const prestadores = await prisma.prestador.findMany({
+    const db = ensurePrisma();
+    const prestadores = await db.prestador.findMany({
       select: {
         id: true,
         nome: true,
@@ -63,7 +64,8 @@ router.get('/buscar-por-nome/:nome', async (req: Request, res: Response) => {
   const { nome } = req.params;
 
   try {
-    const prestador = await prisma.prestador.findFirst({
+    const db = ensurePrisma();
+    const prestador = await db.prestador.findFirst({
       where: {
         nome: {
           contains: nome
@@ -103,8 +105,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const db = ensurePrisma();
     // Verificar se já existe um prestador com este CPF
-    const existente = await prisma.prestador.findFirst({ 
+    const existente = await db.prestador.findFirst({ 
       where: { cpf: cpf.replace(/\D/g, '') } 
     });
     
@@ -142,7 +145,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     };
 
     // Criar o prestador com todas as relações
-    const novo = await prisma.prestador.create({
+    const novo = await db.prestador.create({
       data: {
         nome,
         cpf: cpf.replace(/\D/g, ''),
@@ -212,6 +215,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   } = req.body;
 
   try {
+    const db = ensurePrisma();
     // Converter valores numéricos
     const valorAcionamentoFloat = valor_acionamento ? parseFloat(valor_acionamento.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
     const franquiaKmFloat = franquia_km ? parseFloat(String(franquia_km)) : 0;
@@ -243,13 +247,13 @@ router.put('/:id', async (req: Request, res: Response) => {
     // Deletar registros relacionados existentes
     console.log('Deletando registros relacionados antigos...');
     await Promise.all([
-      prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-      prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-      prisma.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
+      db.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+      db.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+      db.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
     ]);
 
     console.log('Atualizando prestador com novos dados...');
-    const atualizado = await prisma.prestador.update({
+    const atualizado = await db.prestador.update({
       where: { id: Number(id) },
       data: {
         nome,
@@ -311,7 +315,8 @@ router.put('/:id/aprovar', async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const prestador = await prisma.prestador.findUnique({
+    const db = ensurePrisma();
+    const prestador = await db.prestador.findUnique({
       where: { id: Number(id) }
     });
 
@@ -323,7 +328,7 @@ router.put('/:id/aprovar', async (req: Request, res: Response) => {
       return res.status(400).json({ erro: 'Prestador já está aprovado' });
     }
 
-    const atualizado = await prisma.prestador.update({
+    const atualizado = await db.prestador.update({
       where: { id: Number(id) },
       data: {
         aprovado: true
@@ -342,14 +347,15 @@ router.delete('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
+    const db = ensurePrisma();
     // Deletar todos os registros relacionados antes de excluir o prestador
     await Promise.all([
-      prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-      prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-      prisma.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
+      db.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+      db.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+      db.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
     ]);
 
-    await prisma.prestador.delete({ where: { id: Number(id) } });
+    await db.prestador.delete({ where: { id: Number(id) } });
 
     res.status(204).end();
   } catch (err) {

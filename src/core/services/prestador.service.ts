@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { AppError } from '../../errors/AppError';
-
-const prisma = new PrismaClient();
+import { ensurePrisma } from '../../lib/prisma';
 
 interface PrestadorData {
   nome: string;
@@ -30,7 +29,8 @@ interface PrestadorData {
 export class PrestadorService {
   async list() {
     try {
-      return await prisma.prestador.findMany({
+      const db = ensurePrisma();
+      return await db.prestador.findMany({
         include: {
           funcoes: true,
           veiculos: true,
@@ -45,7 +45,8 @@ export class PrestadorService {
 
   async listPublic() {
     try {
-      return await prisma.prestador.findMany({
+      const db = ensurePrisma();
+      return await db.prestador.findMany({
         where: { aprovado: true },
         include: {
           funcoes: true,
@@ -61,7 +62,8 @@ export class PrestadorService {
 
   async findById(id: number) {
     try {
-      const prestador = await prisma.prestador.findUnique({
+      const db = ensurePrisma();
+      const prestador = await db.prestador.findUnique({
         where: { id },
         include: {
           funcoes: true,
@@ -84,7 +86,8 @@ export class PrestadorService {
 
   async create(data: PrestadorData) {
     try {
-      return await prisma.prestador.create({
+      const db = ensurePrisma();
+      return await db.prestador.create({
         data: {
           nome: data.nome,
           cpf: data.cpf,
@@ -133,24 +136,25 @@ export class PrestadorService {
 
   async update(id: number, data: PrestadorData) {
     try {
+      const db = ensurePrisma();
       // Verificar se o prestador existe
       await this.findById(id);
 
       // Deletar relacionamentos existentes
-      await prisma.$transaction([
-        prisma.funcaoPrestador.deleteMany({
+      await db.$transaction([
+        db.funcaoPrestador.deleteMany({
           where: { prestadorId: id }
         }),
-        prisma.tipoVeiculoPrestador.deleteMany({
+        db.tipoVeiculoPrestador.deleteMany({
           where: { prestadorId: id }
         }),
-        prisma.regiaoPrestador.deleteMany({
+        db.regiaoPrestador.deleteMany({
           where: { prestadorId: id }
         })
       ]);
 
       // Atualizar prestador com novos dados
-      return await prisma.prestador.update({
+      return await db.prestador.update({
         where: { id },
         data: {
           nome: data.nome,
@@ -201,21 +205,22 @@ export class PrestadorService {
 
   async delete(id: number) {
     try {
+      const db = ensurePrisma();
       // Verificar se o prestador existe
       await this.findById(id);
 
       // Deletar prestador e seus relacionamentos
-      await prisma.$transaction([
-        prisma.funcaoPrestador.deleteMany({
+      await db.$transaction([
+        db.funcaoPrestador.deleteMany({
           where: { prestadorId: id }
         }),
-        prisma.tipoVeiculoPrestador.deleteMany({
+        db.tipoVeiculoPrestador.deleteMany({
           where: { prestadorId: id }
         }),
-        prisma.regiaoPrestador.deleteMany({
+        db.regiaoPrestador.deleteMany({
           where: { prestadorId: id }
         }),
-        prisma.prestador.delete({
+        db.prestador.delete({
           where: { id }
         })
       ]);
@@ -228,7 +233,8 @@ export class PrestadorService {
 
   async findByRegiao(regiao: string) {
     try {
-      return await prisma.prestador.findMany({
+      const db = ensurePrisma();
+      return await db.prestador.findMany({
         where: {
           regioes: {
             some: {
@@ -250,7 +256,8 @@ export class PrestadorService {
 
   async findByFuncao(funcao: string) {
     try {
-      return await prisma.prestador.findMany({
+      const db = ensurePrisma();
+      return await db.prestador.findMany({
         where: {
           funcoes: {
             some: {

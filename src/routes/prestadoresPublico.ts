@@ -1,10 +1,8 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { ensurePrisma } from '../lib/prisma';
 import { PrestadorPublicoInput } from '../types/prestadorPublico';
-import { prisma } from '../lib/db';
 
 const router = express.Router();
-const prismaClient = new PrismaClient();
 
 // Cadastro público de prestadores
 router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Response): Promise<void> => {
@@ -40,8 +38,9 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
   }
 
   try {
+    const db = ensurePrisma();
     // Verificar se já existe um prestador com este CPF
-    const existente = await prismaClient.prestador.findFirst({
+    const existente = await db.prestador.findFirst({
       where: { cpf: cpf.replace(/\D/g, '') }
     });
 
@@ -63,7 +62,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
     const veiculosParaCriar = Array.isArray(tipo_veiculo) ? 
         tipo_veiculo.map((tipo: string) => ({ tipo })) : [];
 
-    const novoPrestador = await prismaClient.prestador.create({
+    const novoPrestador = await db.prestador.create({
       data: {
         nome,
         cpf: cpf.replace(/\D/g, ''),
@@ -124,7 +123,8 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
 // Listar prestadores públicos
 router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const prestadores = await prisma.prestador.findMany({
+    const db = ensurePrisma();
+    const prestadores = await db.prestador.findMany({
       where: { aprovado: true },
       select: {
         id: true,
@@ -156,7 +156,8 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const prestador = await prisma.prestador.findUnique({
+    const db = ensurePrisma();
+    const prestador = await db.prestador.findUnique({
       where: { id: Number(id) },
       select: {
         id: true,
