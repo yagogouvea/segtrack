@@ -4,7 +4,7 @@
   "description": "Backend do sistema SEGTRACK",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/server.ts",
+    "dev": "ts-node-dev -r dotenv/config -r tsconfig-paths/register --respawn --transpile-only src/server.ts",
     "build": "tsc -p tsconfig.json && tsc-alias",
     "start": "node -r tsconfig-paths/register dist/server.js",
     "start:prod": "node dist/server.js",
@@ -18,13 +18,14 @@
     "prisma:studio": "prisma studio",
     "prod:pm2": "pm2 start ecosystem.config.js --env production",
     "prod:stop": "pm2 stop ecosystem.config.js",
-    "swagger:generate": "tsoa spec-and-routes"
+    "swagger:generate": "tsoa spec-and-routes",
+    "format": "prettier --write \"src/**/*.ts\""
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@types/pg": "^8.15.4",
     "aws-sdk": "^2.1569.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
@@ -35,6 +36,8 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.14.1",
+    "pg": "^8.16.0",
     "pino": "^8.18.0",
     "pino-pretty": "^10.3.1",
     "swagger-ui-express": "^5.0.0",
@@ -43,6 +46,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.825.0",
+    "@prisma/client": "^6.9.0",
     "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.7.5",
@@ -67,6 +71,6 @@
     "ts-prune": "^0.10.3",
     "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^4.9.5"
+    "typescript": "^5.8.3"
   }
 }

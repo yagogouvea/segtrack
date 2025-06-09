@@ -8,12 +8,11 @@ console.log('Iniciando configuração do Express...');
 
 const app = express();
 
-// Configurações básicas
+// Middlewares
+app.use(cors());
 app.use(helmet());
 app.use(compression());
-app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 console.log('Configurando rotas básicas...');
 
@@ -23,7 +22,7 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 // Health check endpoint
-app.get('/health', async (_req: Request, res: Response) => {
+app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     await testConnection();
     res.status(200).json({ 
