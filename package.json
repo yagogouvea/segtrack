@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.825.0",
-    "@prisma/client": "^6.9.0",
+    "@prisma/client": "^5.10.2",
     "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.7.5",
@@ -66,7 +66,7 @@
     "jest": "^29.7.0",
     "nodemon": "^3.1.10",
     "pm2": "^5.4.3",
-    "prisma": "^6.9.0",
+    "prisma": "^5.10.2",
     "ts-jest": "^29.1.2",
     "ts-node-dev": "^2.0.0",
     "ts-prune": "^0.10.3",
