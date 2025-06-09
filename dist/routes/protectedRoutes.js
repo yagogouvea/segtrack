@@ -12,4 +12,3 @@ router.get('/manager', (0, auth_middleware_1.requirePermission)('read:relatorio'
     res.json({ message: 'Acesso permitido - Área gerencial' });
 });
 exports.default = router;
-//# sourceMappingURL=protectedRoutes.js.map

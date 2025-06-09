@@ -25,4 +25,3 @@ exports.RegiaoContratoEnum = {
     INTERIOR: 'INTERIOR',
     OUTROS_ESTADOS: 'OUTROS_ESTADOS'
 };
-//# sourceMappingURL=enums.js.map

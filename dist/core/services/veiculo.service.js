@@ -33,4 +33,3 @@ class VeiculoService {
     }
 }
 exports.VeiculoService = VeiculoService;
-//# sourceMappingURL=veiculo.service.js.map

@@ -4,13 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
 // GET - Listar todos os prestadores (completo)
 router.get('/', async (_req, res) => {
     try {
-        const prestadores = await prisma.prestador.findMany({
+        const db = (0, prisma_1.ensurePrisma)();
+        const prestadores = await db.prestador.findMany({
             include: {
                 funcoes: true,
                 regioes: true,
@@ -19,19 +19,9 @@ router.get('/', async (_req, res) => {
             orderBy: { nome: 'asc' }
         });
         // Formatando a resposta para incluir todos os campos necessários
-        const prestadoresFormatados = prestadores.map(prestador => ({
-            ...prestador,
-            funcoes: prestador.funcoes.map(f => f.funcao),
-            regioes: prestador.regioes.map(r => r.regiao),
-            tipo_veiculo: prestador.veiculos.map(v => v.tipo),
-            veiculos: prestador.veiculos,
+        const prestadoresFormatados = prestadores.map(prestador => (Object.assign(Object.assign({}, prestador), { funcoes: prestador.funcoes.map(f => f.funcao), regioes: prestador.regioes.map(r => r.regiao), tipo_veiculo: prestador.veiculos.map(v => v.tipo), veiculos: prestador.veiculos, 
             // Formatando valores monetários e numéricos
-            valor_acionamento: prestador.valor_acionamento || 0,
-            valor_hora_adc: prestador.valor_hora_adc || 0,
-            valor_km_adc: prestador.valor_km_adc || 0,
-            franquia_km: prestador.franquia_km || 0,
-            franquia_horas: prestador.franquia_horas || ''
-        }));
+            valor_acionamento: prestador.valor_acionamento || 0, valor_hora_adc: prestador.valor_hora_adc || 0, valor_km_adc: prestador.valor_km_adc || 0, franquia_km: prestador.franquia_km || 0, franquia_horas: prestador.franquia_horas || '' })));
         console.log('Prestadores formatados:', prestadoresFormatados);
         res.json(prestadoresFormatados);
     }
@@ -43,7 +33,8 @@ router.get('/', async (_req, res) => {
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)
 router.get('/popup', async (_req, res) => {
     try {
-        const prestadores = await prisma.prestador.findMany({
+        const db = (0, prisma_1.ensurePrisma)();
+        const prestadores = await db.prestador.findMany({
             select: {
                 id: true,
                 nome: true,
@@ -63,7 +54,8 @@ router.get('/popup', async (_req, res) => {
 router.get('/buscar-por-nome/:nome', async (req, res) => {
     const { nome } = req.params;
     try {
-        const prestador = await prisma.prestador.findFirst({
+        const db = (0, prisma_1.ensurePrisma)();
+        const prestador = await db.prestador.findFirst({
             where: {
                 nome: {
                     contains: nome
@@ -93,8 +85,9 @@ router.post('/', async (req, res) => {
             res.status(400).json({ erro: 'Nome e CPF são obrigatórios' });
             return;
         }
+        const db = (0, prisma_1.ensurePrisma)();
         // Verificar se já existe um prestador com este CPF
-        const existente = await prisma.prestador.findFirst({
+        const existente = await db.prestador.findFirst({
             where: { cpf: cpf.replace(/\D/g, '') }
         });
         if (existente) {
@@ -129,7 +122,7 @@ router.post('/', async (req, res) => {
             }));
         };
         // Criar o prestador com todas as relações
-        const novo = await prisma.prestador.create({
+        const novo = await db.prestador.create({
             data: {
                 nome,
                 cpf: cpf.replace(/\D/g, ''),
@@ -166,13 +159,7 @@ router.post('/', async (req, res) => {
             }
         });
         // Formatar a resposta
-        const prestadorFormatado = {
-            ...novo,
-            funcoes: novo.funcoes.map(f => f.funcao),
-            regioes: novo.regioes.map(r => r.regiao),
-            tipo_veiculo: novo.veiculos.map(v => v.tipo),
-            veiculos: novo.veiculos
-        };
+        const prestadorFormatado = Object.assign(Object.assign({}, novo), { funcoes: novo.funcoes.map(f => f.funcao), regioes: novo.regioes.map(r => r.regiao), tipo_veiculo: novo.veiculos.map(v => v.tipo), veiculos: novo.veiculos });
         console.log('Prestador criado:', prestadorFormatado);
         res.status(201).json(prestadorFormatado);
     }
@@ -190,6 +177,7 @@ router.put('/:id', async (req, res) => {
     console.log('Atualizando prestador:', { id, body: req.body });
     const { nome, cpf, cod_nome, telefone, email, aprovado, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc, funcoes, regioes, veiculos } = req.body;
     try {
+        const db = (0, prisma_1.ensurePrisma)();
         // Converter valores numéricos
         const valorAcionamentoFloat = valor_acionamento ? parseFloat(valor_acionamento.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
         const franquiaKmFloat = franquia_km ? parseFloat(String(franquia_km)) : 0;
@@ -220,12 +208,12 @@ router.put('/:id', async (req, res) => {
         // Deletar registros relacionados existentes
         console.log('Deletando registros relacionados antigos...');
         await Promise.all([
-            prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-            prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-            prisma.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
+            db.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+            db.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+            db.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
         ]);
         console.log('Atualizando prestador com novos dados...');
-        const atualizado = await prisma.prestador.update({
+        const atualizado = await db.prestador.update({
             where: { id: Number(id) },
             data: {
                 nome,
@@ -263,12 +251,7 @@ router.put('/:id', async (req, res) => {
             }
         });
         // Formatar a resposta
-        const prestadorFormatado = {
-            ...atualizado,
-            funcoes: atualizado.funcoes.map(f => f.funcao),
-            regioes: atualizado.regioes.map(r => r.regiao),
-            tipo_veiculo: atualizado.veiculos.map(v => v.tipo)
-        };
+        const prestadorFormatado = Object.assign(Object.assign({}, atualizado), { funcoes: atualizado.funcoes.map(f => f.funcao), regioes: atualizado.regioes.map(r => r.regiao), tipo_veiculo: atualizado.veiculos.map(v => v.tipo) });
         console.log('Prestador atualizado com sucesso:', prestadorFormatado);
         res.json(prestadorFormatado);
     }
@@ -284,7 +267,8 @@ router.put('/:id', async (req, res) => {
 router.put('/:id/aprovar', async (req, res) => {
     const { id } = req.params;
     try {
-        const prestador = await prisma.prestador.findUnique({
+        const db = (0, prisma_1.ensurePrisma)();
+        const prestador = await db.prestador.findUnique({
             where: { id: Number(id) }
         });
         if (!prestador) {
@@ -293,7 +277,7 @@ router.put('/:id/aprovar', async (req, res) => {
         if (prestador.aprovado) {
             return res.status(400).json({ erro: 'Prestador já está aprovado' });
         }
-        const atualizado = await prisma.prestador.update({
+        const atualizado = await db.prestador.update({
             where: { id: Number(id) },
             data: {
                 aprovado: true
@@ -310,13 +294,14 @@ router.put('/:id/aprovar', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
+        const db = (0, prisma_1.ensurePrisma)();
         // Deletar todos os registros relacionados antes de excluir o prestador
         await Promise.all([
-            prisma.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-            prisma.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-            prisma.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
+            db.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+            db.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
+            db.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
         ]);
-        await prisma.prestador.delete({ where: { id: Number(id) } });
+        await db.prestador.delete({ where: { id: Number(id) } });
         res.status(204).end();
     }
     catch (err) {
@@ -325,4 +310,3 @@ router.delete('/:id', async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=prestadores.js.map

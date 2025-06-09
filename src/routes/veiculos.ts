@@ -1,6 +1,6 @@
 import express, { Router, Request, Response } from 'express';
 import axios from 'axios';
-import prisma from '../lib/prisma';
+import { ensurePrisma } from '@/lib/prisma';
 
 const router: Router = express.Router();
 
@@ -19,7 +19,7 @@ router.get('/:placa', async (req: Request, res: Response) => {
   }
 
   try {
-    let veiculo = await prisma.veiculo.findFirst({
+    let veiculo = await ensurePrisma().veiculo.findFirst({
       where: { placa: placaFormatada },
     });
 
@@ -43,7 +43,7 @@ router.get('/:placa', async (req: Request, res: Response) => {
         return res.status(404).json({ erro: 'Veículo não encontrado' });
       }
 
-      veiculo = await prisma.veiculo.create({
+      veiculo = await ensurePrisma().veiculo.create({
         data: {
           placa: placaFormatada,
           modelo: dados.modelo || '',
@@ -57,6 +57,17 @@ router.get('/:placa', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('❌ Erro ao buscar veículo:', err);
     return res.status(500).json({ erro: 'Erro ao buscar veículo' });
+  }
+});
+
+router.get('/', async (req, res) => {
+  try {
+    const db = ensurePrisma();
+    const veiculos = await db.veiculo.findMany();
+    res.json(veiculos);
+  } catch (error) {
+    console.error('Erro ao listar veículos:', error);
+    res.status(500).json({ error: 'Erro ao listar veículos' });
   }
 });
 

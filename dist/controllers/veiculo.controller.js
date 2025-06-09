@@ -70,4 +70,3 @@ class VeiculoController {
     }
 }
 exports.VeiculoController = VeiculoController;
-//# sourceMappingURL=veiculo.controller.js.map

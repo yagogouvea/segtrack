@@ -7,7 +7,7 @@ exports.COGNITO_CONFIG = {
     userPoolId: process.env.COGNITO_USER_POOL_ID || '',
     clientId: process.env.COGNITO_CLIENT_ID || '',
     clientSecret: process.env.COGNITO_CLIENT_SECRET || '',
-    tokenUse: 'access',
+    tokenUse: 'access', // ou 'id'
     tokenExpiration: 3600000, // 1 hora em milissegundos
 };
 // Cliente do Cognito
@@ -24,5 +24,4 @@ var CognitoGroups;
     CognitoGroups["ADMIN"] = "Administradores";
     CognitoGroups["GESTOR"] = "Gestores";
     CognitoGroups["USUARIO"] = "Usuarios";
-})(CognitoGroups = exports.CognitoGroups || (exports.CognitoGroups = {}));
-//# sourceMappingURL=cognito.config.js.map
+})(CognitoGroups || (exports.CognitoGroups = CognitoGroups = {}));

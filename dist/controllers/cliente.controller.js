@@ -82,4 +82,3 @@ class ClienteController {
     }
 }
 exports.ClienteController = ClienteController;
-//# sourceMappingURL=cliente.controller.js.map

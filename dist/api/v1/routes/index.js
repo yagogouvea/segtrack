@@ -22,4 +22,3 @@ v1Router.use('/fotos', auth_middleware_1.authenticateToken, fotos_routes_1.defau
 v1Router.use('/relatorios', auth_middleware_1.authenticateToken, relatorios_routes_1.default);
 v1Router.use('/users', auth_middleware_1.authenticateToken, user_routes_1.default);
 exports.default = v1Router;
-//# sourceMappingURL=index.js.map

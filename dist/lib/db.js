@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.disconnectPrisma = exports.analyzeMySQLError = exports.testConnection = exports.prisma = void 0;
+exports.prisma = void 0;
+exports.testConnection = testConnection;
+exports.analyzeMySQLError = analyzeMySQLError;
+exports.disconnectPrisma = disconnectPrisma;
 // backend/src/lib/db.ts
 const prisma_1 = require("./prisma");
 Object.defineProperty(exports, "prisma", { enumerable: true, get: function () { return prisma_1.prisma; } });
@@ -8,7 +11,6 @@ Object.defineProperty(exports, "prisma", { enumerable: true, get: function () { 
 async function testConnection() {
     return (0, prisma_1.testConnection)();
 }
-exports.testConnection = testConnection;
 // Função para analisar erros do MySQL
 function analyzeMySQLError(error) {
     if (!error)
@@ -31,7 +33,6 @@ function analyzeMySQLError(error) {
     }
     return error.message || 'Erro desconhecido';
 }
-exports.analyzeMySQLError = analyzeMySQLError;
 // Função para desconectar do banco
 async function disconnectPrisma() {
     try {
@@ -42,9 +43,7 @@ async function disconnectPrisma() {
         console.error('❌ Erro ao desconectar do banco de dados:', error);
     }
 }
-exports.disconnectPrisma = disconnectPrisma;
 // Garantir que desconectamos do banco antes de encerrar
 process.on('beforeExit', async () => {
     await disconnectPrisma();
 });
-//# sourceMappingURL=db.js.map

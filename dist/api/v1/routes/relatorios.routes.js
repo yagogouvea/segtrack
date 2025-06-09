@@ -11,4 +11,3 @@ router.get('/prestadores', controller.gerarRelatorioPrestadores);
 router.get('/clientes', controller.gerarRelatorioClientes);
 router.get('/financeiro', controller.gerarRelatorioFinanceiro);
 exports.default = router;
-//# sourceMappingURL=relatorios.routes.js.map

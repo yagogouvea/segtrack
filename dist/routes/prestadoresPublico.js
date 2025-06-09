@@ -4,10 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
-const db_1 = require("../lib/db");
+const prisma_1 = require("../lib/prisma");
 const router = express_1.default.Router();
-const prismaClient = new client_1.PrismaClient();
 // Cadastro público de prestadores
 router.post('/', async (req, res) => {
     console.log('Recebendo requisição de cadastro público:', req.body);
@@ -15,7 +13,7 @@ router.post('/', async (req, res) => {
     // Validação de campos obrigatórios
     if (!nome || !cpf || !cod_nome || !telefone || !email ||
         !tipo_pix || !chave_pix || !cep ||
-        !funcoes?.length || !regioes?.length || !tipo_veiculo?.length) {
+        !(funcoes === null || funcoes === void 0 ? void 0 : funcoes.length) || !(regioes === null || regioes === void 0 ? void 0 : regioes.length) || !(tipo_veiculo === null || tipo_veiculo === void 0 ? void 0 : tipo_veiculo.length)) {
         console.log('Campos obrigatórios faltando:', {
             temNome: !!nome,
             temCPF: !!cpf,
@@ -25,16 +23,17 @@ router.post('/', async (req, res) => {
             temTipoPix: !!tipo_pix,
             temChavePix: !!chave_pix,
             temCEP: !!cep,
-            temFuncoes: !!funcoes?.length,
-            temRegioes: !!regioes?.length,
-            temTipoVeiculo: !!tipo_veiculo?.length
+            temFuncoes: !!(funcoes === null || funcoes === void 0 ? void 0 : funcoes.length),
+            temRegioes: !!(regioes === null || regioes === void 0 ? void 0 : regioes.length),
+            temTipoVeiculo: !!(tipo_veiculo === null || tipo_veiculo === void 0 ? void 0 : tipo_veiculo.length)
         });
         res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
         return;
     }
     try {
+        const db = (0, prisma_1.ensurePrisma)();
         // Verificar se já existe um prestador com este CPF
-        const existente = await prismaClient.prestador.findFirst({
+        const existente = await db.prestador.findFirst({
             where: { cpf: cpf.replace(/\D/g, '') }
         });
         if (existente) {
@@ -52,7 +51,7 @@ router.post('/', async (req, res) => {
         // Garantir que tipo_veiculo é um array
         const veiculosParaCriar = Array.isArray(tipo_veiculo) ?
             tipo_veiculo.map((tipo) => ({ tipo })) : [];
-        const novoPrestador = await prismaClient.prestador.create({
+        const novoPrestador = await db.prestador.create({
             data: {
                 nome,
                 cpf: cpf.replace(/\D/g, ''),
@@ -90,13 +89,7 @@ router.post('/', async (req, res) => {
             }
         });
         // Formatar a resposta para incluir tipo_veiculo
-        const prestadorFormatado = {
-            ...novoPrestador,
-            funcoes: novoPrestador.funcoes.map((f) => f.funcao),
-            regioes: novoPrestador.regioes.map((r) => r.regiao),
-            tipo_veiculo: novoPrestador.veiculos.map((v) => v.tipo),
-            veiculos: novoPrestador.veiculos
-        };
+        const prestadorFormatado = Object.assign(Object.assign({}, novoPrestador), { funcoes: novoPrestador.funcoes.map((f) => f.funcao), regioes: novoPrestador.regioes.map((r) => r.regiao), tipo_veiculo: novoPrestador.veiculos.map((v) => v.tipo), veiculos: novoPrestador.veiculos });
         console.log('Prestador criado com sucesso:', prestadorFormatado);
         res.status(201).json(prestadorFormatado);
     }
@@ -111,7 +104,8 @@ router.post('/', async (req, res) => {
 // Listar prestadores públicos
 router.get('/', async (_req, res) => {
     try {
-        const prestadores = await db_1.prisma.prestador.findMany({
+        const db = (0, prisma_1.ensurePrisma)();
+        const prestadores = await db.prestador.findMany({
             where: { aprovado: true },
             select: {
                 id: true,
@@ -126,10 +120,7 @@ router.get('/', async (_req, res) => {
             }
         });
         // Transform the response to include functions in a flattened format
-        const formattedPrestadores = prestadores.map((p) => ({
-            ...p,
-            funcoes: p.funcoes.map((f) => f.funcao)
-        }));
+        const formattedPrestadores = prestadores.map((p) => (Object.assign(Object.assign({}, p), { funcoes: p.funcoes.map((f) => f.funcao) })));
         res.json(formattedPrestadores);
     }
     catch (error) {
@@ -141,7 +132,8 @@ router.get('/', async (_req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const prestador = await db_1.prisma.prestador.findUnique({
+        const db = (0, prisma_1.ensurePrisma)();
+        const prestador = await db.prestador.findUnique({
             where: { id: Number(id) },
             select: {
                 id: true,
@@ -161,10 +153,7 @@ router.get('/:id', async (req, res) => {
             return;
         }
         // Transform the response to include functions in a flattened format
-        const formattedPrestador = {
-            ...prestador,
-            funcoes: prestador.funcoes.map((f) => f.funcao)
-        };
+        const formattedPrestador = Object.assign(Object.assign({}, prestador), { funcoes: prestador.funcoes.map((f) => f.funcao) });
         res.json(formattedPrestador);
     }
     catch (error) {
@@ -173,4 +162,3 @@ router.get('/:id', async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=prestadoresPublico.js.map

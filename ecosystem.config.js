@@ -1,17 +1,14 @@
 module.exports = {
   apps: [{
-    name: 'segtrack-api-dev',
-    script: 'npx',
-    args: 'ts-node -r tsconfig-paths/register src/server.ts',
-    watch: ['src'],
-    ignore_watch: ['node_modules', 'logs'],
-    env_development: {
-      NODE_ENV: 'development',
-      PORT: 3001
-    },
+    name: 'segtrack-backend',
+    script: 'dist/server.js',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
     env_production: {
       NODE_ENV: 'production',
-      PORT: 3001
+      PORT: 3000
     }
   }]
 }; 

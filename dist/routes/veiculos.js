@@ -5,9 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
-const prisma_1 = __importDefault(require("../lib/prisma"));
+const prisma_1 = require("../lib/prisma");
 const router = express_1.default.Router();
 router.get('/:placa', async (req, res) => {
+    var _a, _b;
     const { placa } = req.params;
     const placaFormatada = placa.toUpperCase();
     const placaValida = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
@@ -18,7 +19,7 @@ router.get('/:placa', async (req, res) => {
         return res.status(500).json({ erro: 'Tokens da API Brasil não configurados' });
     }
     try {
-        let veiculo = await prisma_1.default.veiculo.findFirst({
+        let veiculo = await (0, prisma_1.ensurePrisma)().veiculo.findFirst({
             where: { placa: placaFormatada },
         });
         if (!veiculo) {
@@ -29,16 +30,16 @@ router.get('/:placa', async (req, res) => {
                     'Authorization': `Bearer ${process.env.API_BRASIL_BEARER}`
                 }
             });
-            const dados = response.data?.response;
+            const dados = (_a = response.data) === null || _a === void 0 ? void 0 : _a.response;
             console.log('🔎 Dados recebidos da API Brasil:', dados);
-            if (!dados?.modelo) {
+            if (!(dados === null || dados === void 0 ? void 0 : dados.modelo)) {
                 return res.status(404).json({ erro: 'Veículo não encontrado' });
             }
-            veiculo = await prisma_1.default.veiculo.create({
+            veiculo = await (0, prisma_1.ensurePrisma)().veiculo.create({
                 data: {
                     placa: placaFormatada,
                     modelo: dados.modelo || '',
-                    cor: dados.cor_veiculo?.cor || dados.cor || '',
+                    cor: ((_b = dados.cor_veiculo) === null || _b === void 0 ? void 0 : _b.cor) || dados.cor || '',
                     fabricante: dados.marca || ''
                 }
             });
@@ -50,5 +51,15 @@ router.get('/:placa', async (req, res) => {
         return res.status(500).json({ erro: 'Erro ao buscar veículo' });
     }
 });
+router.get('/', async (req, res) => {
+    try {
+        const db = (0, prisma_1.ensurePrisma)();
+        const veiculos = await db.veiculo.findMany();
+        res.json(veiculos);
+    }
+    catch (error) {
+        console.error('Erro ao listar veículos:', error);
+        res.status(500).json({ error: 'Erro ao listar veículos' });
+    }
+});
 exports.default = router;
-//# sourceMappingURL=veiculos.js.map

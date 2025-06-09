@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.updateUserPassword = exports.updateUser = exports.createUser = exports.getUser = exports.getUsers = void 0;
-const db_1 = require("../lib/db");
+const prisma_1 = require("../lib/prisma");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const zod_1 = require("zod");
 // Schema para validação de usuário
@@ -29,7 +29,8 @@ const passwordUpdateSchema = zod_1.z.object({
 // GET /api/users
 const getUsers = async (_req, res) => {
     try {
-        const users = await db_1.prisma.user.findMany({
+        const db = (0, prisma_1.ensurePrisma)();
+        const users = await db.user.findMany({
             select: {
                 id: true,
                 name: true,
@@ -53,7 +54,8 @@ exports.getUsers = getUsers;
 const getUser = async (req, res) => {
     const { id } = req.params;
     try {
-        const user = await db_1.prisma.user.findUnique({
+        const db = (0, prisma_1.ensurePrisma)();
+        const user = await db.user.findUnique({
             where: { id },
             select: {
                 id: true,
@@ -82,8 +84,9 @@ exports.getUser = getUser;
 const createUser = async (req, res) => {
     try {
         const data = userSchema.parse(req.body);
+        const db = (0, prisma_1.ensurePrisma)();
         // Verificar se o email já existe
-        const existingUser = await db_1.prisma.user.findUnique({
+        const existingUser = await db.user.findUnique({
             where: { email: data.email }
         });
         if (existingUser) {
@@ -101,7 +104,7 @@ const createUser = async (req, res) => {
                 JSON.parse(data.permissions);
                 permissionsString = data.permissions;
             }
-            catch {
+            catch (_a) {
                 // Se não for JSON válido, converter para array e depois para JSON
                 permissionsString = JSON.stringify([data.permissions]);
             }
@@ -109,7 +112,7 @@ const createUser = async (req, res) => {
         else {
             permissionsString = '[]';
         }
-        const user = await db_1.prisma.user.create({
+        const user = await db.user.create({
             data: {
                 name: data.name,
                 email: data.email,
@@ -146,9 +149,10 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     try {
         const data = userUpdateSchema.parse(req.body);
+        const db = (0, prisma_1.ensurePrisma)();
         // Se email foi fornecido, verificar se já existe
         if (data.email) {
-            const existingUser = await db_1.prisma.user.findFirst({
+            const existingUser = await db.user.findFirst({
                 where: {
                     email: data.email,
                     NOT: { id }
@@ -160,7 +164,7 @@ const updateUser = async (req, res) => {
             }
         }
         // Buscar usuário atual para manter as permissões existentes
-        const currentUser = await db_1.prisma.user.findUnique({
+        const currentUser = await db.user.findUnique({
             where: { id },
             select: { permissions: true }
         });
@@ -176,11 +180,6 @@ const updateUser = async (req, res) => {
         const requiredFields = {
             permissions: JSON.stringify(newPermissions)
         };
-        // Atualizar primeiro os campos obrigatórios
-        await db_1.prisma.user.update({
-            where: { id },
-            data: requiredFields
-        });
         // Preparar campos opcionais para atualização
         const optionalFields = {};
         if (data.name)
@@ -189,18 +188,12 @@ const updateUser = async (req, res) => {
             optionalFields.email = data.email;
         if (data.role)
             optionalFields.role = data.role;
-        if (data.active !== undefined)
+        if (typeof data.active === 'boolean')
             optionalFields.active = data.active;
-        // Atualizar campos opcionais se houver algum
-        if (Object.keys(optionalFields).length > 0) {
-            await db_1.prisma.user.update({
-                where: { id },
-                data: optionalFields
-            });
-        }
-        // Buscar e retornar o usuário atualizado
-        const updatedUser = await db_1.prisma.user.findUnique({
+        // Atualizar usuário
+        const updatedUser = await db.user.update({
             where: { id },
+            data: Object.assign(Object.assign(Object.assign({}, optionalFields), requiredFields), { updatedAt: new Date() }),
             select: {
                 id: true,
                 name: true,
@@ -212,10 +205,6 @@ const updateUser = async (req, res) => {
                 updatedAt: true
             }
         });
-        if (!updatedUser) {
-            res.status(500).json({ error: 'Usuário não encontrado após atualização' });
-            return;
-        }
         res.json(updatedUser);
     }
     catch (error) {
@@ -228,24 +217,19 @@ const updateUser = async (req, res) => {
     }
 };
 exports.updateUser = updateUser;
-// PUT /api/users/:id/password
+// PATCH /api/users/:id/password
 const updateUserPassword = async (req, res) => {
     const { id } = req.params;
     try {
         const data = passwordUpdateSchema.parse(req.body);
-        // Verificar se o usuário existe
-        const user = await db_1.prisma.user.findUnique({
-            where: { id }
-        });
-        if (!user) {
-            res.status(404).json({ error: 'Usuário não encontrado' });
-            return;
-        }
-        // Atualizar a senha
-        const passwordHash = await bcrypt_1.default.hash(data.password, 10);
-        await db_1.prisma.user.update({
+        const db = (0, prisma_1.ensurePrisma)();
+        const hashedPassword = await bcrypt_1.default.hash(data.password, 10);
+        await db.user.update({
             where: { id },
-            data: { passwordHash }
+            data: {
+                passwordHash: hashedPassword,
+                updatedAt: new Date()
+            }
         });
         res.json({ message: 'Senha atualizada com sucesso' });
     }
@@ -263,15 +247,15 @@ exports.updateUserPassword = updateUserPassword;
 const deleteUser = async (req, res) => {
     const { id } = req.params;
     try {
-        await db_1.prisma.user.delete({
+        const db = (0, prisma_1.ensurePrisma)();
+        await db.user.delete({
             where: { id }
         });
-        res.json({ message: 'Usuário deletado com sucesso' });
+        res.json({ message: 'Usuário excluído com sucesso' });
     }
     catch (error) {
-        console.error('Erro ao deletar usuário:', error);
-        res.status(500).json({ error: 'Erro ao deletar usuário' });
+        console.error('Erro ao excluir usuário:', error);
+        res.status(500).json({ error: 'Erro ao excluir usuário' });
     }
 };
 exports.deleteUser = deleteUser;
-//# sourceMappingURL=userController.js.map

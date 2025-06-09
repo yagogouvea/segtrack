@@ -3,11 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PrestadorService = void 0;
 const client_1 = require("@prisma/client");
 const AppError_1 = require("../../errors/AppError");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../../lib/prisma");
 class PrestadorService {
     async list() {
         try {
-            return await prisma.prestador.findMany({
+            const db = (0, prisma_1.ensurePrisma)();
+            return await db.prestador.findMany({
                 include: {
                     funcoes: true,
                     veiculos: true,
@@ -22,7 +23,8 @@ class PrestadorService {
     }
     async listPublic() {
         try {
-            return await prisma.prestador.findMany({
+            const db = (0, prisma_1.ensurePrisma)();
+            return await db.prestador.findMany({
                 where: { aprovado: true },
                 include: {
                     funcoes: true,
@@ -38,7 +40,8 @@ class PrestadorService {
     }
     async findById(id) {
         try {
-            const prestador = await prisma.prestador.findUnique({
+            const db = (0, prisma_1.ensurePrisma)();
+            const prestador = await db.prestador.findUnique({
                 where: { id },
                 include: {
                     funcoes: true,
@@ -60,7 +63,8 @@ class PrestadorService {
     }
     async create(data) {
         try {
-            return await prisma.prestador.create({
+            const db = (0, prisma_1.ensurePrisma)();
+            return await db.prestador.create({
                 data: {
                     nome: data.nome,
                     cpf: data.cpf,
@@ -109,22 +113,23 @@ class PrestadorService {
     }
     async update(id, data) {
         try {
+            const db = (0, prisma_1.ensurePrisma)();
             // Verificar se o prestador existe
             await this.findById(id);
             // Deletar relacionamentos existentes
-            await prisma.$transaction([
-                prisma.funcaoPrestador.deleteMany({
+            await db.$transaction([
+                db.funcaoPrestador.deleteMany({
                     where: { prestadorId: id }
                 }),
-                prisma.tipoVeiculoPrestador.deleteMany({
+                db.tipoVeiculoPrestador.deleteMany({
                     where: { prestadorId: id }
                 }),
-                prisma.regiaoPrestador.deleteMany({
+                db.regiaoPrestador.deleteMany({
                     where: { prestadorId: id }
                 })
             ]);
             // Atualizar prestador com novos dados
-            return await prisma.prestador.update({
+            return await db.prestador.update({
                 where: { id },
                 data: {
                     nome: data.nome,
@@ -176,20 +181,21 @@ class PrestadorService {
     }
     async delete(id) {
         try {
+            const db = (0, prisma_1.ensurePrisma)();
             // Verificar se o prestador existe
             await this.findById(id);
             // Deletar prestador e seus relacionamentos
-            await prisma.$transaction([
-                prisma.funcaoPrestador.deleteMany({
+            await db.$transaction([
+                db.funcaoPrestador.deleteMany({
                     where: { prestadorId: id }
                 }),
-                prisma.tipoVeiculoPrestador.deleteMany({
+                db.tipoVeiculoPrestador.deleteMany({
                     where: { prestadorId: id }
                 }),
-                prisma.regiaoPrestador.deleteMany({
+                db.regiaoPrestador.deleteMany({
                     where: { prestadorId: id }
                 }),
-                prisma.prestador.delete({
+                db.prestador.delete({
                     where: { id }
                 })
             ]);
@@ -203,7 +209,8 @@ class PrestadorService {
     }
     async findByRegiao(regiao) {
         try {
-            return await prisma.prestador.findMany({
+            const db = (0, prisma_1.ensurePrisma)();
+            return await db.prestador.findMany({
                 where: {
                     regioes: {
                         some: {
@@ -225,7 +232,8 @@ class PrestadorService {
     }
     async findByFuncao(funcao) {
         try {
-            return await prisma.prestador.findMany({
+            const db = (0, prisma_1.ensurePrisma)();
+            return await db.prestador.findMany({
                 where: {
                     funcoes: {
                         some: {
@@ -247,4 +255,3 @@ class PrestadorService {
     }
 }
 exports.PrestadorService = PrestadorService;
-//# sourceMappingURL=prestador.service.js.map

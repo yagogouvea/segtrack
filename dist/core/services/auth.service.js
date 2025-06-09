@@ -9,58 +9,58 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 class AuthService {
     async login(data) {
-        const user = await prisma_1.prisma.user.findUnique({
-            where: { email: data.email },
-            select: {
-                id: true,
-                email: true,
-                passwordHash: true,
-                role: true,
-                permissions: true,
-                active: true
-            }
+        const db = (0, prisma_1.ensurePrisma)();
+        const user = await db.user.findUnique({
+            where: { email: data.email }
         });
         if (!user) {
             throw new Error('Usuário não encontrado');
         }
-        if (!user.active) {
-            throw new Error('Usuário desativado');
+        const validPassword = await bcryptjs_1.default.compare(data.password, user.passwordHash);
+        if (!validPassword) {
+            throw new Error('Senha inválida');
         }
-        const isValidPassword = await bcryptjs_1.default.compare(data.password, user.passwordHash);
-        if (!isValidPassword) {
-            throw new Error('Senha incorreta');
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET não está definido');
+        }
+        let permissions;
+        try {
+            permissions = JSON.parse(user.permissions);
+            if (!Array.isArray(permissions)) {
+                throw new Error('Formato de permissões inválido');
+            }
+        }
+        catch (_a) {
+            permissions = [];
         }
         const token = jsonwebtoken_1.default.sign({
-            userId: user.id,
+            id: user.id,
+            name: user.name,
             role: user.role,
-            email: user.email,
-            permissions: user.permissions
-        }, process.env.JWT_SECRET || 'default-secret', { expiresIn: '12h' });
+            permissions
+        }, process.env.JWT_SECRET, { expiresIn: '24h' });
         return {
             token,
             user: {
                 id: user.id,
+                name: user.name,
                 email: user.email,
                 role: user.role,
-                permissions: user.permissions
+                permissions
             }
         };
     }
-    async validateToken(token) {
-        try {
-            const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-            const user = await prisma_1.prisma.user.findUnique({
-                where: { id: decoded.userId }
-            });
-            if (!user?.active) {
-                throw new Error('Usuário inválido ou inativo');
-            }
-            return decoded;
+    async verifyToken(token) {
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET não está definido');
         }
-        catch (error) {
-            throw new Error('Token inválido');
+        try {
+            jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+            return true;
+        }
+        catch (_a) {
+            return false;
         }
     }
 }
 exports.AuthService = AuthService;
-//# sourceMappingURL=auth.service.js.map

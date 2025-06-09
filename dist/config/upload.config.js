@@ -34,4 +34,3 @@ exports.uploadConfig = {
         }
     }
 };
-//# sourceMappingURL=upload.config.js.map

@@ -8,7 +8,8 @@ const prisma_1 = require("../../lib/prisma");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 class UserService {
     async list() {
-        return prisma_1.prisma.user.findMany({
+        const db = (0, prisma_1.ensurePrisma)();
+        return db.user.findMany({
             select: {
                 id: true,
                 name: true,
@@ -22,7 +23,8 @@ class UserService {
         });
     }
     async findById(id) {
-        return prisma_1.prisma.user.findUnique({
+        const db = (0, prisma_1.ensurePrisma)();
+        return db.user.findUnique({
             where: { id },
             select: {
                 id: true,
@@ -36,9 +38,16 @@ class UserService {
             }
         });
     }
+    async findByEmail(email) {
+        const db = (0, prisma_1.ensurePrisma)();
+        return db.user.findUnique({
+            where: { email }
+        });
+    }
     async create(data) {
+        const db = (0, prisma_1.ensurePrisma)();
         const hashedPassword = await bcrypt_1.default.hash(data.password, 10);
-        return prisma_1.prisma.user.create({
+        return db.user.create({
             data: {
                 name: data.name,
                 email: data.email,
@@ -60,7 +69,8 @@ class UserService {
         });
     }
     async update(id, data) {
-        return prisma_1.prisma.user.update({
+        const db = (0, prisma_1.ensurePrisma)();
+        return db.user.update({
             where: { id },
             data: {
                 name: data.name,
@@ -82,12 +92,14 @@ class UserService {
         });
     }
     async delete(id) {
-        return prisma_1.prisma.user.delete({
+        const db = (0, prisma_1.ensurePrisma)();
+        return db.user.delete({
             where: { id }
         });
     }
     async changePassword(id, currentPassword, newPassword) {
-        const user = await prisma_1.prisma.user.findUnique({
+        const db = (0, prisma_1.ensurePrisma)();
+        const user = await db.user.findUnique({
             where: { id },
             select: { passwordHash: true }
         });
@@ -99,11 +111,20 @@ class UserService {
             throw new Error('Senha atual incorreta');
         }
         const newPasswordHash = await bcrypt_1.default.hash(newPassword, 10);
-        return prisma_1.prisma.user.update({
+        return db.user.update({
             where: { id },
             data: { passwordHash: newPasswordHash }
         });
     }
+    async updatePassword(id, newPassword) {
+        const db = (0, prisma_1.ensurePrisma)();
+        const hashedPassword = await bcrypt_1.default.hash(newPassword, 10);
+        return db.user.update({
+            where: { id },
+            data: {
+                passwordHash: hashedPassword
+            }
+        });
+    }
 }
 exports.UserService = UserService;
-//# sourceMappingURL=user.service.js.map

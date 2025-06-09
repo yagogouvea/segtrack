@@ -1,8 +1,16 @@
 "use strict";
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.disconnectPrisma = exports.testConnection = exports.prisma = void 0;
+exports.prismaEnv = exports.prisma = void 0;
+exports.testConnection = testConnection;
+exports.disconnectPrisma = disconnectPrisma;
+exports.ensurePrisma = ensurePrisma;
 const client_1 = require("@prisma/client");
+const env_1 = require("../config/env");
 const prismaClientSingleton = () => {
+    if (!process.env.DATABASE_URL) {
+        throw new Error('❌ DATABASE_URL não está definida no arquivo .env');
+    }
     return new client_1.PrismaClient({
         log: process.env.NODE_ENV === 'development'
             ? ['query', 'error', 'warn']
@@ -15,12 +23,35 @@ const prismaClientSingleton = () => {
         },
     });
 };
-exports.prisma = global.prisma || prismaClientSingleton();
+const prisma = (_a = global.prisma) !== null && _a !== void 0 ? _a : prismaClientSingleton();
+exports.prisma = prisma;
 if (process.env.NODE_ENV !== 'production') {
-    global.prisma = exports.prisma;
+    global.prisma = prisma;
+}
+// Função auxiliar para testar a conexão
+async function testConnection() {
+    try {
+        await prisma.$connect();
+        console.log("✅ Conectado ao banco de dados com sucesso!");
+    }
+    catch (error) {
+        console.error("❌ Erro ao conectar com o banco de dados:", error);
+        throw error;
+    }
+}
+// Função para desconectar o Prisma
+async function disconnectPrisma() {
+    await prisma.$disconnect();
+}
+// Função para garantir que o prisma está disponível
+function ensurePrisma() {
+    if (!prisma) {
+        throw new Error('Prisma client não está disponível. Verifique se DATABASE_URL está definida no .env');
+    }
+    return prisma;
 }
 // Middleware para retry em operações do banco
-exports.prisma.$use(async (params, next) => {
+prisma === null || prisma === void 0 ? void 0 : prisma.$use(async (params, next) => {
     const MAX_RETRIES = 3;
     const BASE_DELAY = 1000; // 1 segundo
     let lastError;
@@ -45,33 +76,10 @@ exports.prisma.$use(async (params, next) => {
     }
     throw lastError;
 });
-// Função para testar a conexão com o banco de dados
-async function testConnection() {
-    try {
-        await exports.prisma.$connect();
-        console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
-        return true;
-    }
-    catch (error) {
-        console.error('❌ Erro ao conectar com o banco de dados:', error);
-        return false;
-    }
-}
-exports.testConnection = testConnection;
-// Função para desconectar do banco de dados
-async function disconnectPrisma() {
-    try {
-        await exports.prisma.$disconnect();
-        console.log('✅ Desconectado do banco de dados com sucesso!');
-    }
-    catch (error) {
-        console.error('❌ Erro ao desconectar do banco de dados:', error);
-    }
-}
-exports.disconnectPrisma = disconnectPrisma;
 // Garantir que desconectamos do banco antes de encerrar
 process.on('beforeExit', async () => {
     await disconnectPrisma();
 });
-exports.default = exports.prisma;
-//# sourceMappingURL=prisma.js.map
+exports.prismaEnv = new client_1.PrismaClient({
+    log: env_1.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});

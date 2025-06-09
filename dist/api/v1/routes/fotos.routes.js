@@ -17,4 +17,3 @@ router.get('/:id', controller.getById);
 router.post('/', upload.single('foto'), controller.upload);
 router.delete('/:id', controller.delete);
 exports.default = router;
-//# sourceMappingURL=fotos.routes.js.map

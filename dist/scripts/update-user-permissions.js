@@ -64,4 +64,3 @@ async function updateUserPermissions() {
     }
 }
 updateUserPermissions();
-//# sourceMappingURL=update-user-permissions.js.map

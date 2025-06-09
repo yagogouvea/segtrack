@@ -63,4 +63,3 @@ class FotoController {
     }
 }
 exports.FotoController = FotoController;
-//# sourceMappingURL=foto.controller.js.map

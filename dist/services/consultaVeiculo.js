@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buscarVeiculoPorPlaca = void 0;
+exports.buscarVeiculoPorPlaca = buscarVeiculoPorPlaca;
 // backend/src/services/consultaVeiculo.ts
 const axios_1 = __importDefault(require("axios"));
 const API_URL = 'https://gateway.apibrasil.io/api/v2/vehicles/dados';
@@ -30,5 +30,3 @@ async function buscarVeiculoPorPlaca(placa) {
         return null;
     }
 }
-exports.buscarVeiculoPorPlaca = buscarVeiculoPorPlaca;
-//# sourceMappingURL=consultaVeiculo.js.map

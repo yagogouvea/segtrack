@@ -6,6 +6,25 @@ import logger from '@/infrastructure/logger';
 import bcrypt from 'bcryptjs';
 import { CreateUserDTO, UpdateUserDTO } from '../types/prisma';
 import { Prisma } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { AppError } from '@/shared/errors/AppError';
+
+interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  permissions?: string[];
+  active?: boolean;
+}
+
+interface UpdateUserRequest {
+  name?: string;
+  email?: string;
+  role?: UserRole;
+  permissions?: string[];
+  active?: boolean;
+}
 
 export class UserController {
   async getCurrentUser(req: Request, res: Response): Promise<void> {
@@ -128,7 +147,18 @@ export class UserController {
 
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const data = req.body as CreateUserDTO;
+      const data = req.body as CreateUserRequest;
+
+      // Validação dos campos obrigatórios
+      if (!data.name || !data.email || !data.password || !data.role) {
+        throw new AppError('Campos obrigatórios faltando: name, email, password, role', 400);
+      }
+
+      // Validação e conversão do role
+      if (!Object.values(UserRole).includes(data.role)) {
+        throw new AppError('Role inválido', 400);
+      }
+
       const hashedPassword = await bcrypt.hash(data.password, 10);
 
       const user = await prisma.user.create({
@@ -137,8 +167,8 @@ export class UserController {
           email: data.email,
           passwordHash: hashedPassword,
           role: data.role,
-          permissions: JSON.stringify(data.permissions || []),
-          active: true
+          permissions: data.permissions ? JSON.stringify(data.permissions) : '[]',
+          active: data.active ?? true
         },
         select: {
           id: true,
@@ -152,7 +182,11 @@ export class UserController {
 
       res.status(201).json(user);
     } catch (error) {
-      logger.error('Erro ao criar usuário:', error);
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      console.error('Erro ao criar usuário:', error);
       res.status(500).json({ error: 'Erro ao criar usuário' });
     }
   }
@@ -188,7 +222,7 @@ export class UserController {
   async update(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const data = req.body as UpdateUserDTO;
+      const data = req.body as UpdateUserRequest;
 
       const user = await prisma.user.update({
         where: { id },
@@ -211,7 +245,11 @@ export class UserController {
 
       res.json(user);
     } catch (error) {
-      logger.error('Erro ao atualizar usuário:', error);
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      console.error('Erro ao atualizar usuário:', error);
       res.status(500).json({ error: 'Erro ao atualizar usuário' });
     }
   }

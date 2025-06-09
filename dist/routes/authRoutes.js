@@ -7,4 +7,3 @@ const router = (0, express_1.Router)();
 router.post('/login', authController_1.login);
 router.post('/seed-admin', authController_1.seedAdmin); // rota temporária para gerar admin
 exports.default = router;
-//# sourceMappingURL=authRoutes.js.map

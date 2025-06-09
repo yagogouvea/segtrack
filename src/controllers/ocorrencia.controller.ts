@@ -1,96 +1,131 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
-import { OcorrenciaStatus } from '../types/prisma';
-
-const prisma = new PrismaClient();
+import { OcorrenciaService } from '@/core/services/ocorrencia.service';
+import { AppError } from '@/shared/errors/AppError';
+import { OcorrenciaStatus } from '@/types/prisma';
 
 export class OcorrenciaController {
+  private service: OcorrenciaService;
+
+  constructor() {
+    this.service = new OcorrenciaService();
+  }
+
   async list(req: Request, res: Response) {
     try {
-      const { cliente, status, dataInicio, dataFim } = req.query;
-      
+      const { status, placa, cliente, data_inicio, data_fim } = req.query;
+
       const filters = {
-        cliente: cliente as string,
         status: status as OcorrenciaStatus,
-        dataInicio: dataInicio ? new Date(dataInicio as string) : undefined,
-        dataFim: dataFim ? new Date(dataFim as string) : undefined
+        placa: placa as string,
+        cliente: cliente as string,
+        data_inicio: data_inicio ? new Date(data_inicio as string) : undefined,
+        data_fim: data_fim ? new Date(data_fim as string) : undefined
       };
 
-      const ocorrencias = await prisma.ocorrencia.findMany({
-        where: {
-          ...(filters.cliente && { cliente: filters.cliente }),
-          ...(filters.status && { status: filters.status }),
-          ...(filters.dataInicio || filters.dataFim) && {
-            criado_em: {
-              gte: filters.dataInicio,
-              lte: filters.dataFim
-            }
-          }
-        },
-        include: {
-          fotos: true
-        },
-        orderBy: {
-          criado_em: 'desc'
-        }
-      });
-
-      res.json(ocorrencias);
+      const ocorrencias = await this.service.list(filters);
+      return res.json(ocorrencias);
     } catch (error) {
-      console.error('Erro ao listar ocorrências:', error);
-      res.status(500).json({ error: 'Erro ao listar ocorrências' });
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
     }
   }
 
   async create(req: Request, res: Response) {
     try {
-      const data = req.body;
-
-      const ocorrencia = await prisma.ocorrencia.create({
-        data: {
-          ...data,
-          status: data.status as OcorrenciaStatus,
-          despesas_detalhadas: data.despesas_detalhadas ? 
-            data.despesas_detalhadas as Prisma.InputJsonValue : 
-            Prisma.NullTypes.JsonNull
-        },
-        include: {
-          fotos: true
-        }
-      });
-
+      const ocorrencia = await this.service.create(req.body);
       return res.status(201).json(ocorrencia);
     } catch (error) {
-      console.error('Erro ao criar ocorrência:', error);
-      return res.status(500).json({ error: 'Erro ao criar ocorrência' });
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  async findById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const ocorrencia = await this.service.findById(Number(id));
+      return res.json(ocorrencia);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
     }
   }
 
   async update(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const data = req.body;
-
-      const ocorrencia = await prisma.ocorrencia.update({
-        where: { id: Number(id) },
-        data: {
-          ...data,
-          status: data.status as OcorrenciaStatus,
-          despesas_detalhadas: data.despesas_detalhadas ? 
-            data.despesas_detalhadas as Prisma.InputJsonValue : 
-            Prisma.NullTypes.JsonNull
-        },
-        include: {
-          fotos: true
-        }
-      });
-
+      const ocorrencia = await this.service.update(Number(id), req.body);
       return res.json(ocorrencia);
     } catch (error) {
-      console.error('Erro ao atualizar ocorrência:', error);
-      return res.status(500).json({ error: 'Erro ao atualizar ocorrência' });
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
     }
   }
 
-  // ... rest of the methods ...
+  async delete(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      await this.service.delete(Number(id));
+      return res.status(204).send();
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  async findByStatus(req: Request, res: Response) {
+    try {
+      const { status } = req.params;
+      const ocorrencias = await this.service.findByStatus(status as OcorrenciaStatus);
+      return res.json(ocorrencias);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  async findByPlaca(req: Request, res: Response) {
+    try {
+      const { placa } = req.params;
+      const ocorrencias = await this.service.findByPlaca(placa);
+      return res.json(ocorrencias);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  async addFotos(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const files = req.files as Express.Multer.File[];
+      
+      if (!files || files.length === 0) {
+        throw new AppError('Nenhuma foto foi enviada', 400);
+      }
+
+      const urls = files.map(file => file.path);
+      const ocorrencia = await this.service.addFotos(Number(id), urls);
+      return res.json(ocorrencia);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
 } 

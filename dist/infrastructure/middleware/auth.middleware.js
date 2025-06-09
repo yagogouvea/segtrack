@@ -83,4 +83,3 @@ const requirePermission = (permission) => {
     };
 };
 exports.requirePermission = requirePermission;
-//# sourceMappingURL=auth.middleware.js.map

@@ -25,4 +25,3 @@ async function testConnection() {
     }
 }
 testConnection();
-//# sourceMappingURL=test-db.js.map

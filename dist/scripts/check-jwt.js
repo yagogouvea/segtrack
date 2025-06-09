@@ -21,4 +21,3 @@ function checkJWT() {
     }
 }
 checkJWT();
-//# sourceMappingURL=check-jwt.js.map

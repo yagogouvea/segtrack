@@ -53,4 +53,3 @@ class RelatorioController {
     }
 }
 exports.RelatorioController = RelatorioController;
-//# sourceMappingURL=relatorio.controller.js.map

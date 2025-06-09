@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const db_1 = require("../lib/db");
+const prisma_1 = require("../lib/prisma");
 async function fixYagoPermissions() {
     try {
         // Define admin permissions in the correct object format
@@ -40,7 +40,7 @@ async function fixYagoPermissions() {
             }
         };
         // Update Yago's permissions
-        const updatedUser = await db_1.prisma.user.update({
+        const updatedUser = await prisma_1.prisma.user.update({
             where: {
                 email: 'yago@segtrackpr.com.br'
             },
@@ -53,17 +53,16 @@ async function fixYagoPermissions() {
             id: updatedUser.id,
             email: updatedUser.email,
             role: updatedUser.role,
-            permissions: updatedUser.permissions ?
-                JSON.parse(updatedUser.permissions) :
-                []
+            permissions: JSON.parse(updatedUser.permissions)
         });
     }
     catch (error) {
         console.error('❌ Erro ao atualizar permissões do Yago:', error);
+        throw error;
     }
     finally {
-        await db_1.prisma.$disconnect();
+        await prisma_1.prisma.$disconnect();
     }
 }
-fixYagoPermissions();
-//# sourceMappingURL=fix-yago-permissions.js.map
+fixYagoPermissions()
+    .catch(console.error);

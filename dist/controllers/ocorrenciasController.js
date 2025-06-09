@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deletarOcorrencia = void 0;
-const db_1 = require("../lib/db");
+const prisma_1 = require("../lib/prisma");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const deletarOcorrencia = async (req, res) => {
@@ -14,8 +14,9 @@ const deletarOcorrencia = async (req, res) => {
         return;
     }
     try {
+        const db = (0, prisma_1.ensurePrisma)();
         // Primeiro, buscar a ocorrência para obter as fotos
-        const ocorrencia = await db_1.prisma.ocorrencia.findUnique({
+        const ocorrencia = await db.ocorrencia.findUnique({
             where: { id: Number(id) },
             include: { fotos: true }
         });
@@ -31,7 +32,7 @@ const deletarOcorrencia = async (req, res) => {
             }
         }
         // Deletar a ocorrência (isso também deletará as fotos devido ao onDelete: Cascade)
-        await db_1.prisma.ocorrencia.delete({
+        await db.ocorrencia.delete({
             where: { id: Number(id) }
         });
         res.json({ message: 'Ocorrência deletada com sucesso' });
@@ -45,4 +46,3 @@ const deletarOcorrencia = async (req, res) => {
     }
 };
 exports.deletarOcorrencia = deletarOcorrencia;
-//# sourceMappingURL=ocorrenciasController.js.map

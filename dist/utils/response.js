@@ -28,4 +28,3 @@ exports.sendResponse = {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-//# sourceMappingURL=response.js.map

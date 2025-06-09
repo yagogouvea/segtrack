@@ -16,4 +16,3 @@ router.get('/:id', (0, auth_middleware_1.requirePermission)('read:user'), contro
 router.put('/:id', (0, auth_middleware_1.requirePermission)('update:user'), controller.update);
 router.delete('/:id', (0, auth_middleware_1.requirePermission)('delete:user'), controller.delete);
 exports.default = router;
-//# sourceMappingURL=userRoutes.js.map

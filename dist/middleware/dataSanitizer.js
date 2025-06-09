@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sanitizeResponseData = exports.sanitizeOcorrenciaData = void 0;
+exports.sanitizeOcorrenciaData = void 0;
+exports.sanitizeResponseData = sanitizeResponseData;
 const sanitizeOcorrenciaData = (data) => {
     return {
         id: data.id,
@@ -39,5 +40,3 @@ function sanitizeResponseData() {
         next();
     };
 }
-exports.sanitizeResponseData = sanitizeResponseData;
-//# sourceMappingURL=dataSanitizer.js.map

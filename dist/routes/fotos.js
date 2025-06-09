@@ -28,7 +28,7 @@ const storage = multer_1.default.diskStorage({
 const upload = (0, multer_1.default)({
     storage,
     limits: {
-        fileSize: 50 * 1024 * 1024,
+        fileSize: 50 * 1024 * 1024, // 50MB
         files: 10 // máximo de 10 arquivos por vez
     },
     fileFilter: (_req, file, cb) => {
@@ -157,4 +157,3 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=fotos.js.map

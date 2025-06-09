@@ -5,4 +5,3 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Exemplo com Zod:
 // import { z } from 'zod';
 // export const PrestadorPublicoSchema = z.object({ nome: z.string(), ... });
-//# sourceMappingURL=prestadorPublico.js.map

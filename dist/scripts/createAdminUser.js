@@ -46,4 +46,3 @@ async function createAdminUser() {
     }
 }
 createAdminUser();
-//# sourceMappingURL=createAdminUser.js.map

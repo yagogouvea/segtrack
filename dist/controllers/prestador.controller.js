@@ -79,4 +79,3 @@ class PrestadorController {
     }
 }
 exports.PrestadorController = PrestadorController;
-//# sourceMappingURL=prestador.controller.js.map

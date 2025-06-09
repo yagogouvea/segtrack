@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = void 0;
+exports.errorHandler = errorHandler;
 const AppError_1 = require("../../shared/errors/AppError");
 const zod_1 = require("zod");
 function errorHandler(err, req, res, _next) {
@@ -37,5 +37,3 @@ function errorHandler(err, req, res, _next) {
             : 'Erro interno do servidor'
     });
 }
-exports.errorHandler = errorHandler;
-//# sourceMappingURL=error.js.map

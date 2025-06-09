@@ -68,4 +68,3 @@ const validateOcorrencia = (req, _res, next) => {
     }
 };
 exports.validateOcorrencia = validateOcorrencia;
-//# sourceMappingURL=ocorrencia.validator.js.map

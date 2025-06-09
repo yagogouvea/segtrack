@@ -14,14 +14,14 @@ const upload = (0, multer_1.default)(upload_config_1.uploadConfig);
 router.use(auth_middleware_1.authenticateToken);
 // Listagem e busca
 router.get('/', controller.list);
-router.get('/:id', controller.getById);
+router.get('/:id', controller.findById);
 // Criação e atualização
 router.post('/', controller.create);
 router.put('/:id', controller.update);
 router.delete('/:id', controller.delete);
 // Upload de fotos
-router.post('/:id/fotos', upload.array('fotos'), controller.addPhotos);
-// Gerar relatório
-router.post('/:id/relatorio', controller.generateReport);
+router.post('/:id/fotos', upload.array('fotos'), controller.addFotos);
+// Rotas específicas
+router.get('/status/:status', controller.findByStatus);
+router.get('/placa/:placa', controller.findByPlaca);
 exports.default = router;
-//# sourceMappingURL=ocorrencias.routes.js.map

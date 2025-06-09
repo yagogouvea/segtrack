@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.seedAdmin = exports.login = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const db_1 = require("../lib/db");
+const prisma_1 = require("../lib/prisma");
 const login = async (req, res) => {
     try {
         // Validar corpo da requisição
@@ -23,7 +23,8 @@ const login = async (req, res) => {
         }
         console.log('Tentativa de login para:', email);
         try {
-            const user = await db_1.prisma.user.findUnique({
+            const db = (0, prisma_1.ensurePrisma)();
+            const user = await db.user.findUnique({
                 where: { email },
                 select: {
                     id: true,
@@ -37,8 +38,8 @@ const login = async (req, res) => {
             });
             console.log('Resultado da busca do usuário:', {
                 found: !!user,
-                role: user?.role,
-                active: user?.active
+                role: user === null || user === void 0 ? void 0 : user.role,
+                active: user === null || user === void 0 ? void 0 : user.active
             });
             if (!user) {
                 res.status(401).json({ message: 'Usuário não encontrado' });
@@ -127,7 +128,8 @@ const login = async (req, res) => {
 exports.login = login;
 const seedAdmin = async (_req, res) => {
     try {
-        const existing = await db_1.prisma.user.findUnique({
+        const db = (0, prisma_1.ensurePrisma)();
+        const existing = await db.user.findUnique({
             where: { email: 'admin@segtrack.com' },
         });
         if (existing) {
@@ -152,7 +154,7 @@ const seedAdmin = async (_req, res) => {
             'delete:foto',
             'upload:foto'
         ];
-        const user = await db_1.prisma.user.create({
+        const user = await db.user.create({
             data: {
                 name: 'Admin SEGTRACK',
                 email: 'admin@segtrack.com',
@@ -170,4 +172,3 @@ const seedAdmin = async (_req, res) => {
     }
 };
 exports.seedAdmin = seedAdmin;
-//# sourceMappingURL=authController.js.map

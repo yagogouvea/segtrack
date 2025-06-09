@@ -68,7 +68,7 @@ router.post('/', async (req, res) => {
                 email,
                 endereco,
                 contratos: {
-                    create: contratos?.map((c) => ({
+                    create: contratos === null || contratos === void 0 ? void 0 : contratos.map((c) => ({
                         nome_interno: c.nome_interno,
                         tipo: c.tipo,
                         regiao: c.regiao,
@@ -113,7 +113,7 @@ router.put('/:id', async (req, res) => {
                 email,
                 endereco,
                 contratos: {
-                    create: contratos?.map((c) => ({
+                    create: contratos === null || contratos === void 0 ? void 0 : contratos.map((c) => ({
                         nome_interno: c.nome_interno,
                         tipo: c.tipo,
                         regiao: c.regiao,
@@ -158,4 +158,3 @@ router.delete('/:id', async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=clientes.js.map

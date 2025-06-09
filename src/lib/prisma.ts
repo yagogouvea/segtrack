@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { env } from '@/config/env';
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -86,4 +87,8 @@ prisma?.$use(async (params, next) => {
 // Garantir que desconectamos do banco antes de encerrar
 process.on('beforeExit', async () => {
   await disconnectPrisma();
+});
+
+export const prismaEnv = new PrismaClient({
+  log: env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });

@@ -1,162 +1,228 @@
 "use strict";
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OcorrenciaService = void 0;
 const client_1 = require("@prisma/client");
 const AppError_1 = require("../../shared/errors/AppError");
+const prisma_1 = require("../../lib/prisma");
 class OcorrenciaService {
-    constructor(prisma) {
-        this.prisma = prisma;
-    }
-    async findAll() {
-        return this.prisma.ocorrencia.findMany({
-            include: {
-                fotos: true
-            },
-            orderBy: {
-                criado_em: 'desc'
+    async list(filters = {}) {
+        try {
+            const db = (0, prisma_1.ensurePrisma)();
+            const where = {};
+            if (filters.status) {
+                where.status = filters.status;
             }
-        });
-    }
-    async findById(id) {
-        const ocorrencia = await this.prisma.ocorrencia.findUnique({
-            where: { id },
-            include: {
-                fotos: true
+            if (filters.placa) {
+                where.OR = [
+                    { placa1: filters.placa },
+                    { placa2: filters.placa },
+                    { placa3: filters.placa }
+                ];
             }
-        });
-        if (!ocorrencia) {
-            return null;
+            if (filters.cliente) {
+                where.cliente = {
+                    contains: filters.cliente
+                };
+            }
+            if (filters.data_inicio || filters.data_fim) {
+                where.criado_em = {};
+                if (filters.data_inicio) {
+                    where.criado_em.gte = filters.data_inicio;
+                }
+                if (filters.data_fim) {
+                    where.criado_em.lte = filters.data_fim;
+                }
+            }
+            return await db.ocorrencia.findMany({
+                where,
+                include: {
+                    fotos: true
+                },
+                orderBy: {
+                    criado_em: 'desc'
+                }
+            });
         }
-        return ocorrencia;
+        catch (error) {
+            console.error('Erro ao listar ocorrências:', error);
+            throw new AppError_1.AppError('Erro ao listar ocorrências');
+        }
     }
     async create(data) {
-        return this.prisma.ocorrencia.create({
-            data: {
-                ...data,
-                status: data.status || 'em_andamento',
-                despesas_detalhadas: data.despesas_detalhadas ?? client_1.Prisma.JsonNull,
-                fotos: data.fotos ? {
-                    create: data.fotos.map(foto => ({
+        var _a;
+        try {
+            if (!data.placa1 || !data.cliente || !data.tipo) {
+                throw new AppError_1.AppError('Campos obrigatórios faltando: placa1, cliente, tipo', 400);
+            }
+            const db = (0, prisma_1.ensurePrisma)();
+            const { fotos } = data, rest = __rest(data, ["fotos"]);
+            const ocorrencia = await db.ocorrencia.create({
+                data: Object.assign(Object.assign({}, rest), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull }),
+                include: {
+                    fotos: true
+                }
+            });
+            if (fotos && fotos.length > 0) {
+                await db.foto.createMany({
+                    data: fotos.map(foto => ({
+                        ocorrenciaId: ocorrencia.id,
                         url: foto.url,
                         legenda: foto.legenda || ''
                     }))
-                } : undefined
-            },
-            include: {
-                fotos: true
+                });
             }
-        });
+            return await db.ocorrencia.findUnique({
+                where: { id: ocorrencia.id },
+                include: { fotos: true }
+            });
+        }
+        catch (error) {
+            console.error('Erro ao criar ocorrência:', error);
+            throw new AppError_1.AppError('Erro ao criar ocorrência');
+        }
+    }
+    async findById(id) {
+        try {
+            const db = (0, prisma_1.ensurePrisma)();
+            const ocorrencia = await db.ocorrencia.findUnique({
+                where: { id },
+                include: {
+                    fotos: true
+                }
+            });
+            if (!ocorrencia) {
+                throw new AppError_1.AppError('Ocorrência não encontrada', 404);
+            }
+            return ocorrencia;
+        }
+        catch (error) {
+            if (error instanceof AppError_1.AppError)
+                throw error;
+            console.error('Erro ao buscar ocorrência:', error);
+            throw new AppError_1.AppError('Erro ao buscar ocorrência');
+        }
     }
     async update(id, data) {
-        return this.prisma.ocorrencia.update({
-            where: { id },
-            data: {
-                ...data,
-                status: data.status,
-                despesas_detalhadas: data.despesas_detalhadas ?? client_1.Prisma.JsonNull,
-                fotos: data.fotos ? {
-                    create: data.fotos.map(foto => ({
+        var _a;
+        try {
+            const db = (0, prisma_1.ensurePrisma)();
+            const { fotos } = data, rest = __rest(data, ["fotos"]);
+            const ocorrencia = await db.ocorrencia.update({
+                where: { id },
+                data: Object.assign(Object.assign({}, rest), { atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull }),
+                include: {
+                    fotos: true
+                }
+            });
+            if (fotos && fotos.length > 0) {
+                await db.foto.createMany({
+                    data: fotos.map(foto => ({
+                        ocorrenciaId: ocorrencia.id,
                         url: foto.url,
                         legenda: foto.legenda || ''
                     }))
-                } : undefined
-            },
-            include: {
-                fotos: true
+                });
             }
-        });
+            return await db.ocorrencia.findUnique({
+                where: { id: ocorrencia.id },
+                include: { fotos: true }
+            });
+        }
+        catch (error) {
+            console.error('Erro ao atualizar ocorrência:', error);
+            throw new AppError_1.AppError('Erro ao atualizar ocorrência');
+        }
     }
     async delete(id) {
-        await this.prisma.foto.deleteMany({
-            where: { ocorrenciaId: id }
-        });
-        await this.prisma.ocorrencia.delete({
-            where: { id }
-        });
+        try {
+            const db = (0, prisma_1.ensurePrisma)();
+            await db.foto.deleteMany({
+                where: { ocorrenciaId: id }
+            });
+            await db.ocorrencia.delete({
+                where: { id }
+            });
+        }
+        catch (error) {
+            console.error('Erro ao deletar ocorrência:', error);
+            throw new AppError_1.AppError('Erro ao deletar ocorrência');
+        }
     }
     async findByStatus(status) {
-        return this.prisma.ocorrencia.findMany({
-            where: { status },
-            include: {
-                fotos: true
-            },
-            orderBy: {
-                criado_em: 'desc'
-            }
-        });
-    }
-    async addPhotos(id, fotos) {
-        return this.prisma.ocorrencia.update({
-            where: { id },
-            data: {
-                fotos: {
-                    create: fotos
+        try {
+            const db = (0, prisma_1.ensurePrisma)();
+            return await db.ocorrencia.findMany({
+                where: { status },
+                include: {
+                    fotos: true
+                },
+                orderBy: {
+                    criado_em: 'desc'
                 }
-            },
-            include: {
-                fotos: true
-            }
-        });
+            });
+        }
+        catch (error) {
+            console.error('Erro ao buscar ocorrências por status:', error);
+            throw new AppError_1.AppError('Erro ao buscar ocorrências por status');
+        }
     }
-    async generateReport(id) {
-        const ocorrencia = await this.findById(id);
-        if (!ocorrencia) {
-            throw new AppError_1.AppError('Ocorrência não encontrada', 404);
+    async findByPlaca(placa) {
+        try {
+            const db = (0, prisma_1.ensurePrisma)();
+            return await db.ocorrencia.findMany({
+                where: {
+                    OR: [
+                        { placa1: placa },
+                        { placa2: placa },
+                        { placa3: placa }
+                    ]
+                },
+                include: {
+                    fotos: true
+                },
+                orderBy: {
+                    criado_em: 'desc'
+                }
+            });
         }
-        // Implementar geração de relatório
-        // TODO: Integrar com serviço de geração de PDF
-        return {
-            url: `/relatorios/${id}.pdf`
-        };
-    }
-    async list(filters = {}) {
-        const where = {};
-        if (filters.cliente) {
-            where.cliente = filters.cliente;
+        catch (error) {
+            console.error('Erro ao buscar ocorrências por placa:', error);
+            throw new AppError_1.AppError('Erro ao buscar ocorrências por placa');
         }
-        if (filters.status) {
-            where.status = filters.status;
-        }
-        if (filters.dataInicio || filters.dataFim) {
-            where.criado_em = {
-                gte: filters.dataInicio,
-                lte: filters.dataFim
-            };
-        }
-        return this.prisma.ocorrencia.findMany({
-            where,
-            include: {
-                fotos: true
-            },
-            orderBy: {
-                criado_em: 'desc'
-            }
-        });
-    }
-    async getById(id) {
-        return this.prisma.ocorrencia.findUnique({
-            where: { id },
-            include: {
-                fotos: true
-            }
-        });
     }
     async addFotos(id, urls) {
-        return this.prisma.ocorrencia.update({
-            where: { id },
-            data: {
-                fotos: {
-                    create: urls.map(url => ({
-                        url,
-                        legenda: ''
-                    }))
+        try {
+            const db = (0, prisma_1.ensurePrisma)();
+            return await db.ocorrencia.update({
+                where: { id },
+                data: {
+                    fotos: {
+                        create: urls.map(url => ({
+                            url,
+                            legenda: ''
+                        }))
+                    }
+                },
+                include: {
+                    fotos: true
                 }
-            },
-            include: {
-                fotos: true
-            }
-        });
+            });
+        }
+        catch (error) {
+            console.error('Erro ao adicionar fotos:', error);
+            throw new AppError_1.AppError('Erro ao adicionar fotos');
+        }
     }
 }
 exports.OcorrenciaService = OcorrenciaService;
-//# sourceMappingURL=ocorrencia.service.js.map

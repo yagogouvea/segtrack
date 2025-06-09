@@ -22,4 +22,3 @@ const corsOptions = {
     maxAge: 86400 // 24 horas
 };
 exports.default = corsOptions;
-//# sourceMappingURL=cors.js.map
