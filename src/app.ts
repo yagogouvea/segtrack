@@ -8,6 +8,9 @@ console.log('Iniciando configuração do Express...');
 
 const app = express();
 
+// Configuração de segurança
+app.set('trust proxy', false); // Desabilita trust proxy para evitar bypass de IP
+
 // Middlewares
 app.use(cors());
 app.use(helmet());
@@ -25,16 +28,9 @@ app.get('/', (_req: Request, res: Response) => {
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     await testConnection();
-    res.status(200).json({ 
-      status: 'healthy',
-      timestamp: new Date().toISOString()
-    });
+    res.status(200).json({ status: 'healthy' });
   } catch (error) {
-    console.error('Health check failed:', error);
-    res.status(500).json({ 
-      status: 'unhealthy',
-      error: String(error)
-    });
+    res.status(500).json({ status: 'unhealthy', error: String(error) });
   }
 });
 

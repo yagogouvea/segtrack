@@ -1,25 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.healthRouter = void 0;
 const express_1 = require("express");
 const prisma_1 = require("../lib/prisma");
-exports.healthRouter = (0, express_1.Router)();
-exports.healthRouter.get('/health', async (req, res) => {
+const router = (0, express_1.Router)();
+router.get('/', async (_req, res) => {
     try {
-        // Test database connection
-        await prisma_1.prisma.$queryRaw `SELECT 1`;
-        return res.json({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            database: 'connected',
-        });
+        await (0, prisma_1.testConnection)();
+        res.status(200).json({ status: 'healthy' });
     }
     catch (error) {
-        return res.status(500).json({
-            status: 'unhealthy',
-            timestamp: new Date().toISOString(),
-            database: 'disconnected',
-            error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        res.status(500).json({ status: 'unhealthy', error: String(error) });
     }
 });
+exports.default = router;

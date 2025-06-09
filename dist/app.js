@@ -10,6 +10,8 @@ const compression_1 = __importDefault(require("compression"));
 const prisma_1 = require("./lib/prisma");
 console.log('Iniciando configuração do Express...');
 const app = (0, express_1.default)();
+// Configuração de segurança
+app.set('trust proxy', false); // Desabilita trust proxy para evitar bypass de IP
 // Middlewares
 app.use((0, cors_1.default)());
 app.use((0, helmet_1.default)());
@@ -24,17 +26,10 @@ app.get('/', (_req, res) => {
 app.get('/api/health', async (_req, res) => {
     try {
         await (0, prisma_1.testConnection)();
-        res.status(200).json({
-            status: 'healthy',
-            timestamp: new Date().toISOString()
-        });
+        res.status(200).json({ status: 'healthy' });
     }
     catch (error) {
-        console.error('Health check failed:', error);
-        res.status(500).json({
-            status: 'unhealthy',
-            error: String(error)
-        });
+        res.status(500).json({ status: 'unhealthy', error: String(error) });
     }
 });
 // Error handling
