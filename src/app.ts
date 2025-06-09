@@ -11,8 +11,36 @@ const app = express();
 // Configuração de segurança
 app.set('trust proxy', false); // Desabilita trust proxy para evitar bypass de IP
 
-// Middlewares
-app.use(cors());
+// Configuração do CORS
+const allowedOrigins = [
+  'http://segtrackprontaresposta.com.br',
+  'https://segtrackprontaresposta.com.br',
+  'http://www.segtrackprontaresposta.com.br',
+  'https://www.segtrackprontaresposta.com.br'
+];
+
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push('http://localhost:3000', 'http://localhost:5173');
+}
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir requisições sem origin (como mobile apps ou ferramentas de API)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      console.warn(`Origem bloqueada pelo CORS: ${origin}`);
+      callback(new Error('Não permitido pelo CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Outros middlewares
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
@@ -28,9 +56,18 @@ app.get('/', (_req: Request, res: Response) => {
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     await testConnection();
-    res.status(200).json({ status: 'healthy' });
+    res.status(200).json({ 
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV
+    });
   } catch (error) {
-    res.status(500).json({ status: 'unhealthy', error: String(error) });
+    console.error('Health check falhou:', error);
+    res.status(500).json({ 
+      status: 'unhealthy', 
+      error: String(error),
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

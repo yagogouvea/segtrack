@@ -75,27 +75,20 @@ export class OcorrenciaService {
           status: data.status || 'em_andamento',
           criado_em: new Date(),
           atualizado_em: new Date(),
-          despesas_detalhadas: data.despesas_detalhadas ?? Prisma.JsonNull
+          despesas_detalhadas: data.despesas_detalhadas ?? Prisma.JsonNull,
+          fotos: fotos && fotos.length > 0 ? {
+            create: fotos.map(foto => ({
+              url: foto.url,
+              legenda: foto.legenda || ''
+            }))
+          } : undefined
         },
         include: {
           fotos: true
         }
       });
 
-      if (fotos && fotos.length > 0) {
-        await db.foto.createMany({
-          data: fotos.map(foto => ({
-            ocorrenciaId: ocorrencia.id,
-            url: foto.url,
-            legenda: foto.legenda || ''
-          }))
-        });
-      }
-
-      return await db.ocorrencia.findUnique({
-        where: { id: ocorrencia.id },
-        include: { fotos: true }
-      }) as Ocorrencia;
+      return ocorrencia;
     } catch (error) {
       console.error('Erro ao criar ocorrência:', error);
       throw new AppError('Erro ao criar ocorrência');
@@ -134,27 +127,20 @@ export class OcorrenciaService {
         data: {
           ...rest,
           atualizado_em: new Date(),
-          despesas_detalhadas: data.despesas_detalhadas ?? Prisma.JsonNull
+          despesas_detalhadas: data.despesas_detalhadas ?? Prisma.JsonNull,
+          fotos: fotos && fotos.length > 0 ? {
+            create: fotos.map(foto => ({
+              url: foto.url,
+              legenda: foto.legenda || ''
+            }))
+          } : undefined
         },
         include: {
           fotos: true
         }
       });
 
-      if (fotos && fotos.length > 0) {
-        await db.foto.createMany({
-          data: fotos.map(foto => ({
-            ocorrenciaId: ocorrencia.id,
-            url: foto.url,
-            legenda: foto.legenda || ''
-          }))
-        });
-      }
-
-      return await db.ocorrencia.findUnique({
-        where: { id: ocorrencia.id },
-        include: { fotos: true }
-      }) as Ocorrencia;
+      return ocorrencia;
     } catch (error) {
       console.error('Erro ao atualizar ocorrência:', error);
       throw new AppError('Erro ao atualizar ocorrência');
@@ -222,7 +208,7 @@ export class OcorrenciaService {
   async addFotos(id: number, urls: string[]): Promise<Ocorrencia> {
     try {
       const db = ensurePrisma();
-      return await db.ocorrencia.update({
+      const ocorrencia = await db.ocorrencia.update({
         where: { id },
         data: {
           fotos: {
@@ -236,6 +222,8 @@ export class OcorrenciaService {
           fotos: true
         }
       });
+
+      return ocorrencia;
     } catch (error) {
       console.error('Erro ao adicionar fotos:', error);
       throw new AppError('Erro ao adicionar fotos');

@@ -68,24 +68,17 @@ class OcorrenciaService {
             const db = (0, prisma_1.ensurePrisma)();
             const { fotos } = data, rest = __rest(data, ["fotos"]);
             const ocorrencia = await db.ocorrencia.create({
-                data: Object.assign(Object.assign({}, rest), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull }),
+                data: Object.assign(Object.assign({}, rest), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull, fotos: fotos && fotos.length > 0 ? {
+                        create: fotos.map(foto => ({
+                            url: foto.url,
+                            legenda: foto.legenda || ''
+                        }))
+                    } : undefined }),
                 include: {
                     fotos: true
                 }
             });
-            if (fotos && fotos.length > 0) {
-                await db.foto.createMany({
-                    data: fotos.map(foto => ({
-                        ocorrenciaId: ocorrencia.id,
-                        url: foto.url,
-                        legenda: foto.legenda || ''
-                    }))
-                });
-            }
-            return await db.ocorrencia.findUnique({
-                where: { id: ocorrencia.id },
-                include: { fotos: true }
-            });
+            return ocorrencia;
         }
         catch (error) {
             console.error('Erro ao criar ocorrência:', error);
@@ -120,24 +113,17 @@ class OcorrenciaService {
             const { fotos } = data, rest = __rest(data, ["fotos"]);
             const ocorrencia = await db.ocorrencia.update({
                 where: { id },
-                data: Object.assign(Object.assign({}, rest), { atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull }),
+                data: Object.assign(Object.assign({}, rest), { atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull, fotos: fotos && fotos.length > 0 ? {
+                        create: fotos.map(foto => ({
+                            url: foto.url,
+                            legenda: foto.legenda || ''
+                        }))
+                    } : undefined }),
                 include: {
                     fotos: true
                 }
             });
-            if (fotos && fotos.length > 0) {
-                await db.foto.createMany({
-                    data: fotos.map(foto => ({
-                        ocorrenciaId: ocorrencia.id,
-                        url: foto.url,
-                        legenda: foto.legenda || ''
-                    }))
-                });
-            }
-            return await db.ocorrencia.findUnique({
-                where: { id: ocorrencia.id },
-                include: { fotos: true }
-            });
+            return ocorrencia;
         }
         catch (error) {
             console.error('Erro ao atualizar ocorrência:', error);
@@ -204,7 +190,7 @@ class OcorrenciaService {
     async addFotos(id, urls) {
         try {
             const db = (0, prisma_1.ensurePrisma)();
-            return await db.ocorrencia.update({
+            const ocorrencia = await db.ocorrencia.update({
                 where: { id },
                 data: {
                     fotos: {
@@ -218,6 +204,7 @@ class OcorrenciaService {
                     fotos: true
                 }
             });
+            return ocorrencia;
         }
         catch (error) {
             console.error('Erro ao adicionar fotos:', error);
