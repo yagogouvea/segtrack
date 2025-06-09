@@ -6,14 +6,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const app_1 = __importDefault(require("./app"));
 const port = parseInt(process.env.PORT || '3001', 10);
+const host = process.env.HOST || '0.0.0.0';
 // Função para inicializar o servidor
 const startServer = async () => {
     try {
-        const server = app_1.default.listen(port, '0.0.0.0', () => {
-            console.log('\n=== Servidor Segtrack ===');
-            console.log(`Endereço: http://0.0.0.0:${port}`);
-            console.log(`Ambiente: ${process.env.NODE_ENV}`);
-            console.log('========================\n');
+        console.log('\n=== Iniciando Servidor Segtrack ===');
+        console.log(`Ambiente: ${process.env.NODE_ENV || 'production'}`);
+        console.log(`Porta: ${port}`);
+        console.log(`Host: ${host}`);
+        console.log('===================================\n');
+        const server = app_1.default.listen(port, host, () => {
+            console.log('\n=== Servidor Segtrack Iniciado ===');
+            console.log(`Endereço: http://${host}:${port}`);
+            console.log(`Ambiente: ${process.env.NODE_ENV || 'production'}`);
+            console.log('=================================\n');
             const used = process.memoryUsage();
             console.log('Status da memória:');
             console.log(`RSS: ${Math.round(used.rss / 1024 / 1024)} MB`);

@@ -17,32 +17,41 @@ const allowedOrigins = [
     'http://segtrackprontaresposta.com.br',
     'https://segtrackprontaresposta.com.br',
     'http://www.segtrackprontaresposta.com.br',
-    'https://www.segtrackprontaresposta.com.br'
+    'https://www.segtrackprontaresposta.com.br',
+    'http://localhost:3000',
+    'http://localhost:5173'
 ];
-if (process.env.NODE_ENV === 'development') {
-    allowedOrigins.push('http://localhost:3000', 'http://localhost:5173');
-}
+// Middleware CORS com log detalhado
 app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
+    origin: function (origin, callback) {
         // Permitir requisições sem origin (como mobile apps ou ferramentas de API)
-        if (!origin)
+        if (!origin) {
+            console.log('Requisição sem origin permitida');
             return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+        }
+        if (allowedOrigins.includes(origin)) {
+            console.log(`Origin permitida: ${origin}`);
             callback(null, true);
         }
         else {
-            console.warn(`Origem bloqueada pelo CORS: ${origin}`);
+            console.warn(`Origin bloqueada: ${origin}`);
             callback(new Error('Não permitido pelo CORS'));
         }
     },
-    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true,
+    maxAge: 86400 // Cache preflight por 24 horas
 }));
 // Outros middlewares
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use(express_1.default.json());
+// Middleware de log para todas as requisições
+app.use((req, _res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
+    next();
+});
 console.log('Configurando rotas básicas...');
 // Rota básica para teste
 app.get('/', (_req, res) => {
@@ -52,11 +61,13 @@ app.get('/', (_req, res) => {
 app.get('/api/health', async (_req, res) => {
     try {
         await (0, prisma_1.testConnection)();
-        res.status(200).json({
+        const response = {
             status: 'healthy',
             timestamp: new Date().toISOString(),
-            environment: process.env.NODE_ENV
-        });
+            environment: process.env.NODE_ENV || 'production'
+        };
+        console.log('Health check bem sucedido:', response);
+        res.status(200).json(response);
     }
     catch (error) {
         console.error('Health check falhou:', error);
