@@ -16,34 +16,44 @@ const allowedOrigins = [
   'http://segtrackprontaresposta.com.br',
   'https://segtrackprontaresposta.com.br',
   'http://www.segtrackprontaresposta.com.br',
-  'https://www.segtrackprontaresposta.com.br'
+  'https://www.segtrackprontaresposta.com.br',
+  'http://localhost:3000',
+  'http://localhost:5173'
 ];
 
-if (process.env.NODE_ENV === 'development') {
-  allowedOrigins.push('http://localhost:3000', 'http://localhost:5173');
-}
-
+// Middleware CORS com log detalhado
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: function(origin, callback) {
     // Permitir requisições sem origin (como mobile apps ou ferramentas de API)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    if (!origin) {
+      console.log('Requisição sem origin permitida');
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      console.log(`Origin permitida: ${origin}`);
       callback(null, true);
     } else {
-      console.warn(`Origem bloqueada pelo CORS: ${origin}`);
+      console.warn(`Origin bloqueada: ${origin}`);
       callback(new Error('Não permitido pelo CORS'));
     }
   },
-  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  maxAge: 86400 // Cache preflight por 24 horas
 }));
 
 // Outros middlewares
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
+
+// Middleware de log para todas as requisições
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
+  next();
+});
 
 console.log('Configurando rotas básicas...');
 
@@ -56,15 +66,17 @@ app.get('/', (_req: Request, res: Response) => {
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     await testConnection();
-    res.status(200).json({ 
+    const response = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV
-    });
+      environment: process.env.NODE_ENV || 'production'
+    };
+    console.log('Health check bem sucedido:', response);
+    res.status(200).json(response);
   } catch (error) {
     console.error('Health check falhou:', error);
-    res.status(500).json({ 
-      status: 'unhealthy', 
+    res.status(500).json({
+      status: 'unhealthy',
       error: String(error),
       timestamp: new Date().toISOString()
     });
@@ -74,7 +86,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 // Error handling
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Erro não tratado:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Erro interno do servidor',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });

@@ -2,15 +2,22 @@ import 'dotenv/config';
 import app from '@/app';
 
 const port = parseInt(process.env.PORT || '3001', 10);
+const host = process.env.HOST || '0.0.0.0';
 
 // Função para inicializar o servidor
 const startServer = async () => {
   try {
-    const server = app.listen(port, '0.0.0.0', () => {
-      console.log('\n=== Servidor Segtrack ===');
-      console.log(`Endereço: http://0.0.0.0:${port}`);
-      console.log(`Ambiente: ${process.env.NODE_ENV}`);
-      console.log('========================\n');
+    console.log('\n=== Iniciando Servidor Segtrack ===');
+    console.log(`Ambiente: ${process.env.NODE_ENV || 'production'}`);
+    console.log(`Porta: ${port}`);
+    console.log(`Host: ${host}`);
+    console.log('===================================\n');
+
+    const server = app.listen(port, host, () => {
+      console.log('\n=== Servidor Segtrack Iniciado ===');
+      console.log(`Endereço: http://${host}:${port}`);
+      console.log(`Ambiente: ${process.env.NODE_ENV || 'production'}`);
+      console.log('=================================\n');
       
       const used = process.memoryUsage();
       console.log('Status da memória:');
