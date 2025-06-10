@@ -18,7 +18,7 @@ sudo apt-get install -y git build-essential nginx
 sudo tee /etc/nginx/sites-available/segtrack << EOF
 server {
     listen 80;
-    server_name api.segtrackprontaresposta.com.br;
+    server_name api.painelsegtrack.com.br;
 
     location / {
         proxy_pass http://localhost:3001;
