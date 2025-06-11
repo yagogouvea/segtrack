@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticateToken, requirePermission } from '../infrastructure/middleware/auth.middleware';
 import { OcorrenciaController } from '@/controllers/ocorrencia.controller';
 import multer from 'multer';
-import { upload } from '@/config/upload';
+import { upload } from '../config/upload';
 
 const router = Router();
 const controller = new OcorrenciaController();

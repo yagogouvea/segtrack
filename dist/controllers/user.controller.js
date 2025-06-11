@@ -15,13 +15,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserController = void 0;
-const prisma_1 = require("../lib/prisma");
-const auth_1 = require("../utils/auth");
-const validation_1 = require("../utils/validation");
-const logger_1 = __importDefault(require("../infrastructure/logger"));
+const prisma_1 = require("@/lib/prisma");
+const auth_1 = require("@/utils/auth");
+const validation_1 = require("@/utils/validation");
+const logger_1 = __importDefault(require("@/infrastructure/logger"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const client_1 = require("@prisma/client");
-const AppError_1 = require("../shared/errors/AppError");
+const AppError_1 = require("@/shared/errors/AppError");
 class UserController {
     async getCurrentUser(req, res) {
         try {

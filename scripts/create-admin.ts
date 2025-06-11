@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -9,7 +9,7 @@ async function createAdminUser() {
       name: 'Administrador',
       email: 'admin@segtrack.com',
       passwordHash: await bcrypt.hash('admin123', 10),
-      role: 'admin',
+      role: UserRole.admin,
       permissions: JSON.stringify({
         users: ['create', 'read', 'update', 'delete'],
         clients: ['create', 'read', 'update', 'delete'],

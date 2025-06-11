@@ -14,10 +14,10 @@ const app = (0, express_1.default)();
 app.set('trust proxy', false); // Desabilita trust proxy para evitar bypass de IP
 // Configuração do CORS
 const allowedOrigins = [
-    'http://segtrackprontaresposta.com.br',
-    'https://segtrackprontaresposta.com.br',
-    'http://www.segtrackprontaresposta.com.br',
-    'https://www.segtrackprontaresposta.com.br',
+    'http://painelsegtrack.com.br',
+    'https://painelsegtrack.com.br',
+    'http://www.painelsegtrack.com.br',
+    'https://www.painelsegtrack.com.br',
     'http://localhost:3000',
     'http://localhost:5173'
 ];

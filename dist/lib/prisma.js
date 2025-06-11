@@ -6,7 +6,7 @@ exports.testConnection = testConnection;
 exports.disconnectPrisma = disconnectPrisma;
 exports.ensurePrisma = ensurePrisma;
 const client_1 = require("@prisma/client");
-const env_1 = require("../config/env");
+const env_1 = require("@/config/env");
 const prismaClientSingleton = () => {
     if (!process.env.DATABASE_URL) {
         throw new Error('❌ DATABASE_URL não está definida no arquivo .env');

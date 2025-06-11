@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppError = void 0;
 exports.errorHandler = errorHandler;
 const zod_1 = require("zod");
-const env_1 = require("../config/env");
+const env_1 = require("@/config/env");
 class AppError extends Error {
     constructor(statusCode, message, isOperational = true) {
         super(message);
