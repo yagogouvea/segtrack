@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../../lib/prisma';
 import { sendResponse } from '../../utils/response';
 import { jsonUtils } from '../../utils/json';
+import { UserRole } from '@/types/user';
 
 interface JwtPayload {
   id: string;
@@ -10,11 +11,11 @@ interface JwtPayload {
   permissions: string[];
 }
 
-interface AuthUser {
+export interface AuthUser {
   id: string;
   name: string;
-  role: string;
   email: string;
+  role: UserRole;
   permissions: string[];
 }
 
@@ -88,7 +89,11 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       name: user.name,
       email: user.email,
       role: user.role,
-      permissions
+      permissions: Array.isArray(user.permissions)
+        ? user.permissions
+        : typeof user.permissions === 'string'
+          ? JSON.parse(user.permissions)
+          : [],
     };
 
     next();
@@ -114,8 +119,12 @@ export const requirePermission = (permission: Permission) => {
       return;
     }
 
-    // Verifica se o usuário tem a permissão específica
-    if (!req.user.permissions.includes(permission)) {
+    const perms = Array.isArray(req.user.permissions)
+      ? req.user.permissions
+      : typeof req.user.permissions === 'string'
+        ? JSON.parse(req.user.permissions)
+        : [];
+    if (!perms.includes(permission)) {
       sendResponse.forbidden(res, 'Acesso negado');
       return;
     }

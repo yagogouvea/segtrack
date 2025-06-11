@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import { testConnection } from './lib/prisma';
+import healthRoutes from './routes/health';
 
 console.log('Iniciando configuração do Express...');
 
@@ -63,25 +64,7 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 // Health check endpoint
-app.get('/api/health', async (_req: Request, res: Response) => {
-  try {
-    await testConnection();
-    const response = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'production'
-    };
-    console.log('Health check bem sucedido:', response);
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Health check falhou:', error);
-    res.status(500).json({
-      status: 'unhealthy',
-      error: String(error),
-      timestamp: new Date().toISOString()
-    });
-  }
-});
+app.use('/api/health', healthRoutes);
 
 // Error handling
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
