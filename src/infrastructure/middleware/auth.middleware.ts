@@ -3,13 +3,15 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../../lib/prisma';
 import { sendResponse } from '../../utils/response';
 import { jsonUtils } from '../../utils/json';
-import { UserRole } from '../../types/prisma';
 
 interface JwtPayload {
   id: string;
   role: string;
   permissions: string[];
 }
+
+// Definição local do tipo UserRole para evitar erro de importação
+type UserRole = 'admin' | 'manager' | 'operator' | 'client';
 
 export interface AuthUser {
   id: string;
