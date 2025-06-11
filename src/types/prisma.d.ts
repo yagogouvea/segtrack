@@ -61,4 +61,6 @@ export type CreateOcorrenciaDTO = {
   fotos?: { url: string; legenda?: string }[];
 };
 
-export type UpdateOcorrenciaDTO = Partial<CreateOcorrenciaDTO>; 
+export type UpdateOcorrenciaDTO = Partial<CreateOcorrenciaDTO>;
+
+export {}; 
