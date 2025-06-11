@@ -1,11 +1,7 @@
 import { CorsOptions } from 'cors';
 
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://painelsegtrack.com.br',
   'https://painelsegtrack.com.br',
-  'http://api.painelsegtrack.com.br',
   'https://api.painelsegtrack.com.br'
 ];
 
