@@ -3,8 +3,8 @@ import { testConnection } from '../lib/prisma';
 
 const router = Router();
 
-router.get('/', (_req, res) => {
-  res.json({ message: 'API SEGTRACK funcionando corretamente!' });
+router.get('/health', (req, res) => {
+  return res.status(200).json({ message: 'API SEGTRACK funcionando corretamente!' });
 });
 
 export default router; 

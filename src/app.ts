@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import healthRoutes from './routes/health';
+import healthRouter from './routes/health';
 
 console.log('Iniciando configuração do Express...');
 
@@ -13,7 +13,7 @@ app.set('trust proxy', 1); // Configuração segura para uso atrás de proxy rev
 
 // CORS simplificado
 app.use(cors({
-  origin: 'https://painelsegtrack.com.br',
+  origin: ['https://painelsegtrack.com.br'],
   credentials: true
 }));
 
@@ -42,7 +42,7 @@ router.get('/health', (_req, res) => {
 // router.use('/ocorrencias', ocorrenciasRoutes);
 // router.use('/veiculos', veiculosRoutes);
 
-app.use('/api', router);
+app.use('/api', healthRouter);
 
 // Rota básica para teste
 app.get('/', (_req: Request, res: Response) => {
