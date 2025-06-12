@@ -8,6 +8,7 @@ router.get('/', async (_req, res) => {
     await testConnection();
     res.status(200).json({ status: 'healthy' });
   } catch (error) {
+    console.error('Erro no healthcheck:', error);
     res.status(500).json({ status: 'unhealthy', error: String(error) });
   }
 });

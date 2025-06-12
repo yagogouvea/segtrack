@@ -14,27 +14,21 @@ const app = (0, express_1.default)();
 app.set('trust proxy', false); // Desabilita trust proxy para evitar bypass de IP
 // Configuração do CORS
 const allowedOrigins = [
-    'http://painelsegtrack.com.br',
     'https://painelsegtrack.com.br',
-    'http://www.painelsegtrack.com.br',
     'https://www.painelsegtrack.com.br',
-    'http://localhost:3000',
-    'http://localhost:5173'
+    'https://api.painelsegtrack.com.br'
 ];
 // Middleware CORS com log detalhado
 app.use((0, cors_1.default)({
     origin: function (origin, callback) {
         // Permitir requisições sem origin (como mobile apps ou ferramentas de API)
         if (!origin) {
-            console.log('Requisição sem origin permitida');
             return callback(null, true);
         }
         if (allowedOrigins.includes(origin)) {
-            console.log(`Origin permitida: ${origin}`);
             callback(null, true);
         }
         else {
-            console.warn(`Origin bloqueada: ${origin}`);
             callback(new Error('Não permitido pelo CORS'));
         }
     },
