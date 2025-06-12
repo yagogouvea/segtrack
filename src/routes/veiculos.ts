@@ -2,6 +2,17 @@ import express, { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { ensurePrisma } from '@/lib/prisma';
 
+interface ApiBrasilResponse {
+  response: {
+    modelo?: string;
+    cor_veiculo?: {
+      cor?: string;
+    };
+    cor?: string;
+    marca?: string;
+  };
+}
+
 const router: Router = express.Router();
 
 router.get('/:placa', async (req: Request, res: Response) => {
@@ -24,7 +35,7 @@ router.get('/:placa', async (req: Request, res: Response) => {
     });
 
     if (!veiculo) {
-      const response = await axios.post(
+      const response = await axios.post<ApiBrasilResponse>(
         'https://gateway.apibrasil.io/api/v2/vehicles/dados',
         { placa: placaFormatada },
         {
