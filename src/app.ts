@@ -9,13 +9,33 @@ console.log('Iniciando configuração do Express...');
 const app = express();
 
 // Configuração de segurança
-app.set('trust proxy', 1); // Configuração segura para uso atrás de proxy reverso (NGINX)
+app.set('trust proxy', 'loopback'); // Configuração mais segura para proxy reverso
 
-// CORS simplificado
-app.use(cors({
-  origin: ['https://painelsegtrack.com.br'],
-  credentials: true
-}));
+// CORS configurado
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    const allowedOrigins = [
+      'https://painelsegtrack.com.br',
+      'https://api.painelsegtrack.com.br',
+      'http://localhost:3000',
+      'http://localhost:5173'
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`Origem ${origin} não permitida por CORS`);
+      callback(new Error('Não permitido por CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Length', 'X-Requested-With'],
+  maxAge: 86400 // 24 horas
+};
+
+app.use(cors(corsOptions));
 
 app.use(helmet());
 app.use(compression());
