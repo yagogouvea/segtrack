@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import { testConnection } from './lib/prisma';
 import healthRoutes from './routes/health';
 
 console.log('Iniciando configuração do Express...');
@@ -12,32 +11,12 @@ const app = express();
 // Configuração de segurança
 app.set('trust proxy', 1); // Configuração segura para uso atrás de proxy reverso (NGINX)
 
-// Configuração do CORS
-const allowedOrigins = [
-  'https://painelsegtrack.com.br',
-  'https://api.painelsegtrack.com.br'
-];
-
-// Middleware CORS com log detalhado
+// CORS simplificado
 app.use(cors({
-  origin: function(origin, callback) {
-    // Permitir requisições sem origin (como mobile apps ou ferramentas de API)
-    if (!origin) {
-      return callback(null, true);
-    }
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Não permitido pelo CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
-  maxAge: 86400 // Cache preflight por 24 horas
+  origin: 'https://painelsegtrack.com.br',
+  credentials: true
 }));
 
-// Outros middlewares
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
@@ -50,13 +29,25 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 console.log('Configurando rotas básicas...');
 
+// Router global
+import { Router } from 'express';
+const router = Router();
+
+// Health check endpoint
+router.get('/health', (_req, res) => {
+  res.status(200).json({ message: 'API SEGTRACK funcionando corretamente!' });
+});
+
+// Outras rotas podem ser adicionadas aqui, ex:
+// router.use('/ocorrencias', ocorrenciasRoutes);
+// router.use('/veiculos', veiculosRoutes);
+
+app.use('/api', router);
+
 // Rota básica para teste
 app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'API Segtrack - Funcionando!' });
 });
-
-// Health check endpoint
-app.use('/api/health', healthRoutes);
 
 // Error handling
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
