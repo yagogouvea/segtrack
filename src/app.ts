@@ -15,7 +15,6 @@ app.set('trust proxy', false); // Desabilita trust proxy para evitar bypass de I
 // Configuração do CORS
 const allowedOrigins = [
   'https://painelsegtrack.com.br',
-  'https://www.painelsegtrack.com.br',
   'https://api.painelsegtrack.com.br'
 ];
 
