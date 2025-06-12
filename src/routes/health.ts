@@ -3,14 +3,8 @@ import { testConnection } from '../lib/prisma';
 
 const router = Router();
 
-router.get('/', async (_req, res) => {
-  try {
-    await testConnection();
-    res.status(200).json({ status: 'healthy' });
-  } catch (error) {
-    console.error('Erro no healthcheck:', error);
-    res.status(500).json({ status: 'unhealthy', error: String(error) });
-  }
+router.get('/', (_req, res) => {
+  res.json({ message: 'API SEGTRACK funcionando corretamente!' });
 });
 
 export default router; 
