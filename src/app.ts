@@ -10,7 +10,7 @@ console.log('Iniciando configuração do Express...');
 const app = express();
 
 // Configuração de segurança
-app.set('trust proxy', false); // Desabilita trust proxy para evitar bypass de IP
+app.set('trust proxy', 1); // Configuração segura para uso atrás de proxy reverso (NGINX)
 
 // Configuração do CORS
 const allowedOrigins = [
