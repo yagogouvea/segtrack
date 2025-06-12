@@ -7,7 +7,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
-const prisma_1 = require("./lib/prisma");
+const health_1 = __importDefault(require("./routes/health"));
 console.log('Iniciando configuração do Express...');
 const app = (0, express_1.default)();
 // Configuração de segurança
@@ -58,26 +58,7 @@ app.get('/', (_req, res) => {
     res.json({ message: 'API Segtrack - Funcionando!' });
 });
 // Health check endpoint
-app.get('/api/health', async (_req, res) => {
-    try {
-        await (0, prisma_1.testConnection)();
-        const response = {
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            environment: process.env.NODE_ENV || 'production'
-        };
-        console.log('Health check bem sucedido:', response);
-        res.status(200).json(response);
-    }
-    catch (error) {
-        console.error('Health check falhou:', error);
-        res.status(500).json({
-            status: 'unhealthy',
-            error: String(error),
-            timestamp: new Date().toISOString()
-        });
-    }
-});
+app.use('/api/health', health_1.default);
 // Error handling
 app.use((err, _req, res, _next) => {
     console.error('Erro não tratado:', err);

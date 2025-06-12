@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OcorrenciaController = void 0;
-const ocorrencia_service_1 = require("@/core/services/ocorrencia.service");
-const AppError_1 = require("@/shared/errors/AppError");
+const ocorrencia_service_1 = require("../core/services/ocorrencia.service");
+const AppError_1 = require("../shared/errors/AppError");
 class OcorrenciaController {
     constructor() {
         this.service = new ocorrencia_service_1.OcorrenciaService();

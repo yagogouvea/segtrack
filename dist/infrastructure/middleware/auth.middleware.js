@@ -50,7 +50,11 @@ const authenticateToken = async (req, res, next) => {
             name: user.name,
             email: user.email,
             role: user.role,
-            permissions
+            permissions: Array.isArray(user.permissions)
+                ? user.permissions
+                : typeof user.permissions === 'string'
+                    ? JSON.parse(user.permissions)
+                    : [],
         };
         next();
     }
@@ -74,8 +78,12 @@ const requirePermission = (permission) => {
             next();
             return;
         }
-        // Verifica se o usuário tem a permissão específica
-        if (!req.user.permissions.includes(permission)) {
+        const perms = Array.isArray(req.user.permissions)
+            ? req.user.permissions
+            : typeof req.user.permissions === 'string'
+                ? JSON.parse(req.user.permissions)
+                : [];
+        if (!perms.includes(permission)) {
             response_1.sendResponse.forbidden(res, 'Acesso negado');
             return;
         }
