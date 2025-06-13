@@ -29,7 +29,7 @@ interface PrestadorData {
 export class PrestadorService {
   async list() {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       return await db.prestador.findMany({
         include: {
           funcoes: true,
@@ -45,7 +45,7 @@ export class PrestadorService {
 
   async listPublic() {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       return await db.prestador.findMany({
         where: { aprovado: true },
         include: {
@@ -62,7 +62,7 @@ export class PrestadorService {
 
   async findById(id: number) {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const prestador = await db.prestador.findUnique({
         where: { id },
         include: {
@@ -86,7 +86,7 @@ export class PrestadorService {
 
   async create(data: PrestadorData) {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       return await db.prestador.create({
         data: {
           nome: data.nome,
@@ -136,7 +136,7 @@ export class PrestadorService {
 
   async update(id: number, data: PrestadorData) {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       // Verificar se o prestador existe
       await this.findById(id);
 
@@ -205,7 +205,7 @@ export class PrestadorService {
 
   async delete(id: number) {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       // Verificar se o prestador existe
       await this.findById(id);
 
@@ -233,7 +233,7 @@ export class PrestadorService {
 
   async findByRegiao(regiao: string) {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       return await db.prestador.findMany({
         where: {
           regioes: {
@@ -256,7 +256,7 @@ export class PrestadorService {
 
   async findByFuncao(funcao: string) {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       return await db.prestador.findMany({
         where: {
           funcoes: {

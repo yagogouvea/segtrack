@@ -18,7 +18,7 @@ const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const swagger_json_1 = __importDefault(require("./swagger.json"));
 const app = (0, express_1.default)();
 // Configurar trust proxy para Cloud Run/Load Balancer
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 // Configurações de segurança básicas
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());

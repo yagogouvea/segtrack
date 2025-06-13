@@ -16,12 +16,12 @@ interface PrismaUser {
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar corpo da requisição
-    if (!req.body.email || !req.body.password) {
-      res.status(400).json({ message: 'Email e senha são obrigatórios' });
+    const { email, password, senha } = req.body;
+    const userPassword = password || senha;
+    if (!email || !userPassword) {
+      res.status(400).json({ message: 'Email e password são obrigatórios' });
       return;
     }
-
-    const { email, password } = req.body;
 
     // Validar JWT_SECRET
     if (!process.env.JWT_SECRET) {
@@ -33,7 +33,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     console.log('Tentativa de login para:', email);
 
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const user = await db.user.findUnique({ 
         where: { email },
         select: {
@@ -63,7 +63,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         return;
       }
 
-      const isMatch = await bcrypt.compare(password, user.passwordHash);
+      const isMatch = await bcrypt.compare(userPassword, user.passwordHash);
       console.log('Resultado da verificação de senha:', { isMatch });
 
       if (!isMatch) {
@@ -111,8 +111,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         const token = jwt.sign(
           {
-            id: user.id,
-            name: user.name,
+            sub: user.id,
+            nome: user.name,
+            email: user.email,
             role: user.role,
             permissions: permissions
           },
@@ -148,7 +149,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const seedAdmin = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const existing = await db.user.findUnique({
       where: { email: 'admin@segtrack.com' },
     });

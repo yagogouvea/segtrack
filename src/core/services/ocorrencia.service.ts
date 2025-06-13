@@ -14,7 +14,14 @@ interface ListOcorrenciaFilters {
 export class OcorrenciaService {
   async list(filters: ListOcorrenciaFilters = {}): Promise<Ocorrencia[]> {
     try {
-      const db = ensurePrisma();
+      console.log('[OcorrenciaService] Iniciando listagem com filtros:', filters);
+      
+      const db = await ensurePrisma();
+      if (!db) {
+        console.error('[OcorrenciaService] Erro: Instância do Prisma não disponível');
+        throw new AppError('Erro de conexão com o banco de dados');
+      }
+
       const where: Prisma.OcorrenciaWhereInput = {};
 
       if (filters.status) {
@@ -45,7 +52,9 @@ export class OcorrenciaService {
         }
       }
 
-      return await db.ocorrencia.findMany({
+      console.log('[OcorrenciaService] Query where:', where);
+
+      const ocorrencias = await db.ocorrencia.findMany({
         where,
         include: {
           fotos: true
@@ -54,8 +63,21 @@ export class OcorrenciaService {
           criado_em: 'desc'
         }
       });
+
+      console.log('[OcorrenciaService] Ocorrências encontradas:', ocorrencias.length);
+      return ocorrencias;
     } catch (error) {
-      console.error('Erro ao listar ocorrências:', error);
+      console.error('[OcorrenciaService] Erro ao listar ocorrências:', {
+        error,
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+        code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined
+      });
+
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        throw new AppError(`Erro no banco de dados: ${error.message} (código: ${error.code})`);
+      }
       throw new AppError('Erro ao listar ocorrências');
     }
   }
@@ -66,7 +88,7 @@ export class OcorrenciaService {
         throw new AppError('Campos obrigatórios faltando: placa1, cliente, tipo', 400);
       }
 
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const { fotos, ...rest } = data;
 
       const ocorrencia = await db.ocorrencia.create({
@@ -97,7 +119,7 @@ export class OcorrenciaService {
 
   async findById(id: number): Promise<Ocorrencia> {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const ocorrencia = await db.ocorrencia.findUnique({
         where: { id },
         include: {
@@ -119,7 +141,7 @@ export class OcorrenciaService {
 
   async update(id: number, data: UpdateOcorrenciaDTO): Promise<Ocorrencia> {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const { fotos, ...rest } = data;
 
       const ocorrencia = await db.ocorrencia.update({
@@ -149,7 +171,7 @@ export class OcorrenciaService {
 
   async delete(id: number): Promise<void> {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       await db.foto.deleteMany({
         where: { ocorrenciaId: id }
       });
@@ -165,7 +187,7 @@ export class OcorrenciaService {
 
   async findByStatus(status: OcorrenciaStatus): Promise<Ocorrencia[]> {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       return await db.ocorrencia.findMany({
         where: { status },
         include: {
@@ -183,7 +205,7 @@ export class OcorrenciaService {
 
   async findByPlaca(placa: string): Promise<Ocorrencia[]> {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       return await db.ocorrencia.findMany({
         where: {
           OR: [
@@ -207,7 +229,7 @@ export class OcorrenciaService {
 
   async addFotos(id: number, urls: string[]): Promise<Ocorrencia> {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const ocorrencia = await db.ocorrencia.update({
         where: { id },
         data: {

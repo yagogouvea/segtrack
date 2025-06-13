@@ -1,165 +1,28 @@
 // backend/routes/clientes.ts
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { ClienteController } from '../controllers/cliente.controller';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const controller = new ClienteController();
 
 // ✅ NOVA ROTA PARA LISTAR CLIENTES COM ID E NOME
-router.get('/resumo', async (_req, res) => {
-  try {
-    const clientes = await prisma.cliente.findMany({
-      select: {
-        id: true,
-        nome: true,
-      },
-      orderBy: { nome: 'asc' },
-    });
-    return res.json(clientes);
-  } catch (err) {
-    console.error('Erro ao buscar clientes:', err);
-    return res.status(500).json({ erro: 'Erro ao buscar clientes' });
-  }
-});
+router.get('/resumo', (req, res) => controller.list(req, res));
 
 // Listar todos os clientes com seus contratos
-router.get('/', async (_req, res) => {
-  try {
-    const clientes = await prisma.cliente.findMany({
-      include: { contratos: true },
-    });
-    return res.json(clientes);
-  } catch (err) {
-    console.error('Erro ao buscar clientes:', err);
-    return res.status(500).json({ erro: 'Erro ao buscar clientes' });
-  }
-});
+router.get('/', (req, res) => controller.list(req, res));
 
 // Buscar cliente por ID
-router.get('/:id', async (req, res) => {
-  try {
-    const cliente = await prisma.cliente.findUnique({
-      where: { id: Number(req.params.id) },
-      include: { contratos: true },
-    });
-    if (!cliente) {
-      return res.status(404).json({ erro: 'Cliente não encontrado' });
-    }
-    return res.json(cliente);
-  } catch (err) {
-    console.error('Erro ao buscar cliente:', err);
-    return res.status(500).json({ erro: 'Erro ao buscar cliente' });
-  }
-});
+router.get('/:id', (req, res) => controller.getById(req, res));
 
 // Criar novo cliente
-router.post('/', async (req, res) => {
-  try {
-    const { nome, cnpj, contato, telefone, email, endereco, contratos } = req.body;
-
-    const cliente = await prisma.cliente.create({
-      data: {
-        nome,
-        cnpj,
-        contato,
-        telefone,
-        email,
-        endereco,
-        contratos: {
-          create: contratos?.map((c: any) => ({
-            nome_interno: c.nome_interno,
-            tipo: c.tipo,
-            regiao: c.regiao,
-            valor_acionamento: c.valor_acionamento ? parseFloat(String(c.valor_acionamento).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            valor_nao_recuperado: c.valor_nao_recuperado ? parseFloat(String(c.valor_nao_recuperado).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            valor_hora_extra: c.valor_hora_extra ? parseFloat(String(c.valor_hora_extra).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            valor_km_extra: c.valor_km_extra ? parseFloat(String(c.valor_km_extra).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            franquia_horas: c.franquia_horas,
-            franquia_km: c.franquia_km ? parseInt(c.franquia_km) : null,
-            valor_km: c.valor_km ? parseFloat(String(c.valor_km).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            valor_base: c.valor_base ? parseFloat(String(c.valor_base).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            permite_negociacao: c.permite_negociacao || false,
-          })),
-        },
-      },
-      include: { contratos: true },
-    });
-
-    res.json(cliente);
-  } catch (err) {
-    console.error('Erro ao criar cliente:', err);
-    res.status(500).json({ erro: 'Erro ao criar cliente' });
-  }
-});
+router.post('/', (req, res) => controller.create(req, res));
 
 // Atualizar cliente existente
-router.put('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { nome, cnpj, contato, telefone, email, endereco, contratos } = req.body;
-
-    // Primeiro exclui todos os contratos existentes
-    await prisma.contrato.deleteMany({
-      where: { clienteId: Number(id) },
-    });
-
-    // Depois atualiza o cliente e cria os novos contratos
-    const cliente = await prisma.cliente.update({
-      where: { id: Number(id) },
-      data: {
-        nome,
-        cnpj,
-        contato,
-        telefone,
-        email,
-        endereco,
-        contratos: {
-          create: contratos?.map((c: any) => ({
-            nome_interno: c.nome_interno,
-            tipo: c.tipo,
-            regiao: c.regiao,
-            valor_acionamento: c.valor_acionamento ? parseFloat(String(c.valor_acionamento).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            valor_nao_recuperado: c.valor_nao_recuperado ? parseFloat(String(c.valor_nao_recuperado).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            valor_hora_extra: c.valor_hora_extra ? parseFloat(String(c.valor_hora_extra).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            valor_km_extra: c.valor_km_extra ? parseFloat(String(c.valor_km_extra).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            franquia_horas: c.franquia_horas,
-            franquia_km: c.franquia_km ? parseInt(c.franquia_km) : null,
-            valor_km: c.valor_km ? parseFloat(String(c.valor_km).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            valor_base: c.valor_base ? parseFloat(String(c.valor_base).replace(/[^\d.,]/g, '').replace(',', '.')) : null,
-            permite_negociacao: c.permite_negociacao || false,
-          })),
-        },
-      },
-      include: { contratos: true },
-    });
-
-    res.json(cliente);
-  } catch (err) {
-    console.error('Erro ao atualizar cliente:', err);
-    res.status(500).json({ erro: 'Erro ao atualizar cliente' });
-  }
-});
+router.put('/:id', (req, res) => controller.update(req, res));
 
 // Excluir cliente
-router.delete('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Primeiro exclui todos os contratos
-    await prisma.contrato.deleteMany({
-      where: { clienteId: Number(id) },
-    });
-
-    // Depois exclui o cliente
-    await prisma.cliente.delete({
-      where: { id: Number(id) },
-    });
-
-    res.status(204).end();
-  } catch (err) {
-    console.error('Erro ao excluir cliente:', err);
-    res.status(500).json({ erro: 'Erro ao excluir cliente' });
-  }
-});
+router.delete('/:id', (req, res) => controller.delete(req, res));
 
 export default router;

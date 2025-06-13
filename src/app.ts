@@ -3,36 +3,24 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import healthRouter from './routes/health';
+import rateLimit from 'express-rate-limit';
+import { testConnection } from './lib/prisma';
+import authRoutes from './routes/authRoutes';
+import ocorrenciasRouter from './routes/ocorrencias';
+import prestadoresRouter from './routes/prestadores';
+import clientesRouter from './routes/clientes';
 
 console.log('Iniciando configuração do Express...');
 
 const app = express();
 
 // Configuração de segurança
-app.set('trust proxy', 'loopback'); // Configuração mais segura para proxy reverso
+app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 
 // CORS configurado
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    const allowedOrigins = [
-      'https://painelsegtrack.com.br',
-      'https://api.painelsegtrack.com.br',
-      'http://localhost:3000',
-      'http://localhost:5173'
-    ];
-    
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`Origem ${origin} não permitida por CORS`);
-      callback(new Error('Não permitido por CORS'));
-    }
-  },
+  origin: ['https://painelsegtrack.com.br'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Length', 'X-Requested-With'],
-  maxAge: 86400 // 24 horas
 };
 
 app.use(cors(corsOptions));
@@ -63,10 +51,39 @@ router.get('/health', (_req, res) => {
 // router.use('/veiculos', veiculosRoutes);
 
 app.use('/api', healthRouter);
+app.use('/api/auth', authRoutes);
+app.use('/api/ocorrencias', ocorrenciasRouter);
+app.use('/api/prestadores', prestadoresRouter);
+app.use('/api/clientes', clientesRouter);
 
 // Rota básica para teste
 app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'API Segtrack - Funcionando!' });
+});
+
+// Adicionar express-rate-limit
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
+// Corrigir endpoint /api/health para testar conexão com o banco
+app.get('/api/health', async (req, res) => {
+  try {
+    await testConnection();
+    res.status(200).json({ status: 'ok' });
+  } catch (err) {
+    console.error('Erro no health check:', err);
+    res.status(500).json({ status: 'erro', detalhes: (err instanceof Error ? err.message : String(err)) });
+  }
+});
+
+// Middleware fallback 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Rota não encontrada' });
 });
 
 // Error handling

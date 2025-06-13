@@ -4,6 +4,17 @@ import app from '@/app';
 const port = parseInt(process.env.PORT || '3001', 10);
 const host = process.env.HOST || '0.0.0.0';
 
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'definida' : 'NÃO definida');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'definida' : 'NÃO definida');
+
 // Função para inicializar o servidor
 const startServer = async () => {
   try {

@@ -12,6 +12,10 @@ export class OcorrenciaController {
 
   async list(req: Request, res: Response) {
     try {
+      console.log('[OcorrenciaController] Iniciando listagem de ocorrências');
+      console.log('[OcorrenciaController] Query params:', req.query);
+      console.log('[OcorrenciaController] User:', req.user);
+
       const { status, placa, cliente, data_inicio, data_fim } = req.query;
 
       const filters = {
@@ -22,13 +26,33 @@ export class OcorrenciaController {
         data_fim: data_fim ? new Date(data_fim as string) : undefined
       };
 
+      console.log('[OcorrenciaController] Filtros aplicados:', filters);
+
       const ocorrencias = await this.service.list(filters);
+      console.log('[OcorrenciaController] Ocorrências encontradas:', ocorrencias.length);
+      
       return res.json(ocorrencias);
     } catch (error) {
+      console.error('[OcorrenciaController] Erro ao listar ocorrências:', {
+        error,
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      });
+      
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ 
+          error: error.message,
+          code: error.code,
+          details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
       }
-      return res.status(500).json({ error: 'Erro interno do servidor' });
+
+      return res.status(500).json({ 
+        error: 'Erro interno do servidor',
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
+        message: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
     }
   }
 

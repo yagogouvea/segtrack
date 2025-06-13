@@ -44,22 +44,37 @@ declare global {
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log('[auth.middleware] Iniciando autenticação...');
+    
     const authHeader = req.headers.authorization;
     if (!authHeader) {
+      console.log('[auth.middleware] Token não fornecido');
       sendResponse.unauthorized(res, 'Token não fornecido');
       return;
     }
 
     const token = authHeader.split(' ')[1];
     if (!token) {
+      console.log('[auth.middleware] Token inválido (formato)');
       sendResponse.unauthorized(res, 'Token inválido');
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as JwtPayload;
+    console.log('[auth.middleware] Verificando token JWT...');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as JwtPayload & { sub?: string };
+    console.log('[auth.middleware] Token decodificado:', decoded);
 
+    // Extrair userId do token (sub ou id)
+    const userId = decoded.sub || decoded.id;
+    if (!userId) {
+      console.error('[auth.middleware] Token JWT malformado ou sem id/sub:', decoded);
+      sendResponse.unauthorized(res, 'Token JWT malformado ou sem id/sub');
+      return;
+    }
+
+    console.log('[auth.middleware] Buscando usuário no banco:', userId);
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
+      where: { id: userId },
       select: {
         id: true,
         name: true,
@@ -71,17 +86,22 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     });
 
     if (!user) {
+      console.log('[auth.middleware] Usuário não encontrado:', userId);
       sendResponse.unauthorized(res, 'Usuário não encontrado');
       return;
     }
 
     if (!user.active) {
+      console.log('[auth.middleware] Usuário inativo:', userId);
       sendResponse.unauthorized(res, 'Usuário inativo');
       return;
     }
 
+    console.log('[auth.middleware] Usuário encontrado:', user);
+
     const permissions = jsonUtils.parse(user.permissions);
     if (!Array.isArray(permissions)) {
+      console.error('[auth.middleware] Formato de permissões inválido:', user.permissions);
       sendResponse.error(res, new Error('Formato de permissões inválido'));
       return;
     }
@@ -98,8 +118,10 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
           : [],
     };
 
+    console.log('[auth.middleware] Autenticação concluída com sucesso');
     next();
   } catch (error) {
+    console.error('[auth.middleware] Erro na autenticação:', error);
     if (error instanceof jwt.JsonWebTokenError) {
       sendResponse.unauthorized(res, 'Token inválido');
       return;

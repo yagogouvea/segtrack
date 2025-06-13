@@ -48,11 +48,25 @@ export async function disconnectPrisma() {
 }
 
 // Função para garantir que o prisma está disponível
-export function ensurePrisma(): PrismaClient {
+export async function ensurePrisma(): Promise<PrismaClient> {
   if (!prisma) {
+    console.error('[Prisma] Cliente não está disponível');
     throw new Error('Prisma client não está disponível. Verifique se DATABASE_URL está definida no .env');
   }
-  return prisma;
+
+  try {
+    // Testa a conexão
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('[Prisma] Conexão com o banco de dados está ativa');
+    return prisma;
+  } catch (error) {
+    console.error('[Prisma] Erro ao verificar conexão:', {
+      error,
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    throw new Error('Erro de conexão com o banco de dados');
+  }
 }
 
 // Middleware para retry em operações do banco

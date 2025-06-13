@@ -1,43 +1,12 @@
 import express, { Request, Response } from 'express';
 import { ensurePrisma } from '../lib/prisma';
+import { PrestadorController } from '../controllers/prestador.controller';
 
 const router = express.Router();
+const controller = new PrestadorController();
 
 // GET - Listar todos os prestadores (completo)
-router.get('/', async (_req: Request, res: Response) => {
-  try {
-    const db = ensurePrisma();
-    const prestadores = await db.prestador.findMany({
-      include: { 
-        funcoes: true, 
-        regioes: true,
-        veiculos: true 
-      },
-      orderBy: { nome: 'asc' }
-    });
-
-    // Formatando a resposta para incluir todos os campos necessários
-    const prestadoresFormatados = prestadores.map(prestador => ({
-      ...prestador,
-      funcoes: prestador.funcoes.map(f => f.funcao),
-      regioes: prestador.regioes.map(r => r.regiao),
-      tipo_veiculo: prestador.veiculos.map(v => v.tipo),
-      veiculos: prestador.veiculos,
-      // Formatando valores monetários e numéricos
-      valor_acionamento: prestador.valor_acionamento || 0,
-      valor_hora_adc: prestador.valor_hora_adc || 0,
-      valor_km_adc: prestador.valor_km_adc || 0,
-      franquia_km: prestador.franquia_km || 0,
-      franquia_horas: prestador.franquia_horas || ''
-    }));
-
-    console.log('Prestadores formatados:', prestadoresFormatados);
-    res.json(prestadoresFormatados);
-  } catch (err) {
-    console.error('❌ Erro ao listar prestadores:', err);
-    res.status(500).json({ erro: 'Erro ao listar prestadores' });
-  }
-});
+router.get('/', (req, res) => controller.list(req, res));
 
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)
 router.get('/popup', async (_req: Request, res: Response) => {
