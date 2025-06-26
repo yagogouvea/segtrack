@@ -1,0 +1,13 @@
+# Ignore arquivos binários e pastas que não fazem parte do código
+node_modules/
+uploads/
+relatorios-pdf/
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.zip
+*.exe
+*.log
+*.db
+.env*

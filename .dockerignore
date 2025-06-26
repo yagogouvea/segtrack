@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Build output
+dist
+build
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Version control
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Misc
+*.log
+.DS_Store
+coverage
+README.md
+docs
+tests
+__tests__
+*.test.ts
+*.spec.ts
+
+# Temporary files
+tmp
+temp
+uploads/*
+!uploads/.gitkeep
+relatorios-pdf/*
+!relatorios-pdf/.gitkeep
+
+Dockerfile
+.dockerignore
