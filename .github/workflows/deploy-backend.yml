@@ -1,0 +1,31 @@
+name: Deploy Backend SEGTRACK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: 🚀 Deploy na EC2 (backend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Clonar repositório
+        uses: actions/checkout@v3
+
+      - name: 🔐 Criar chave SSH
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      - name: 🚀 Executar deploy backend na EC2
+        run: |
+          set -e  # Garante que falhas abortem o job
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            set -e
+            echo "📦 Conectado ao servidor EC2"
+            cd /opt/segtrack/backup || exit 1
+            echo "🔧 Iniciando script de deploy remoto"
+            sudo env $(cat backup.env | xargs) ./execute-deploy.sh
+          EOF

@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["metrics"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoContrato {
+  padrao_regiao
+  acl_km
+  padrao_fixo
+  valor_fechado
+}
+
+enum RegiaoContrato {
+  CAPITAL
+  GRANDE_SP
+  INTERIOR
+  OUTROS_ESTADOS
+}
+
+enum UserRole {
+  admin
+  manager
+  operator
+  client
+}
+
+enum OcorrenciaStatus {
+  em_andamento
+  concluida
+  cancelada
+  aguardando
+}
+
+model Cliente {
+  id               Int                     @id @default(autoincrement())
+  nome             String
+  cnpj             String
+  contato          String?
+  telefone         String?
+  email            String?
+  endereco         String?
+  camposAdicionais CampoAdicionalCliente[]
+  contratos        Contrato[]
+}
+
+model CampoAdicionalCliente {
+  id        Int     @id @default(autoincrement())
+  clienteId Int
+  label     String
+  campo     String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], map: "fk_campo_adicional_cliente")
+
+  @@index([clienteId])
+}
+
+model Contrato {
+  id                   Int      @id @default(autoincrement())
+  clienteId            Int
+  nome_interno         String?
+  tipo                 TipoContrato?
+  regiao               RegiaoContrato?
+  valor_acionamento    Decimal? @db.Decimal(10, 2)
+  valor_nao_recuperado Decimal? @db.Decimal(10, 2)
+  valor_hora_extra     Decimal? @db.Decimal(10, 2)
+  valor_km_extra       Decimal? @db.Decimal(10, 2)
+  franquia_horas       String?
+  franquia_km          Int?
+  valor_km            Decimal? @db.Decimal(10, 2)  // Para contratos ACL
+  valor_base          Decimal? @db.Decimal(10, 2)  // Para contratos valor_fechado
+  permite_negociacao   Boolean? @default(false)    // Para contratos valor_fechado
+  cliente              Cliente  @relation(fields: [clienteId], references: [id], map: "fk_contrato_cliente")
+
+  @@index([clienteId])
+}
+
+model Prestador {
+  id                Int                    @id @default(autoincrement())
+  nome              String
+  cpf               String
+  cod_nome          String?
+  telefone          String?
+  email             String?
+  aprovado          Boolean                @default(false)
+  tipo_pix          String?
+  chave_pix         String?
+  cep               String?
+  endereco          String?
+  bairro            String?
+  cidade            String?
+  estado            String?
+  valor_acionamento Float?                 @default(0)
+  franquia_horas    String?                @default("")
+  franquia_km       Float?                 @default(0)
+  valor_hora_adc    Float?                 @default(0)
+  valor_km_adc      Float?                 @default(0)
+  criado_em         DateTime               @default(now())
+  origem            String?                @default("interno")
+  funcoes           FuncaoPrestador[]
+  regioes           RegiaoPrestador[]
+  veiculos          TipoVeiculoPrestador[]
+}
+
+model FuncaoPrestador {
+  id          Int       @id @default(autoincrement())
+  funcao      String
+  prestadorId Int
+  prestador   Prestador @relation(fields: [prestadorId], references: [id], map: "fk_funcao_prestador")
+
+  @@index([prestadorId])
+}
+
+model RegiaoPrestador {
+  id          Int       @id @default(autoincrement())
+  regiao      String
+  prestadorId Int
+  prestador   Prestador @relation(fields: [prestadorId], references: [id], map: "fk_regiao_prestador")
+
+  @@index([prestadorId])
+}
+
+model TipoVeiculoPrestador {
+  id          Int       @id @default(autoincrement())
+  tipo        String
+  prestadorId Int
+  prestador   Prestador @relation(fields: [prestadorId], references: [id], map: "fk_tipo_veiculo_prestador")
+
+  @@index([prestadorId])
+}
+
+model Veiculo {
+  id         Int      @id @default(autoincrement())
+  placa      String   @unique
+  modelo     String?
+  marca      String?
+  cor        String?
+  fabricante String?
+  ano        Int?
+  createdAt  DateTime @default(now())
+}
+
+model Ocorrencia {
+  id                  Int       @id @default(autoincrement())
+  placa1              String
+  placa2              String?
+  placa3              String?
+  modelo1             String?
+  cor1                String?
+  cliente             String
+  tipo                String
+  tipo_veiculo        String?
+  coordenadas         String?
+  endereco            String?
+  bairro              String?
+  cidade              String?
+  estado              String?
+  cpf_condutor        String?
+  nome_condutor       String?
+  transportadora      String?
+  valor_carga         Float?
+  notas_fiscais       String?
+  os                  String?
+  origem_bairro       String?
+  origem_cidade       String?
+  origem_estado       String?
+  prestador           String?
+  inicio              DateTime?
+  chegada             DateTime?
+  termino             DateTime?
+  km                  Float?
+  despesas            Float?
+  descricao           String?   @db.Text
+  resultado           String?
+  status              OcorrenciaStatus @default(em_andamento)
+  encerrada_em        DateTime?
+  criado_em           DateTime  @default(now())
+  atualizado_em       DateTime  @updatedAt
+  data_acionamento    DateTime?
+  km_final            Float?
+  km_inicial          Float?
+  despesas_detalhadas Json?
+  fotos               Foto[]
+
+  @@index([placa1])
+  @@index([status])
+}
+
+model Foto {
+  id           Int        @id @default(autoincrement())
+  url          String     @db.Text
+  legenda      String     @db.Text
+  ocorrenciaId Int
+  createdAt    DateTime   @default(now())
+  ocorrencia   Ocorrencia @relation(fields: [ocorrenciaId], references: [id], map: "fk_foto_ocorrencia")
+
+  @@index([ocorrenciaId])
+}
+
+model Relatorio {
+  id              Int      @id @default(autoincrement())
+  ocorrenciaId    Int
+  cliente         String
+  tipo            String
+  dataAcionamento DateTime
+  caminhoPdf      String
+  criadoEm        DateTime @default(now())
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  permissions  Json
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

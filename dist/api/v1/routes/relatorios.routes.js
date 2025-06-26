@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_middleware_1 = require("../../../infrastructure/middleware/auth.middleware");
+const relatorio_controller_1 = require("../../../controllers/relatorio.controller");
+const router = (0, express_1.Router)();
+const controller = new relatorio_controller_1.RelatorioController();
+router.use(auth_middleware_1.authenticateToken);
+router.get('/ocorrencias', controller.gerarRelatorioOcorrencias);
+router.get('/prestadores', controller.gerarRelatorioPrestadores);
+router.get('/clientes', controller.gerarRelatorioClientes);
+router.get('/financeiro', controller.gerarRelatorioFinanceiro);
+exports.default = router;

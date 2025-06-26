@@ -1,0 +1,1 @@
+scp -i "C:/Users/yagog/Downloads/segtrack-final.pem" "C:/Users/yagog/segtrack-projeto-completo/backend/src/app.ts" ec2-user@54.221.92.154:~/segtrack-backend/src/

@@ -1,0 +1,1 @@
+{"version":3,"file":"ocorrencia.controller.d.ts","sourceRoot":"","sources":["../../src/controllers/ocorrencia.controller.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AAM5C,qBAAa,oBAAoB;IACzB,IAAI,CAAC,GAAG,EAAE,OAAO,EAAE,GAAG,EAAE,QAAQ;IAqChC,MAAM,CAAC,GAAG,EAAE,OAAO,EAAE,GAAG,EAAE,QAAQ;IAwBlC,MAAM,CAAC,GAAG,EAAE,OAAO,EAAE,GAAG,EAAE,QAAQ;CA2BzC"}
