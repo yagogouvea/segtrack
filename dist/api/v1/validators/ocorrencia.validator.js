@@ -7,8 +7,8 @@ const validation_1 = require("../../../utils/validation");
 const enums_1 = require("../../../types/enums");
 const ocorrenciaSchema = zod_1.z.object({
     placa1: zod_1.z.string().min(7).max(8),
-    placa2: zod_1.z.string().min(7).max(8).nullable().optional(),
-    placa3: zod_1.z.string().min(7).max(8).nullable().optional(),
+    placa2: zod_1.z.string().min(7).max(8).or(zod_1.z.literal('')).or(zod_1.z.null()).optional(),
+    placa3: zod_1.z.string().min(7).max(8).or(zod_1.z.literal('')).or(zod_1.z.null()).optional(),
     modelo1: zod_1.z.string().nullable().optional(),
     cor1: zod_1.z.string().nullable().optional(),
     cliente: zod_1.z.string().min(1),
@@ -29,9 +29,9 @@ const ocorrenciaSchema = zod_1.z.object({
     origem_cidade: zod_1.z.string().nullable().optional(),
     origem_estado: zod_1.z.string().nullable().optional(),
     prestador: zod_1.z.string().nullable().optional(),
-    inicio: zod_1.z.date().nullable().optional(),
-    chegada: zod_1.z.date().nullable().optional(),
-    termino: zod_1.z.date().nullable().optional(),
+    inicio: zod_1.z.preprocess((v) => v === '' ? null : (typeof v === 'string' ? new Date(v) : v), zod_1.z.date().nullable().optional()),
+    chegada: zod_1.z.preprocess((v) => v === '' ? null : (typeof v === 'string' ? new Date(v) : v), zod_1.z.date().nullable().optional()),
+    termino: zod_1.z.preprocess((v) => v === '' ? null : (typeof v === 'string' ? new Date(v) : v), zod_1.z.date().nullable().optional()),
     km: zod_1.z.number().nullable().optional(),
     km_inicial: zod_1.z.number().nullable().optional(),
     km_final: zod_1.z.number().nullable().optional(),
@@ -40,7 +40,10 @@ const ocorrenciaSchema = zod_1.z.object({
     descricao: zod_1.z.string().nullable().optional(),
     resultado: zod_1.z.string().nullable().optional(),
     status: zod_1.z.enum(['em_andamento', 'concluida', 'cancelada', 'aguardando']).optional(),
-    data_acionamento: zod_1.z.date().nullable().optional(),
+    data_acionamento: zod_1.z.preprocess((v) => v === '' ? null : (typeof v === 'string' ? new Date(v) : v), zod_1.z.date().nullable().optional()),
+    planta_origem: zod_1.z.string().nullable().optional(),
+    cidade_destino: zod_1.z.string().nullable().optional(),
+    km_acl: zod_1.z.string().nullable().optional(),
     fotos: zod_1.z.array(zod_1.z.object({
         url: zod_1.z.string(),
         legenda: zod_1.z.string().optional()

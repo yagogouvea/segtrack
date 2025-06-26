@@ -6,12 +6,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const prisma_1 = require("../lib/prisma");
 const prestador_controller_1 = require("../controllers/prestador.controller");
+const auth_middleware_1 = require("../infrastructure/middleware/auth.middleware");
 const router = express_1.default.Router();
 const controller = new prestador_controller_1.PrestadorController();
+// Aplicar autenticação em todas as rotas
+router.use(auth_middleware_1.authenticateToken);
 // GET - Listar todos os prestadores (completo)
-router.get('/', (req, res) => controller.list(req, res));
+// Agora aceita filtros via query params: nome, cod_nome, regiao, funcao
+// Exemplo: /prestadores?nome=joao&regiao=Osasco&funcao=Drone
+router.get('/', (0, auth_middleware_1.requirePermission)('read:prestador'), (req, res) => controller.list(req, res));
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)
-router.get('/popup', async (_req, res) => {
+router.get('/popup', (0, auth_middleware_1.requirePermission)('read:prestador'), async (_req, res) => {
     try {
         const db = await (0, prisma_1.ensurePrisma)();
         const prestadores = await db.prestador.findMany({
@@ -31,7 +36,7 @@ router.get('/popup', async (_req, res) => {
 });
 // ✅ NOVA ROTA - Buscar prestador por nome (usado no popup de passagem de serviço)
 // ✅ ROTA CORRIGIDA - Buscar prestador por nome (sem usar `mode`)
-router.get('/buscar-por-nome/:nome', async (req, res) => {
+router.get('/buscar-por-nome/:nome', (0, auth_middleware_1.requirePermission)('read:prestador'), async (req, res) => {
     const { nome } = req.params;
     try {
         const db = await (0, prisma_1.ensurePrisma)();
@@ -57,7 +62,7 @@ router.get('/buscar-por-nome/:nome', async (req, res) => {
     }
 });
 // POST - Criar novo prestador
-router.post('/', async (req, res) => {
+router.post('/', (0, auth_middleware_1.requirePermission)('create:prestador'), async (req, res) => {
     try {
         const { nome, cpf, cod_nome, telefone, email, aprovado, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc, funcoes, regioes, veiculos } = req.body;
         // Validações básicas
@@ -152,7 +157,7 @@ router.post('/', async (req, res) => {
     }
 });
 // PUT - Atualizar prestador
-router.put('/:id', async (req, res) => {
+router.put('/:id', (0, auth_middleware_1.requirePermission)('update:prestador'), async (req, res) => {
     const { id } = req.params;
     console.log('Atualizando prestador:', { id, body: req.body });
     const { nome, cpf, cod_nome, telefone, email, aprovado, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc, funcoes, regioes, veiculos } = req.body;
@@ -244,7 +249,7 @@ router.put('/:id', async (req, res) => {
     }
 });
 // PUT - Aprovar prestador
-router.put('/:id/aprovar', async (req, res) => {
+router.put('/:id/aprovar', (0, auth_middleware_1.requirePermission)('update:prestador'), async (req, res) => {
     const { id } = req.params;
     try {
         const db = await (0, prisma_1.ensurePrisma)();
@@ -271,7 +276,7 @@ router.put('/:id/aprovar', async (req, res) => {
     }
 });
 // DELETE - Excluir prestador
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', (0, auth_middleware_1.requirePermission)('delete:prestador'), async (req, res) => {
     const { id } = req.params;
     try {
         const db = await (0, prisma_1.ensurePrisma)();

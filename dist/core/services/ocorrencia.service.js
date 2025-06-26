@@ -15,6 +15,35 @@ exports.OcorrenciaService = void 0;
 const client_1 = require("@prisma/client");
 const AppError_1 = require("../../shared/errors/AppError");
 const prisma_1 = require("../../lib/prisma");
+// Função para processar despesas_detalhadas de string JSON para array
+const processarDespesasDetalhadas = (ocorrencia) => {
+    if (ocorrencia.despesas_detalhadas) {
+        try {
+            if (typeof ocorrencia.despesas_detalhadas === 'string') {
+                // Verificar se a string não está vazia
+                if (ocorrencia.despesas_detalhadas.trim() === '') {
+                    ocorrencia.despesas_detalhadas = [];
+                }
+                else {
+                    ocorrencia.despesas_detalhadas = JSON.parse(ocorrencia.despesas_detalhadas);
+                }
+            }
+            // Se já é um array, manter como está
+            if (!Array.isArray(ocorrencia.despesas_detalhadas)) {
+                ocorrencia.despesas_detalhadas = [];
+            }
+        }
+        catch (error) {
+            console.error('Erro ao processar despesas_detalhadas:', error);
+            console.error('Valor recebido:', ocorrencia.despesas_detalhadas);
+            ocorrencia.despesas_detalhadas = [];
+        }
+    }
+    else {
+        ocorrencia.despesas_detalhadas = [];
+    }
+    return ocorrencia;
+};
 class OcorrenciaService {
     async list(filters = {}) {
         try {
@@ -60,7 +89,7 @@ class OcorrenciaService {
                 }
             });
             console.log('[OcorrenciaService] Ocorrências encontradas:', ocorrencias.length);
-            return ocorrencias;
+            return ocorrencias.map(processarDespesasDetalhadas);
         }
         catch (error) {
             console.error('[OcorrenciaService] Erro ao listar ocorrências:', {
@@ -77,15 +106,18 @@ class OcorrenciaService {
         }
     }
     async create(data) {
-        var _a;
         try {
             if (!data.placa1 || !data.cliente || !data.tipo) {
                 throw new AppError_1.AppError('Campos obrigatórios faltando: placa1, cliente, tipo', 400);
             }
+            // Log para debug
+            console.log('[DEBUG][CREATE OCORRENCIA] Dados recebidos:', JSON.stringify(data, null, 2));
             const db = await (0, prisma_1.ensurePrisma)();
             const { fotos } = data, rest = __rest(data, ["fotos"]);
+            // Log para debug
+            console.log('[DEBUG][CREATE OCORRENCIA] Dados enviados ao banco:', JSON.stringify(rest, null, 2));
             const ocorrencia = await db.ocorrencia.create({
-                data: Object.assign(Object.assign({}, rest), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : undefined, fotos: fotos && fotos.length > 0 ? {
+                data: Object.assign(Object.assign({}, rest), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: data.despesas_detalhadas ? JSON.stringify(data.despesas_detalhadas) : undefined, fotos: fotos && fotos.length > 0 ? {
                         create: fotos.map(foto => ({
                             url: foto.url,
                             legenda: foto.legenda || ''
@@ -95,7 +127,9 @@ class OcorrenciaService {
                     fotos: true
                 }
             });
-            return ocorrencia;
+            // Log para debug
+            console.log('[DEBUG][CREATE OCORRENCIA] Ocorrencia criada:', JSON.stringify(ocorrencia, null, 2));
+            return processarDespesasDetalhadas(ocorrencia);
         }
         catch (error) {
             console.error('Erro ao criar ocorrência:', error);
@@ -114,7 +148,7 @@ class OcorrenciaService {
             if (!ocorrencia) {
                 throw new AppError_1.AppError('Ocorrência não encontrada', 404);
             }
-            return ocorrencia;
+            return processarDespesasDetalhadas(ocorrencia);
         }
         catch (error) {
             if (error instanceof AppError_1.AppError)
@@ -124,13 +158,12 @@ class OcorrenciaService {
         }
     }
     async update(id, data) {
-        var _a;
         try {
             const db = await (0, prisma_1.ensurePrisma)();
             const { fotos } = data, rest = __rest(data, ["fotos"]);
             const ocorrencia = await db.ocorrencia.update({
                 where: { id },
-                data: Object.assign(Object.assign({}, rest), { atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : undefined, fotos: fotos && fotos.length > 0 ? {
+                data: Object.assign(Object.assign({}, rest), { atualizado_em: new Date(), despesas_detalhadas: data.despesas_detalhadas ? JSON.stringify(data.despesas_detalhadas) : undefined, fotos: fotos && fotos.length > 0 ? {
                         create: fotos.map(foto => ({
                             url: foto.url,
                             legenda: foto.legenda || ''
@@ -140,7 +173,7 @@ class OcorrenciaService {
                     fotos: true
                 }
             });
-            return ocorrencia;
+            return processarDespesasDetalhadas(ocorrencia);
         }
         catch (error) {
             console.error('Erro ao atualizar ocorrência:', error);
@@ -165,7 +198,7 @@ class OcorrenciaService {
     async findByStatus(status) {
         try {
             const db = await (0, prisma_1.ensurePrisma)();
-            return await db.ocorrencia.findMany({
+            const ocorrencias = await db.ocorrencia.findMany({
                 where: { status },
                 include: {
                     fotos: true
@@ -174,6 +207,7 @@ class OcorrenciaService {
                     criado_em: 'desc'
                 }
             });
+            return ocorrencias.map(processarDespesasDetalhadas);
         }
         catch (error) {
             console.error('Erro ao buscar ocorrências por status:', error);
@@ -183,7 +217,7 @@ class OcorrenciaService {
     async findByPlaca(placa) {
         try {
             const db = await (0, prisma_1.ensurePrisma)();
-            return await db.ocorrencia.findMany({
+            const ocorrencias = await db.ocorrencia.findMany({
                 where: {
                     OR: [
                         { placa1: placa },
@@ -198,6 +232,7 @@ class OcorrenciaService {
                     criado_em: 'desc'
                 }
             });
+            return ocorrencias.map(processarDespesasDetalhadas);
         }
         catch (error) {
             console.error('Erro ao buscar ocorrências por placa:', error);
@@ -221,7 +256,7 @@ class OcorrenciaService {
                     fotos: true
                 }
             });
-            return ocorrencia;
+            return processarDespesasDetalhadas(ocorrencia);
         }
         catch (error) {
             console.error('Erro ao adicionar fotos:', error);

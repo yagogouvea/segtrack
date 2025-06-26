@@ -16,158 +16,48 @@ const login = async (req, res) => {
             res.status(400).json({ message: 'Email e password são obrigatórios' });
             return;
         }
-        // Em desenvolvimento, permitir login sem banco de dados
-        if (process.env.NODE_ENV === 'development') {
-            console.log('Modo desenvolvimento: login sem banco de dados');
-            // Credenciais de desenvolvimento
-            if (email === 'admin@segtrack.com.br' && userPassword === 'segtrack123') {
-                const permissions = [
-                    'create:user',
-                    'read:user',
-                    'update:user',
-                    'delete:user',
-                    'create:ocorrencia',
-                    'read:ocorrencia',
-                    'update:ocorrencia',
-                    'delete:ocorrencia',
-                    'read:dashboard',
-                    'read:relatorio',
-                    'create:foto',
-                    'read:foto',
-                    'update:foto',
-                    'delete:foto',
-                    'upload:foto'
-                ];
-                const token = jsonwebtoken_1.default.sign({
-                    sub: '1',
-                    nome: 'Admin SEGTRACK',
-                    email: email,
-                    role: 'admin',
-                    permissions: permissions
-                }, process.env.JWT_SECRET || 'dev-secret-key', { expiresIn: '12h' });
-                console.log('Login de desenvolvimento bem-sucedido');
-                res.json({
-                    token,
-                    user: {
-                        id: '1',
-                        name: 'Admin SEGTRACK',
-                        email: email,
-                        role: 'admin',
-                        permissions: permissions
-                    }
-                });
-                return;
-            }
-            else {
-                res.status(401).json({ message: 'Credenciais inválidas para desenvolvimento' });
-                return;
-            }
-        }
-        // Validar JWT_SECRET
-        if (!process.env.JWT_SECRET) {
-            console.error('JWT_SECRET não está definido no ambiente');
-            res.status(500).json({ message: 'Erro de configuração do servidor' });
+        // --- INÍCIO AUTENTICAÇÃO REAL ---
+        const db = await (0, prisma_1.ensurePrisma)();
+        const user = await db.user.findUnique({ where: { email } });
+        if (!user) {
+            res.status(401).json({ message: 'Usuário não encontrado' });
             return;
         }
-        console.log('Tentativa de login para:', email);
+        if (!user.active) {
+            res.status(403).json({ message: 'Usuário inativo' });
+            return;
+        }
+        const validPassword = await bcrypt_1.default.compare(userPassword, user.passwordHash);
+        if (!validPassword) {
+            res.status(401).json({ message: 'Senha incorreta' });
+            return;
+        }
+        let permissions = [];
         try {
-            const db = await (0, prisma_1.ensurePrisma)();
-            const user = await db.user.findUnique({
-                where: { email },
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    passwordHash: true,
-                    role: true,
-                    permissions: true,
-                    active: true
-                }
-            });
-            console.log('Resultado da busca do usuário:', {
-                found: !!user,
-                role: user === null || user === void 0 ? void 0 : user.role,
-                active: user === null || user === void 0 ? void 0 : user.active
-            });
-            if (!user) {
-                res.status(401).json({ message: 'Usuário não encontrado' });
-                return;
-            }
-            if (!user.active) {
-                res.status(403).json({ message: 'Usuário desativado. Entre em contato com o administrador.' });
-                return;
-            }
-            const isMatch = await bcrypt_1.default.compare(userPassword, user.passwordHash);
-            console.log('Resultado da verificação de senha:', { isMatch });
-            if (!isMatch) {
-                res.status(401).json({ message: 'Senha incorreta' });
-                return;
-            }
-            try {
-                let permissions;
-                // Se for admin, define todas as permissões
-                if (user.role === 'admin') {
-                    permissions = [
-                        'create:user',
-                        'read:user',
-                        'update:user',
-                        'delete:user',
-                        'create:ocorrencia',
-                        'read:ocorrencia',
-                        'update:ocorrencia',
-                        'delete:ocorrencia',
-                        'read:dashboard',
-                        'read:relatorio',
-                        'create:foto',
-                        'read:foto',
-                        'update:foto',
-                        'delete:foto',
-                        'upload:foto'
-                    ];
-                }
-                else {
-                    // Para usuários não-admin, usa as permissões do banco
-                    try {
-                        permissions = JSON.parse(user.permissions);
-                        if (!Array.isArray(permissions)) {
-                            throw new Error('Formato de permissões inválido');
-                        }
-                    }
-                    catch (parseError) {
-                        console.error('Erro ao converter permissões:', parseError);
-                        res.status(500).json({ message: 'Erro ao processar permissões do usuário' });
-                        return;
-                    }
-                }
-                console.log('Permissões do usuário:', permissions);
-                const token = jsonwebtoken_1.default.sign({
-                    sub: user.id,
-                    nome: user.name,
-                    email: user.email,
-                    role: user.role,
-                    permissions: permissions
-                }, process.env.JWT_SECRET, { expiresIn: '12h' });
-                console.log('Token gerado com sucesso');
-                res.json({
-                    token,
-                    user: {
-                        id: user.id,
-                        name: user.name,
-                        email: user.email,
-                        role: user.role,
-                        permissions: permissions
-                    }
-                });
-            }
-            catch (conversionError) {
-                console.error('Erro na conversão de permissões:', conversionError);
-                res.status(500).json({ message: 'Erro ao processar permissões' });
-            }
+            permissions = user.permissions ? JSON.parse(user.permissions) : [];
         }
-        catch (dbError) {
-            console.error('Erro ao buscar usuário:', dbError);
-            res.status(500).json({ message: 'Erro ao buscar usuário' });
+        catch (_a) {
+            permissions = [];
         }
+        const token = jsonwebtoken_1.default.sign({
+            sub: user.id,
+            nome: user.name,
+            email: user.email,
+            role: user.role,
+            permissions: permissions
+        }, process.env.JWT_SECRET || 'dev-secret-key', { expiresIn: '12h' });
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                permissions: permissions,
+                active: user.active
+            }
+        });
+        // --- FIM AUTENTICAÇÃO REAL ---
     }
     catch (error) {
         console.error("Erro no login:", error);

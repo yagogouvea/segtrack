@@ -15,4 +15,6 @@ router.post('/', (0, auth_middleware_1.requirePermission)('create:user'), contro
 router.get('/:id', (0, auth_middleware_1.requirePermission)('read:user'), controller.getById);
 router.put('/:id', (0, auth_middleware_1.requirePermission)('update:user'), controller.update);
 router.delete('/:id', (0, auth_middleware_1.requirePermission)('delete:user'), controller.delete);
+// PATCH para alterar senha de usuário
+router.patch('/:id/password', (0, auth_middleware_1.requirePermission)('update:user'), controller.updateUserPassword);
 exports.default = router;

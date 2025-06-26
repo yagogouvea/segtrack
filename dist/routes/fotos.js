@@ -46,7 +46,7 @@ const router = express_1.default.Router();
 // Aplicar autenticação a todas as rotas
 router.use(auth_middleware_1.authenticateToken);
 // 🔹 Upload de novas fotos
-router.post('/', upload.single('foto'), async (req, res) => {
+router.post('/', (0, auth_middleware_1.requirePermission)('create:foto'), upload.single('foto'), async (req, res) => {
     const { ocorrenciaId, legenda } = req.body;
     const arquivo = req.file;
     if (!arquivo) {
@@ -90,7 +90,7 @@ router.post('/', upload.single('foto'), async (req, res) => {
     }
 });
 // 🔹 Atualizar legenda da foto
-router.put('/:id', async (req, res) => {
+router.put('/:id', (0, auth_middleware_1.requirePermission)('update:foto'), async (req, res) => {
     const { id } = req.params;
     const { legenda } = req.body;
     if (!legenda || typeof legenda !== 'string') {
@@ -110,7 +110,7 @@ router.put('/:id', async (req, res) => {
     }
 });
 // 🔹 Remover foto
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', (0, auth_middleware_1.requirePermission)('delete:foto'), async (req, res) => {
     const { id } = req.params;
     try {
         const foto = await prisma.foto.findUnique({ where: { id: Number(id) } });
@@ -135,7 +135,7 @@ router.delete('/:id', async (req, res) => {
     }
 });
 // 🔹 Listar fotos por ocorrência
-router.get('/por-ocorrencia/:ocorrenciaId', async (req, res) => {
+router.get('/por-ocorrencia/:ocorrenciaId', (0, auth_middleware_1.requirePermission)('read:foto'), async (req, res) => {
     console.log('Buscando fotos para ocorrência ID:', req.params.ocorrenciaId);
     const { ocorrenciaId } = req.params;
     if (!ocorrenciaId || isNaN(Number(ocorrenciaId))) {

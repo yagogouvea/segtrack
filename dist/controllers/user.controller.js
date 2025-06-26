@@ -14,14 +14,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserController = void 0;
+exports.updateUserPassword = exports.UserController = void 0;
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../utils/auth");
 const validation_1 = require("../utils/validation");
 const logger_1 = __importDefault(require("../infrastructure/logger"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const AppError_1 = require("../shared/errors/AppError");
-const VALID_ROLES = ['admin', 'manager', 'operator', 'client'];
+const VALID_ROLES = ['admin', 'supervisor', 'operador', 'manager', 'operator', 'client'];
 class UserController {
     async getCurrentUser(req, res) {
         try {
@@ -120,7 +120,11 @@ class UserController {
                     active: true
                 }
             });
-            res.json(users);
+            // Corrigir o campo permissions para array
+            const usersWithPermissionsArray = users.map(user => (Object.assign(Object.assign({}, user), { permissions: typeof user.permissions === 'string'
+                    ? JSON.parse(user.permissions)
+                    : user.permissions })));
+            res.json(usersWithPermissionsArray);
         }
         catch (error) {
             logger_1.default.error('Erro ao listar usuários:', error);
@@ -130,15 +134,13 @@ class UserController {
     async create(req, res) {
         var _a;
         try {
+            console.log('UserController - Dados recebidos:', req.body);
             const data = req.body;
             // Validação dos campos obrigatórios
             if (!data.name || !data.email || !data.password || !data.role) {
                 throw new AppError_1.AppError('Campos obrigatórios faltando: name, email, password, role', 400);
             }
-            // Validação e conversão do role
-            if (!VALID_ROLES.includes(data.role)) {
-                throw new AppError_1.AppError('Role inválido', 400);
-            }
+            console.log('UserController - Dados validados:', data);
             const hashedPassword = await bcryptjs_1.default.hash(data.password, 10);
             const user = await prisma_1.prisma.user.create({
                 data: {
@@ -162,10 +164,11 @@ class UserController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
+                console.error('UserController - AppError:', error.message);
                 res.status(error.statusCode).json({ error: error.message });
                 return;
             }
-            console.error('Erro ao criar usuário:', error);
+            console.error('UserController - Erro ao criar usuário:', error);
             res.status(500).json({ error: 'Erro ao criar usuário' });
         }
     }
@@ -424,5 +427,36 @@ class UserController {
             res.status(500).json({ error: 'Erro ao excluir usuário' });
         }
     }
+    async updateUserPassword(req, res) {
+        try {
+            const { id } = req.params;
+            const { password, confirmPassword } = req.body;
+            if (!password || !confirmPassword) {
+                res.status(400).json({ error: 'Senha e confirmação são obrigatórias' });
+                return;
+            }
+            if (password !== confirmPassword) {
+                res.status(400).json({ error: 'As senhas não coincidem' });
+                return;
+            }
+            if (password.length < 6) {
+                res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres' });
+                return;
+            }
+            const db = await (0, prisma_1.ensurePrisma)();
+            const hashedPassword = await bcryptjs_1.default.hash(password, 10);
+            await db.user.update({
+                where: { id },
+                data: { passwordHash: hashedPassword }
+            });
+            res.json({ message: 'Senha atualizada com sucesso' });
+        }
+        catch (error) {
+            logger_1.default.error('Erro ao atualizar senha:', error);
+            console.error('Erro detalhado ao atualizar senha:', error);
+            res.status(500).json({ error: 'Erro ao atualizar senha', details: error instanceof Error ? error.stack : String(error) });
+        }
+    }
 }
 exports.UserController = UserController;
+exports.updateUserPassword = new UserController().updateUserPassword.bind(new UserController());

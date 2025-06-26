@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_middleware_1 = require("../../../infrastructure/middleware/auth.middleware");
 const ocorrencia_controller_1 = require("../controllers/ocorrencia.controller");
+const ocorrencia_validator_1 = require("../validators/ocorrencia.validator");
 const multer_1 = __importDefault(require("multer"));
 const upload_config_1 = require("../../../config/upload.config");
 const router = (0, express_1.Router)();
@@ -16,8 +17,8 @@ router.use(auth_middleware_1.authenticateToken);
 router.get('/', controller.list);
 router.get('/:id', controller.findById);
 // Criação e atualização
-router.post('/', controller.create);
-router.put('/:id', controller.update);
+router.post('/', ocorrencia_validator_1.validateOcorrencia, controller.create);
+router.put('/:id', ocorrencia_validator_1.validateOcorrencia, controller.update);
 router.delete('/:id', controller.delete);
 // Upload de fotos
 router.post('/:id/fotos', upload.array('fotos'), controller.addFotos);

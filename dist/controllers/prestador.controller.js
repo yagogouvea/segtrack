@@ -14,14 +14,21 @@ class PrestadorController {
                 res.status(500).json({ error: 'Erro ao listar prestadores públicos' });
             }
         };
-        this.list = async (_req, res) => {
+        this.list = async (req, res) => {
             try {
-                // Em desenvolvimento, retornar dados mock
-                // if (process.env.NODE_ENV === 'development') {
-                //   console.log('[PrestadorController] Modo desenvolvimento: retornando dados mock');
-                //   res.json(mockPrestadores);
-                //   return;
-                // }
+                const { nome, cod_nome, regiao, funcao } = req.query;
+                if (nome || cod_nome || regiao || funcao) {
+                    // Se houver filtros, buscar com filtros
+                    const prestadores = await this.service.searchWithFilters({
+                        nome: nome,
+                        cod_nome: cod_nome,
+                        regiao: regiao,
+                        funcao: funcao
+                    });
+                    res.json(prestadores);
+                    return;
+                }
+                // Sem filtros, retorna todos
                 const prestadores = await this.service.list();
                 res.json(prestadores);
             }

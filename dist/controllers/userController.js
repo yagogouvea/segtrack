@@ -12,7 +12,7 @@ const userSchema = zod_1.z.object({
     name: zod_1.z.string().min(3),
     email: zod_1.z.string().email(),
     password: zod_1.z.string().min(6),
-    role: zod_1.z.enum(['admin', 'user']),
+    role: zod_1.z.string(),
     permissions: zod_1.z.array(zod_1.z.string()).or(zod_1.z.string()),
     active: zod_1.z.boolean().default(true)
 });
@@ -83,7 +83,9 @@ exports.getUser = getUser;
 // POST /api/users
 const createUser = async (req, res) => {
     try {
+        console.log('Dados recebidos:', req.body);
         const data = userSchema.parse(req.body);
+        console.log('Dados validados:', data);
         const db = await (0, prisma_1.ensurePrisma)();
         // Verificar se o email já existe
         const existingUser = await db.user.findUnique({
@@ -136,6 +138,7 @@ const createUser = async (req, res) => {
     }
     catch (error) {
         if (error instanceof zod_1.z.ZodError) {
+            console.error('Erro de validação:', error.errors);
             res.status(400).json({ error: 'Dados inválidos', details: error.errors });
             return;
         }
@@ -220,26 +223,39 @@ exports.updateUser = updateUser;
 // PATCH /api/users/:id/password
 const updateUserPassword = async (req, res) => {
     const { id } = req.params;
+    console.log('[updateUserPassword] Iniciando alteração de senha para id:', id);
+    console.log('[updateUserPassword] Body recebido:', req.body);
     try {
         const data = passwordUpdateSchema.parse(req.body);
+        console.log('[updateUserPassword] Dados validados:', data);
         const db = await (0, prisma_1.ensurePrisma)();
+        console.log('[updateUserPassword] Prisma OK');
         const hashedPassword = await bcrypt_1.default.hash(data.password, 10);
-        await db.user.update({
+        console.log('[updateUserPassword] Hash gerado');
+        const result = await db.user.update({
             where: { id },
             data: {
                 passwordHash: hashedPassword,
                 updatedAt: new Date()
             }
         });
+        console.log('[updateUserPassword] Usuário atualizado:', result);
         res.json({ message: 'Senha atualizada com sucesso' });
     }
     catch (error) {
         if (error instanceof zod_1.z.ZodError) {
+            console.error('[updateUserPassword] Erro de validação Zod:', error.errors);
             res.status(400).json({ error: 'Dados inválidos', details: error.errors });
             return;
         }
-        console.error('Erro ao atualizar senha:', error);
-        res.status(500).json({ error: 'Erro ao atualizar senha' });
+        if (error instanceof Error) {
+            console.error('[updateUserPassword] Erro ao atualizar senha:', error.stack);
+            res.status(500).json({ error: 'Erro ao atualizar senha', details: error.message });
+        }
+        else {
+            console.error('[updateUserPassword] Erro ao atualizar senha:', error);
+            res.status(500).json({ error: 'Erro ao atualizar senha', details: String(error) });
+        }
     }
 };
 exports.updateUserPassword = updateUserPassword;

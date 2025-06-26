@@ -8,13 +8,15 @@ class PrestadorService {
     async list() {
         try {
             const db = await (0, prisma_1.ensurePrisma)();
-            return await db.prestador.findMany({
+            const prestadores = await db.prestador.findMany({
                 include: {
                     funcoes: true,
                     veiculos: true,
                     regioes: true
                 }
             });
+            // Formatar os dados para o frontend
+            return prestadores.map(prestador => (Object.assign(Object.assign({}, prestador), { funcoes: prestador.funcoes.map(f => f.funcao), regioes: prestador.regioes.map(r => r.regiao), tipo_veiculo: prestador.veiculos.map(v => v.tipo), veiculos: prestador.veiculos })));
         }
         catch (error) {
             console.error('Erro ao buscar prestadores:', error);
@@ -251,6 +253,57 @@ class PrestadorService {
         catch (error) {
             console.error('Erro ao buscar prestadores por função:', error);
             throw new AppError_1.AppError('Erro ao buscar prestadores por função');
+        }
+    }
+    /**
+     * Busca prestadores com múltiplos filtros combináveis
+     * @param filters { nome, cod_nome, regiao, funcao }
+     */
+    async searchWithFilters(filters) {
+        try {
+            const db = await (0, prisma_1.ensurePrisma)();
+            console.log('🔍 Filtros recebidos:', filters);
+            const where = {};
+            if (filters.nome && filters.nome.trim()) {
+                where.nome = { contains: filters.nome.trim() };
+            }
+            if (filters.cod_nome && filters.cod_nome.trim()) {
+                where.cod_nome = { contains: filters.cod_nome.trim() };
+            }
+            if (filters.regiao && filters.regiao.trim()) {
+                where.regioes = {
+                    some: {
+                        regiao: { contains: filters.regiao.trim() }
+                    }
+                };
+            }
+            if (filters.funcao && filters.funcao.trim()) {
+                where.funcoes = {
+                    some: {
+                        funcao: { contains: filters.funcao.trim() }
+                    }
+                };
+            }
+            console.log('🔍 Where clause:', JSON.stringify(where, null, 2));
+            const result = await db.prestador.findMany({
+                where,
+                include: {
+                    funcoes: true,
+                    veiculos: true,
+                    regioes: true
+                }
+            });
+            console.log(`✅ Encontrados ${result.length} prestadores`);
+            // Formatar os dados para o frontend
+            return result.map(prestador => (Object.assign(Object.assign({}, prestador), { funcoes: prestador.funcoes.map(f => f.funcao), regioes: prestador.regioes.map(r => r.regiao), tipo_veiculo: prestador.veiculos.map(v => v.tipo), veiculos: prestador.veiculos })));
+        }
+        catch (error) {
+            console.error('❌ Erro detalhado ao buscar prestadores com filtros:', error);
+            if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+                console.error('❌ Código do erro Prisma:', error.code);
+                console.error('❌ Mensagem do erro Prisma:', error.message);
+            }
+            throw new AppError_1.AppError('Erro ao buscar prestadores com filtros');
         }
     }
 }

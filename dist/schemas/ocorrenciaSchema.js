@@ -38,6 +38,9 @@ exports.ocorrenciaSchema = zod_1.z.object({
     resultado: zod_1.z.string().nullable().optional(),
     status: zod_1.z.string().default("Em andamento"),
     data_acionamento: zod_1.z.date().nullable().optional(),
+    planta_origem: zod_1.z.string().nullable().optional(),
+    cidade_destino: zod_1.z.string().nullable().optional(),
+    km_acl: zod_1.z.string().nullable().optional(),
     fotos: zod_1.z.array(zod_1.z.object({
         url: zod_1.z.string(),
         legenda: zod_1.z.string().optional().default(''),

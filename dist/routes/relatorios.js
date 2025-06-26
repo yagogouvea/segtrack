@@ -7,7 +7,10 @@ const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../lib/prisma");
+const auth_middleware_1 = require("../infrastructure/middleware/auth.middleware");
 const router = (0, express_1.Router)();
+// Aplicar autenticação em todas as rotas
+router.use(auth_middleware_1.authenticateToken);
 const storage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => {
         cb(null, path_1.default.join(__dirname, '../../uploads/relatorios'));
@@ -18,7 +21,7 @@ const storage = multer_1.default.diskStorage({
     }
 });
 const upload = (0, multer_1.default)({ storage });
-router.post('/upload', upload.single('arquivo'), async (req, res) => {
+router.post('/upload', (0, auth_middleware_1.requirePermission)('create:relatorio'), upload.single('arquivo'), async (req, res) => {
     try {
         if (!req.file) {
             res.status(400).json({ error: 'Nenhum arquivo enviado' });
@@ -45,7 +48,7 @@ router.post('/upload', upload.single('arquivo'), async (req, res) => {
         res.status(500).json({ error: 'Erro ao fazer upload do relatório' });
     }
 });
-router.get('/', async (_req, res) => {
+router.get('/', (0, auth_middleware_1.requirePermission)('read:relatorio'), async (_req, res) => {
     try {
         const relatorios = await prisma_1.prisma.relatorio.findMany({
             orderBy: {
@@ -59,7 +62,7 @@ router.get('/', async (_req, res) => {
         res.status(500).json({ error: 'Erro ao listar relatórios' });
     }
 });
-router.get('/:id', async (req, res) => {
+router.get('/:id', (0, auth_middleware_1.requirePermission)('read:relatorio'), async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) {
@@ -80,7 +83,7 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ error: 'Erro ao buscar relatório' });
     }
 });
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', (0, auth_middleware_1.requirePermission)('delete:relatorio'), async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) {

@@ -41,7 +41,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
     let permissions: string[] = [];
     try {
-      permissions = JSON.parse(user.permissions);
+      permissions = user.permissions ? JSON.parse(user.permissions) : [];
     } catch {
       permissions = [];
     }
