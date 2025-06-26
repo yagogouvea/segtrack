@@ -1,6 +1,6 @@
 import express, { Router, Request, Response } from 'express';
 import axios from 'axios';
-import { ensurePrisma } from '@/lib/prisma';
+import { ensurePrisma } from '../lib/prisma';
 
 interface ApiBrasilResponse {
   response: {
