@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET não está definida. Configure a variável de ambiente JWT_SECRET.');
+}
 const TOKEN_EXPIRATION = '24h';
 
 export interface TokenPayload {

@@ -9,6 +9,9 @@ const envSchema = z.object({
   PORT: z.string().transform(Number).default('3000'),
   DATABASE_URL: z.string(),
   JWT_SECRET: z.string(),
+  BASE_URL: z.string(),
+  FRONTEND_URL: z.string(),
+  AWS_S3_BUCKET: z.string(),
 });
 
 const _env = envSchema.safeParse(process.env);

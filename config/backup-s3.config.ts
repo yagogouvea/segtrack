@@ -8,7 +8,7 @@ export const backupConfig = {
             secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
         }
     }),
-    bucket: 'segtrack-backups',
+    bucket: process.env.AWS_S3_BUCKET || (() => { throw new Error('AWS_S3_BUCKET não definida'); })(),
     backupRetentionDays: 30,
     backupPaths: {
         local: '/var/backups/completo',

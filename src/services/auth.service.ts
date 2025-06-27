@@ -15,7 +15,13 @@ interface LoginResponse {
 }
 
 export class AuthService {
-  private readonly JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+  private readonly JWT_SECRET = process.env.JWT_SECRET;
+
+  constructor() {
+    if (!this.JWT_SECRET) {
+      throw new Error('JWT_SECRET não está definida. Configure a variável de ambiente JWT_SECRET.');
+    }
+  }
 
   async login(email: string, password: string): Promise<LoginResponse> {
     const user = await prisma.user.findUnique({
