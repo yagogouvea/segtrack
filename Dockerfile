@@ -11,6 +11,9 @@ RUN npm ci
 # Copie TODO o código, incluindo prisma, src, etc.
 COPY . .
 
+# Debug: listar conteúdo da pasta prisma
+RUN ls -l prisma
+
 # Agora gere o client do Prisma
 RUN npx prisma generate
 
