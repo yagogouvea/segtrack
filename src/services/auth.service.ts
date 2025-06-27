@@ -50,6 +50,8 @@ export class AuthService {
       throw new Error('Senha inválida');
     }
 
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET não definido');
     const token = jwt.sign(
       {
         id: user.id,
@@ -58,7 +60,7 @@ export class AuthService {
         role: user.role,
         permissions: user.permissions
       },
-      this.JWT_SECRET,
+      secret,
       { expiresIn: '24h' }
     );
 
