@@ -8,12 +8,11 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm ci
 
-# Copy prisma schema and generate client
-COPY prisma ./prisma/
-RUN npx prisma generate
-
-# Bundle app source
+# Copie TODO o código, incluindo prisma, src, etc.
 COPY . .
+
+# Agora gere o client do Prisma
+RUN npx prisma generate
 
 # Build TypeScript
 RUN npm run build
