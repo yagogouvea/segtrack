@@ -29,7 +29,7 @@ const passwordUpdateSchema = zod_1.z.object({
 // GET /api/users
 const getUsers = async (_req, res) => {
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const users = await db.user.findMany({
             select: {
                 id: true,
@@ -54,7 +54,7 @@ exports.getUsers = getUsers;
 const getUser = async (req, res) => {
     const { id } = req.params;
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const user = await db.user.findUnique({
             where: { id },
             select: {
@@ -84,7 +84,7 @@ exports.getUser = getUser;
 const createUser = async (req, res) => {
     try {
         const data = userSchema.parse(req.body);
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Verificar se o email já existe
         const existingUser = await db.user.findUnique({
             where: { email: data.email }
@@ -149,7 +149,7 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     try {
         const data = userUpdateSchema.parse(req.body);
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Se email foi fornecido, verificar se já existe
         if (data.email) {
             const existingUser = await db.user.findFirst({
@@ -222,7 +222,7 @@ const updateUserPassword = async (req, res) => {
     const { id } = req.params;
     try {
         const data = passwordUpdateSchema.parse(req.body);
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const hashedPassword = await bcrypt_1.default.hash(data.password, 10);
         await db.user.update({
             where: { id },
@@ -247,7 +247,7 @@ exports.updateUserPassword = updateUserPassword;
 const deleteUser = async (req, res) => {
     const { id } = req.params;
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         await db.user.delete({
             where: { id }
         });

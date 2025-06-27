@@ -44,7 +44,7 @@ const passwordUpdateSchema = z.object({
 // GET /api/users
 export const getUsers = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const users = await db.user.findMany({
       select: {
         id: true,
@@ -70,7 +70,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const user = await db.user.findUnique({
       where: { id },
       select: {
@@ -101,7 +101,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const data = userSchema.parse(req.body);
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     
     // Verificar se o email já existe
     const existingUser = await db.user.findUnique({
@@ -168,7 +168,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   
   try {
     const data = userUpdateSchema.parse(req.body);
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
 
     // Se email foi fornecido, verificar se já existe
     if (data.email) {
@@ -250,7 +250,7 @@ export const updateUserPassword = async (req: Request, res: Response): Promise<v
   
   try {
     const data = passwordUpdateSchema.parse(req.body);
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
@@ -278,7 +278,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
   const { id } = req.params;
 
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     await db.user.delete({
       where: { id }
     });

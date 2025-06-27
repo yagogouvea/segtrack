@@ -9,7 +9,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 class AuthService {
     async login(data) {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const user = await db.user.findUnique({
             where: { email: data.email }
         });

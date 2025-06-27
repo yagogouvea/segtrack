@@ -21,7 +21,7 @@ interface UpdateUserData {
 
 export class UserService {
   async list() {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     return db.user.findMany({
       select: {
         id: true,
@@ -37,7 +37,7 @@ export class UserService {
   }
 
   async findById(id: string) {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     return db.user.findUnique({
       where: { id },
       select: {
@@ -54,14 +54,14 @@ export class UserService {
   }
 
   async findByEmail(email: string) {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     return db.user.findUnique({
       where: { email }
     });
   }
 
   async create(data: CreateUserData) {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
     return db.user.create({
@@ -87,7 +87,7 @@ export class UserService {
   }
 
   async update(id: string, data: UpdateUserData) {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     return db.user.update({
       where: { id },
       data: {
@@ -111,14 +111,14 @@ export class UserService {
   }
 
   async delete(id: string) {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     return db.user.delete({
       where: { id }
     });
   }
 
   async changePassword(id: string, currentPassword: string, newPassword: string) {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const user = await db.user.findUnique({
       where: { id },
       select: { passwordHash: true }
@@ -142,7 +142,7 @@ export class UserService {
   }
 
   async updatePassword(id: string, newPassword: string) {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     return db.user.update({

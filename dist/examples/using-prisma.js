@@ -7,8 +7,8 @@ exports.exemploListarUsuarios = exemploListarUsuarios;
 exports.exemploCriarUsuario = exemploCriarUsuario;
 exports.exemploTransacao = exemploTransacao;
 exports.exemploQueryRaw = exemploQueryRaw;
-const prisma_1 = require("@/lib/prisma");
-const logger_1 = __importDefault(require("@/infrastructure/logger"));
+const prisma_1 = require("../src/lib/prisma");
+const logger_1 = __importDefault(require("../src/infrastructure/logger"));
 /**
  * Este arquivo serve como exemplo de como usar o prisma de forma segura
  * após a atualização que adiciona verificação de null.
@@ -22,7 +22,7 @@ const logger_1 = __importDefault(require("@/infrastructure/logger"));
 async function exemploListarUsuarios() {
     try {
         // Obter uma instância garantida do prisma
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Usar normalmente
         const users = await db.user.findMany({
             select: {
@@ -40,7 +40,7 @@ async function exemploListarUsuarios() {
 }
 async function exemploCriarUsuario(data) {
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const userData = {
             email: data.email,
             name: data.name,
@@ -66,7 +66,7 @@ async function exemploCriarUsuario(data) {
 }
 async function exemploTransacao() {
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Exemplo de transação
         const result = await db.$transaction(async (tx) => {
             const userData = {
@@ -103,7 +103,7 @@ async function exemploTransacao() {
 }
 async function exemploQueryRaw() {
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Exemplo de query raw com tipos
         const result = await db.$queryRaw `
       SELECT 

@@ -1,7 +1,7 @@
 import { ensurePrisma } from '../lib/prisma';
 
 async function fixPermissionsColumn() {
-  const db = ensurePrisma();
+  const db = await ensurePrisma();
   try {
     // Primeiro, atualiza os registros existentes que têm NULL para '[]'
     await db.$executeRaw`UPDATE User SET permissions = '[]' WHERE permissions IS NULL`;

@@ -1,0 +1,27 @@
+# Configurações de Desenvolvimento Local
+# Copie este arquivo para .env e ajuste conforme necessário
+
+NODE_ENV=development
+PORT=3001
+HOST=0.0.0.0
+
+# Banco de dados local (SQLite para desenvolvimento)
+DATABASE_URL="file:./dev.db"
+
+# JWT Secret (para desenvolvimento)
+JWT_SECRET=segtrack-dev-secret-key-2024
+
+# CORS (para desenvolvimento)
+CORS_ORIGIN=http://localhost:3000
+
+# Outras configurações opcionais
+API_BRASIL_DEVICE=
+API_BRASIL_BEARER=
+
+# AWS (opcional para desenvolvimento)
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+COGNITO_USER_POOL_ID=
+COGNITO_CLIENT_ID=
+COGNITO_CLIENT_SECRET= 

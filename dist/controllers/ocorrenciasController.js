@@ -14,7 +14,7 @@ const deletarOcorrencia = async (req, res) => {
         return;
     }
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Primeiro, buscar a ocorrência para obter as fotos
         const ocorrencia = await db.ocorrencia.findUnique({
             where: { id: Number(id) },

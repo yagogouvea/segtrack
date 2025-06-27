@@ -13,6 +13,10 @@ process.on('unhandledRejection', (reason, promise) => {
 
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'definida' : 'NÃO definida');
+if (process.env.DATABASE_URL) {
+  const url = process.env.DATABASE_URL.replace(/\/\/.*:.*@/, '//USER:***@');
+  console.log('DATABASE_URL (parcial):', url);
+}
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'definida' : 'NÃO definida');
 
 // Função para inicializar o servidor

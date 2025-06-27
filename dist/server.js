@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
-const app_1 = __importDefault(require("@/app"));
+const app_1 = __importDefault(require("./src/app"));
 const port = parseInt(process.env.PORT || '3001', 10);
 const host = process.env.HOST || '0.0.0.0';
 process.on('uncaughtException', (err) => {
@@ -15,6 +15,10 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'definida' : 'NÃO definida');
+if (process.env.DATABASE_URL) {
+    const url = process.env.DATABASE_URL.replace(/\/\/.*:.*@/, '//USER:***@');
+    console.log('DATABASE_URL (parcial):', url);
+}
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'definida' : 'NÃO definida');
 // Função para inicializar o servidor
 const startServer = async () => {

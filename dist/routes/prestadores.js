@@ -13,7 +13,7 @@ router.get('/', (req, res) => controller.list(req, res));
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)
 router.get('/popup', async (_req, res) => {
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const prestadores = await db.prestador.findMany({
             select: {
                 id: true,
@@ -34,7 +34,7 @@ router.get('/popup', async (_req, res) => {
 router.get('/buscar-por-nome/:nome', async (req, res) => {
     const { nome } = req.params;
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const prestador = await db.prestador.findFirst({
             where: {
                 nome: {
@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
             res.status(400).json({ erro: 'Nome e CPF são obrigatórios' });
             return;
         }
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Verificar se já existe um prestador com este CPF
         const existente = await db.prestador.findFirst({
             where: { cpf: cpf.replace(/\D/g, '') }
@@ -157,7 +157,7 @@ router.put('/:id', async (req, res) => {
     console.log('Atualizando prestador:', { id, body: req.body });
     const { nome, cpf, cod_nome, telefone, email, aprovado, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc, funcoes, regioes, veiculos } = req.body;
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Converter valores numéricos
         const valorAcionamentoFloat = valor_acionamento ? parseFloat(valor_acionamento.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
         const franquiaKmFloat = franquia_km ? parseFloat(String(franquia_km)) : 0;
@@ -247,7 +247,7 @@ router.put('/:id', async (req, res) => {
 router.put('/:id/aprovar', async (req, res) => {
     const { id } = req.params;
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const prestador = await db.prestador.findUnique({
             where: { id: Number(id) }
         });
@@ -274,7 +274,7 @@ router.put('/:id/aprovar', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         // Deletar todos os registros relacionados antes de excluir o prestador
         await Promise.all([
             db.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),

@@ -9,6 +9,13 @@ import authRoutes from './routes/authRoutes';
 import ocorrenciasRouter from './routes/ocorrencias';
 import prestadoresRouter from './routes/prestadores';
 import clientesRouter from './routes/clientes';
+import path from 'path';
+
+console.log('[APP] DATABASE_URL:', process.env.DATABASE_URL ? 'definida' : 'NÃO definida');
+if (process.env.DATABASE_URL) {
+  const url = process.env.DATABASE_URL.replace(/\/\/.*:.*@/, '//USER:***@');
+  console.log('[APP] DATABASE_URL (parcial):', url);
+}
 
 console.log('Iniciando configuração do Express...');
 
@@ -19,7 +26,15 @@ app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 
 // CORS configurado
 const corsOptions = {
-  origin: ['https://painelsegtrack.com.br'],
+  origin: [
+    'https://painelsegtrack.com.br', 
+    'http://localhost:3000', 
+    'http://localhost:3001',
+    'https://segtrack-frontend.railway.app',
+    'https://segtrack-backend.railway.app',
+    /\.railway\.app$/, // Permite qualquer subdomínio do Railway
+    /\.vercel\.app$/   // Permite domínios Vercel também
+  ],
   credentials: true,
 };
 
@@ -28,6 +43,9 @@ app.use(cors(corsOptions));
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
+
+// Adicionado: Servir arquivos estáticos da pasta uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Middleware de log para todas as requisições
 app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -69,17 +87,6 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 app.use(limiter);
-
-// Corrigir endpoint /api/health para testar conexão com o banco
-app.get('/api/health', async (req, res) => {
-  try {
-    await testConnection();
-    res.status(200).json({ status: 'ok' });
-  } catch (err) {
-    console.error('Erro no health check:', err);
-    res.status(500).json({ status: 'erro', detalhes: (err instanceof Error ? err.message : String(err)) });
-  }
-});
 
 // Middleware fallback 404
 app.use((req, res) => {

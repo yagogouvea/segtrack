@@ -1,6 +1,6 @@
 import express, { Router, Request, Response } from 'express';
 import axios from 'axios';
-import { ensurePrisma } from '@/lib/prisma';
+import { ensurePrisma } from '../lib/prisma';
 
 interface ApiBrasilResponse {
   response: {
@@ -30,7 +30,8 @@ router.get('/:placa', async (req: Request, res: Response) => {
   }
 
   try {
-    let veiculo = await ensurePrisma().veiculo.findFirst({
+    const db = await ensurePrisma();
+    let veiculo = await db.veiculo.findFirst({
       where: { placa: placaFormatada },
     });
 
@@ -54,7 +55,7 @@ router.get('/:placa', async (req: Request, res: Response) => {
         return res.status(404).json({ erro: 'Veículo não encontrado' });
       }
 
-      veiculo = await ensurePrisma().veiculo.create({
+      veiculo = await db.veiculo.create({
         data: {
           placa: placaFormatada,
           modelo: dados.modelo || '',
@@ -73,7 +74,7 @@ router.get('/:placa', async (req: Request, res: Response) => {
 
 router.get('/', async (req, res) => {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const veiculos = await db.veiculo.findMany();
     res.json(veiculos);
   } catch (error) {

@@ -11,7 +11,7 @@ router.get('/', (req, res) => controller.list(req, res));
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)
 router.get('/popup', async (_req: Request, res: Response) => {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const prestadores = await db.prestador.findMany({
       select: {
         id: true,
@@ -33,7 +33,7 @@ router.get('/buscar-por-nome/:nome', async (req: Request, res: Response) => {
   const { nome } = req.params;
 
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const prestador = await db.prestador.findFirst({
       where: {
         nome: {
@@ -74,7 +74,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     // Verificar se já existe um prestador com este CPF
     const existente = await db.prestador.findFirst({ 
       where: { cpf: cpf.replace(/\D/g, '') } 
@@ -184,7 +184,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   } = req.body;
 
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     // Converter valores numéricos
     const valorAcionamentoFloat = valor_acionamento ? parseFloat(valor_acionamento.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
     const franquiaKmFloat = franquia_km ? parseFloat(String(franquia_km)) : 0;
@@ -284,7 +284,7 @@ router.put('/:id/aprovar', async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const prestador = await db.prestador.findUnique({
       where: { id: Number(id) }
     });
@@ -316,7 +316,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     // Deletar todos os registros relacionados antes de excluir o prestador
     await Promise.all([
       db.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),

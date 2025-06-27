@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_middleware_1 = require("../infrastructure/middleware/auth.middleware");
-const ocorrencia_controller_1 = require("@/controllers/ocorrencia.controller");
+const ocorrencia_controller_1 = require("../src/controllers/ocorrencia.controller");
 const upload_1 = require("../config/upload");
 const router = (0, express_1.Router)();
 const controller = new ocorrencia_controller_1.OcorrenciaController();

@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const prisma_1 = require("../lib/prisma");
 async function fixPermissionsColumn() {
-    const db = (0, prisma_1.ensurePrisma)();
+    const db = await (0, prisma_1.ensurePrisma)();
     try {
         // Primeiro, atualiza os registros existentes que têm NULL para '[]'
         await db.$executeRaw `UPDATE User SET permissions = '[]' WHERE permissions IS NULL`;

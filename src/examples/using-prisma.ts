@@ -16,7 +16,7 @@ import { Prisma } from '@prisma/client';
 export async function exemploListarUsuarios() {
   try {
     // Obter uma instância garantida do prisma
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     
     // Usar normalmente
     const users = await db.user.findMany({
@@ -36,7 +36,7 @@ export async function exemploListarUsuarios() {
 
 export async function exemploCriarUsuario(data: { email: string; name: string; passwordHash: string }) {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     
     const userData: Prisma.UserCreateInput = {
       email: data.email,
@@ -66,7 +66,7 @@ export async function exemploCriarUsuario(data: { email: string; name: string; p
 
 export async function exemploTransacao() {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     
     // Exemplo de transação
     const result = await db.$transaction(async (tx) => {
@@ -109,7 +109,7 @@ export async function exemploTransacao() {
 
 export async function exemploQueryRaw() {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     
     // Exemplo de query raw com tipos
     const result = await db.$queryRaw<Array<{ id: number; name: string; total_ocorrencias: number }>>`
