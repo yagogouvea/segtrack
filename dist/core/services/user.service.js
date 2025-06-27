@@ -8,7 +8,7 @@ const prisma_1 = require("../../lib/prisma");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 class UserService {
     async list() {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         return db.user.findMany({
             select: {
                 id: true,
@@ -23,7 +23,7 @@ class UserService {
         });
     }
     async findById(id) {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         return db.user.findUnique({
             where: { id },
             select: {
@@ -39,13 +39,13 @@ class UserService {
         });
     }
     async findByEmail(email) {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         return db.user.findUnique({
             where: { email }
         });
     }
     async create(data) {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const hashedPassword = await bcrypt_1.default.hash(data.password, 10);
         return db.user.create({
             data: {
@@ -69,7 +69,7 @@ class UserService {
         });
     }
     async update(id, data) {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         return db.user.update({
             where: { id },
             data: {
@@ -92,13 +92,13 @@ class UserService {
         });
     }
     async delete(id) {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         return db.user.delete({
             where: { id }
         });
     }
     async changePassword(id, currentPassword, newPassword) {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const user = await db.user.findUnique({
             where: { id },
             select: { passwordHash: true }
@@ -117,7 +117,7 @@ class UserService {
         });
     }
     async updatePassword(id, newPassword) {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const hashedPassword = await bcrypt_1.default.hash(newPassword, 10);
         return db.user.update({
             where: { id },

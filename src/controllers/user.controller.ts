@@ -272,7 +272,7 @@ export class UserController {
   async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.params.id;
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
 
       const user = await db.user.findUnique({
         where: { id: userId },
@@ -303,7 +303,7 @@ export class UserController {
   async updateUser(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.params.id;
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
 
       const updateData: Prisma.UserUpdateInput = {
         ...req.body,
@@ -330,7 +330,7 @@ export class UserController {
         return;
       }
 
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const user = await db.user.findUnique({
         where: { id: userId },
         select: {
@@ -365,7 +365,7 @@ export class UserController {
 
   async getAllUsers(_req: Request, res: Response): Promise<void> {
     try {
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const users = await db.user.findMany({
         select: {
           id: true,
@@ -397,7 +397,7 @@ export class UserController {
         return;
       }
 
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const userData: Prisma.UserCreateInput = {
         email,
         name,
@@ -434,7 +434,7 @@ export class UserController {
         return;
       }
 
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
       const user = await db.user.findUnique({
         where: { id: userId }
       });
@@ -464,7 +464,7 @@ export class UserController {
   async deleteUser(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.params.id;
-      const db = ensurePrisma();
+      const db = await ensurePrisma();
 
       await db.user.delete({
         where: { id: userId }

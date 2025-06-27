@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
-const prisma_1 = require("@/lib/prisma");
+const prisma_1 = require("../src/lib/prisma");
 const router = express_1.default.Router();
 router.get('/:placa', async (req, res) => {
     var _a, _b;
@@ -19,7 +19,7 @@ router.get('/:placa', async (req, res) => {
         return res.status(500).json({ erro: 'Tokens da API Brasil não configurados' });
     }
     try {
-        let veiculo = await (0, prisma_1.ensurePrisma)().veiculo.findFirst({
+        let veiculo = await (await (0, prisma_1.ensurePrisma)()).veiculo.findFirst({
             where: { placa: placaFormatada },
         });
         if (!veiculo) {
@@ -35,7 +35,7 @@ router.get('/:placa', async (req, res) => {
             if (!(dados === null || dados === void 0 ? void 0 : dados.modelo)) {
                 return res.status(404).json({ erro: 'Veículo não encontrado' });
             }
-            veiculo = await (0, prisma_1.ensurePrisma)().veiculo.create({
+            veiculo = await (await (0, prisma_1.ensurePrisma)()).veiculo.create({
                 data: {
                     placa: placaFormatada,
                     modelo: dados.modelo || '',
@@ -53,7 +53,7 @@ router.get('/:placa', async (req, res) => {
 });
 router.get('/', async (req, res) => {
     try {
-        const db = (0, prisma_1.ensurePrisma)();
+        const db = await (0, prisma_1.ensurePrisma)();
         const veiculos = await db.veiculo.findMany();
         res.json(veiculos);
     }

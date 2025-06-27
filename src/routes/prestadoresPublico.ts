@@ -38,7 +38,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
   }
 
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     // Verificar se já existe um prestador com este CPF
     const existente = await db.prestador.findFirst({
       where: { cpf: cpf.replace(/\D/g, '') }
@@ -123,7 +123,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
 // Listar prestadores públicos
 router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const prestadores = await db.prestador.findMany({
       where: { aprovado: true },
       select: {
@@ -156,7 +156,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const prestador = await db.prestador.findUnique({
       where: { id: Number(id) },
       select: {

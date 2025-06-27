@@ -11,7 +11,7 @@ export const deletarOcorrencia = async (req: Request, res: Response): Promise<vo
   }
 
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     // Primeiro, buscar a ocorrência para obter as fotos
     const ocorrencia = await db.ocorrencia.findUnique({
       where: { id: Number(id) },

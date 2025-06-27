@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const auth_middleware_1 = require("@/infrastructure/middleware/auth.middleware");
+const auth_middleware_1 = require("../../../src/infrastructure/middleware/auth.middleware");
 const prestadores_routes_1 = __importDefault(require("./prestadores.routes"));
 const clientes_routes_1 = __importDefault(require("./clientes.routes"));
 const veiculos_routes_1 = __importDefault(require("./veiculos.routes"));

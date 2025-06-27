@@ -6,7 +6,7 @@ console.log('🔄 Iniciando configuração do Prisma...');
 // Função para testar a conexão
 export async function testConnection(): Promise<boolean> {
   try {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     await db.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {

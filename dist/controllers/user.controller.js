@@ -15,13 +15,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserController = void 0;
-const prisma_1 = require("@/lib/prisma");
+const prisma_1 = require("../src/lib/prisma");
 const auth_1 = require("@/utils/auth");
-const validation_1 = require("@/utils/validation");
-const logger_1 = __importDefault(require("@/infrastructure/logger"));
+const validation_1 = require("../src/utils/validation");
+const logger_1 = __importDefault(require("../src/infrastructure/logger"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const client_1 = require("@prisma/client");
-const AppError_1 = require("@/shared/errors/AppError");
+const AppError_1 = require("../src/shared/errors/AppError");
 class UserController {
     async getCurrentUser(req, res) {
         try {
@@ -243,7 +243,7 @@ class UserController {
     async getUserById(req, res) {
         try {
             const userId = req.params.id;
-            const db = (0, prisma_1.ensurePrisma)();
+            const db = await (0, prisma_1.ensurePrisma)();
             const user = await db.user.findUnique({
                 where: { id: userId },
                 select: {
@@ -271,7 +271,7 @@ class UserController {
     async updateUser(req, res) {
         try {
             const userId = req.params.id;
-            const db = (0, prisma_1.ensurePrisma)();
+            const db = await (0, prisma_1.ensurePrisma)();
             const updateData = Object.assign(Object.assign({}, req.body), { updatedAt: new Date() });
             const user = await db.user.update({
                 where: { id: userId },
@@ -292,7 +292,7 @@ class UserController {
                 res.status(401).json({ error: 'Usuário não autenticado' });
                 return;
             }
-            const db = (0, prisma_1.ensurePrisma)();
+            const db = await (0, prisma_1.ensurePrisma)();
             const user = await db.user.findUnique({
                 where: { id: userId },
                 select: {
@@ -324,7 +324,7 @@ class UserController {
     }
     async getAllUsers(_req, res) {
         try {
-            const db = (0, prisma_1.ensurePrisma)();
+            const db = await (0, prisma_1.ensurePrisma)();
             const users = await db.user.findMany({
                 select: {
                     id: true,
@@ -353,7 +353,7 @@ class UserController {
                 res.status(400).json({ error: validationError });
                 return;
             }
-            const db = (0, prisma_1.ensurePrisma)();
+            const db = await (0, prisma_1.ensurePrisma)();
             const userData = {
                 email,
                 name,
@@ -387,7 +387,7 @@ class UserController {
                 res.status(400).json({ error: 'Nova senha deve ter pelo menos 6 caracteres' });
                 return;
             }
-            const db = (0, prisma_1.ensurePrisma)();
+            const db = await (0, prisma_1.ensurePrisma)();
             const user = await db.user.findUnique({
                 where: { id: userId }
             });
@@ -413,7 +413,7 @@ class UserController {
     async deleteUser(req, res) {
         try {
             const userId = req.params.id;
-            const db = (0, prisma_1.ensurePrisma)();
+            const db = await (0, prisma_1.ensurePrisma)();
             await db.user.delete({
                 where: { id: userId }
             });

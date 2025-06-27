@@ -20,7 +20,7 @@ interface LoginResponse {
 
 export class AuthService {
   async login(data: LoginData): Promise<LoginResponse> {
-    const db = ensurePrisma();
+    const db = await ensurePrisma();
     const user = await db.user.findUnique({
       where: { email: data.email }
     });
