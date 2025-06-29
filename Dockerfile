@@ -1,11 +1,11 @@
 # Use Node.js LTS version
-FROM node:18-alpine
+FROM node:18-slim
 
 # Create app directory
 WORKDIR /usr/src/app
 
 # Instale dependências do sistema para Prisma
-RUN apk add --no-cache openssl1.1-compat
+RUN apt-get update && apt-get install -y openssl
 
 # Install app dependencies
 COPY package*.json ./
