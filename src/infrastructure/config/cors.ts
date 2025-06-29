@@ -2,7 +2,8 @@ import { CorsOptions } from 'cors';
 
 const allowedOrigins = [
   'https://painelsegtrack.com.br',
-  'https://api.painelsegtrack.com.br'
+  'https://api.painelsegtrack.com.br',
+  'https://segtrack-frontend-production-fe95.up.railway.app'
 ];
 
 const corsOptions: CorsOptions = {
