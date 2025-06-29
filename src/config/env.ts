@@ -11,7 +11,6 @@ const envSchema = z.object({
   JWT_SECRET: z.string(),
   BASE_URL: z.string(),
   FRONTEND_URL: z.string(),
-  AWS_S3_BUCKET: z.string(),
 });
 
 const _env = envSchema.safeParse(process.env);
