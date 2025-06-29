@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import healthRouter from './routes/health';
 import rateLimit from 'express-rate-limit';
 import { testConnection } from './lib/prisma';
 import authRoutes from './routes/authRoutes';
@@ -67,7 +66,6 @@ router.get('/health', (_req, res) => {
 // router.use('/ocorrencias', ocorrenciasRoutes);
 // router.use('/veiculos', veiculosRoutes);
 
-app.use('/api', healthRouter);
 app.use('/api/auth', authRoutes);
 app.use('/api/ocorrencias', ocorrenciasRouter);
 app.use('/api/prestadores', prestadoresRouter);
@@ -87,7 +85,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Corrigir endpoint /api/health para testar conexão com o banco
+// Manter apenas a rota direta /api/health
 app.get('/api/health', async (req, res) => {
   try {
     await testConnection();
