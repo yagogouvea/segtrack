@@ -4,6 +4,9 @@ FROM node:18-alpine
 # Create app directory
 WORKDIR /usr/src/app
 
+# Instale dependências do sistema para Prisma
+RUN apk add --no-cache openssl1.1-compat
+
 # Install app dependencies
 COPY package*.json ./
 RUN npm ci
