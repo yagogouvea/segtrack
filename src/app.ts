@@ -53,15 +53,6 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 console.log('Configurando rotas básicas...');
 
-// Router global
-import { Router } from 'express';
-const router = Router();
-
-// Health check endpoint
-router.get('/health', (_req, res) => {
-  res.status(200).json({ message: 'API SEGTRACK funcionando corretamente!' });
-});
-
 // Outras rotas podem ser adicionadas aqui, ex:
 // router.use('/ocorrencias', ocorrenciasRoutes);
 // router.use('/veiculos', veiculosRoutes);
