@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes';
 import ocorrenciasRouter from './routes/ocorrencias';
 import prestadoresRouter from './routes/prestadores';
 import clientesRouter from './routes/clientes';
+import corsOptions from './infrastructure/config/cors';
 
 console.log('Iniciando configuração do Express...');
 
@@ -18,11 +19,6 @@ const app = express();
 app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 
 // CORS configurado
-const corsOptions = {
-  origin: ['https://painelsegtrack.com.br'],
-  credentials: true,
-};
-
 app.use(cors(corsOptions));
 
 app.use(helmet());
