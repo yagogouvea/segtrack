@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import app from '@/app';
 
-const port = parseInt(process.env.PORT || '3001', 10);
+const port = parseInt(process.env.PORT || '3000', 10);
 const host = process.env.HOST || '0.0.0.0';
 
 process.on('uncaughtException', (err) => {
