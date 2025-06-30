@@ -16,9 +16,7 @@ const app = express();
 // Configuração de segurança
 app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 
-const allowedOrigins = [
-  'https://segtrack-frontend-production-fe95.up.railway.app',
-];
+const allowedOrigins = ['https://segtrack-frontend-production-fe95.up.railway.app'];
 
 app.use(cors({
   origin: function (origin, callback) {
