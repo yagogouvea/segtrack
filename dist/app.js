@@ -7,23 +7,36 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
-const health_1 = __importDefault(require("./routes/health"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const prisma_1 = require("./lib/prisma");
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const ocorrencias_1 = __importDefault(require("./routes/ocorrencias"));
 const prestadores_1 = __importDefault(require("./routes/prestadores"));
 const clientes_1 = __importDefault(require("./routes/clientes"));
+const cors_2 = __importDefault(require("./infrastructure/config/cors"));
 console.log('Iniciando configuração do Express...');
 const app = (0, express_1.default)();
 // Configuração de segurança
 app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 // CORS configurado
-const corsOptions = {
-    origin: ['https://painelsegtrack.com.br'],
-    credentials: true,
-};
-app.use((0, cors_1.default)(corsOptions));
+app.use((0, cors_1.default)(cors_2.default));
+// Middleware personalizado para forçar headers de CORS corretos
+app.use((req, res, next) => {
+    const origin = req.get('origin');
+    console.log('🔍 Middleware CORS - Origin:', origin);
+    // Permitir todas as origens temporariamente
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    // Responder imediatamente para requisições OPTIONS
+    if (req.method === 'OPTIONS') {
+        console.log('🔄 CORS - Respondendo OPTIONS preflight');
+        res.status(200).end();
+        return;
+    }
+    next();
+});
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use(express_1.default.json());
@@ -33,17 +46,9 @@ app.use((req, _res, next) => {
     next();
 });
 console.log('Configurando rotas básicas...');
-// Router global
-const express_2 = require("express");
-const router = (0, express_2.Router)();
-// Health check endpoint
-router.get('/health', (_req, res) => {
-    res.status(200).json({ message: 'API SEGTRACK funcionando corretamente!' });
-});
 // Outras rotas podem ser adicionadas aqui, ex:
 // router.use('/ocorrencias', ocorrenciasRoutes);
 // router.use('/veiculos', veiculosRoutes);
-app.use('/api', health_1.default);
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/ocorrencias', ocorrencias_1.default);
 app.use('/api/prestadores', prestadores_1.default);
@@ -60,7 +65,7 @@ const limiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
 });
 app.use(limiter);
-// Corrigir endpoint /api/health para testar conexão com o banco
+// Manter apenas a rota direta /api/health
 app.get('/api/health', async (req, res) => {
     try {
         await (0, prisma_1.testConnection)();

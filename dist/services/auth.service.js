@@ -9,7 +9,10 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 class AuthService {
     constructor() {
-        this.JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+        this.JWT_SECRET = process.env.JWT_SECRET;
+        if (!this.JWT_SECRET) {
+            throw new Error('JWT_SECRET não está definida. Configure a variável de ambiente JWT_SECRET.');
+        }
     }
     async login(email, password) {
         const user = await prisma_1.prisma.user.findUnique({
@@ -34,13 +37,16 @@ class AuthService {
         if (!isValidPassword) {
             throw new Error('Senha inválida');
         }
+        const secret = process.env.JWT_SECRET;
+        if (!secret)
+            throw new Error('JWT_SECRET não definido');
         const token = jsonwebtoken_1.default.sign({
             id: user.id,
             name: user.name,
             email: user.email,
             role: user.role,
             permissions: user.permissions
-        }, this.JWT_SECRET, { expiresIn: '24h' });
+        }, secret, { expiresIn: '24h' });
         return {
             token,
             user: {
