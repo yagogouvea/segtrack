@@ -13,30 +13,22 @@ const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const ocorrencias_1 = __importDefault(require("./routes/ocorrencias"));
 const prestadores_1 = __importDefault(require("./routes/prestadores"));
 const clientes_1 = __importDefault(require("./routes/clientes"));
-const cors_2 = __importDefault(require("./infrastructure/config/cors"));
 console.log('Iniciando configuração do Express...');
 const app = (0, express_1.default)();
 // Configuração de segurança
 app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
-// CORS configurado
-app.use((0, cors_1.default)(cors_2.default));
-// Middleware personalizado para forçar headers de CORS corretos
-app.use((req, res, next) => {
-    const origin = req.get('origin');
-    console.log('🔍 Middleware CORS - Origin:', origin);
-    // Permitir todas as origens temporariamente
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    // Responder imediatamente para requisições OPTIONS
-    if (req.method === 'OPTIONS') {
-        console.log('🔄 CORS - Respondendo OPTIONS preflight');
-        res.status(200).end();
-        return;
-    }
-    next();
-});
+const allowedOrigins = ['https://segtrack-frontend-production-fe95.up.railway.app'];
+app.use((0, cors_1.default)({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+}));
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use(express_1.default.json());

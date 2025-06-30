@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const app_1 = __importDefault(require("./app"));
+const prisma_1 = require("./lib/prisma");
 const port = parseInt(process.env.PORT || '3000', 10);
 const host = process.env.HOST || '0.0.0.0';
 process.on('uncaughtException', (err) => {
@@ -24,7 +25,7 @@ const startServer = async () => {
         console.log(`Porta: ${port}`);
         console.log(`Host: ${host}`);
         console.log('===================================\n');
-        const server = app_1.default.listen(port, host, () => {
+        const server = app_1.default.listen(port, host, async () => {
             console.log('\n=== Servidor Segtrack Iniciado ===');
             console.log(`Endereço: http://${host}:${port}`);
             console.log(`Ambiente: ${process.env.NODE_ENV || 'production'}`);
@@ -36,6 +37,14 @@ const startServer = async () => {
             console.log(`Heap Usado: ${Math.round(used.heapUsed / 1024 / 1024)} MB`);
             console.log(`Externo: ${Math.round(used.external / 1024 / 1024)} MB`);
             console.log(`Buffers: ${Math.round(used.arrayBuffers / 1024 / 1024)} MB\n`);
+            // Testar conexão com o banco de dados via Prisma
+            try {
+                await (0, prisma_1.testConnection)();
+                console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
+            }
+            catch (error) {
+                console.error('❌ Falha ao conectar com o banco de dados:', error);
+            }
         });
         // Configurar timeouts do servidor
         server.keepAliveTimeout = 620 * 1000; // 620 segundos
