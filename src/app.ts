@@ -8,7 +8,6 @@ import authRoutes from './routes/authRoutes';
 import ocorrenciasRouter from './routes/ocorrencias';
 import prestadoresRouter from './routes/prestadores';
 import clientesRouter from './routes/clientes';
-import corsOptions from './infrastructure/config/cors';
 
 console.log('Iniciando configuração do Express...');
 
@@ -17,29 +16,11 @@ const app = express();
 // Configuração de segurança
 app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 
-// CORS configurado
-app.use(cors(corsOptions));
-
-// Middleware personalizado para forçar headers de CORS corretos
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const origin = req.get('origin');
-  console.log('🔍 Middleware CORS - Origin:', origin);
-  
-  // Permitir todas as origens temporariamente
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Responder imediatamente para requisições OPTIONS
-  if (req.method === 'OPTIONS') {
-    console.log('🔄 CORS - Respondendo OPTIONS preflight');
-    res.status(200).end();
-    return;
-  }
-  
-  next();
-});
+// CORS configurado usando variável de ambiente
+app.use(cors({
+  origin: process.env.CORS_ORIGIN,
+  credentials: true,
+}));
 
 app.use(helmet());
 app.use(compression());
