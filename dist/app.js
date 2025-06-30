@@ -45,6 +45,10 @@ app.use('/api/auth', authRoutes_1.default);
 app.use('/api/ocorrencias', ocorrencias_1.default);
 app.use('/api/prestadores', prestadores_1.default);
 app.use('/api/clientes', clientes_1.default);
+// Rota básica para /api
+app.get('/api', (req, res) => {
+    res.status(200).json({ message: 'API Segtrack online!' });
+});
 // Rota básica para teste
 app.get('/', (_req, res) => {
     res.json({ message: 'API Segtrack - Funcionando!' });
