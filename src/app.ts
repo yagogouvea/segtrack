@@ -8,6 +8,7 @@ import authRoutes from './routes/authRoutes';
 import ocorrenciasRouter from './routes/ocorrencias';
 import prestadoresRouter from './routes/prestadores';
 import clientesRouter from './routes/clientes';
+import userRoutes from './routes/userRoutes';
 
 console.log('Iniciando configuração do Express...');
 
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ocorrencias', ocorrenciasRouter);
 app.use('/api/prestadores', prestadoresRouter);
 app.use('/api/clientes', clientesRouter);
+app.use('/api/users', userRoutes);
 
 // Rota básica para /api
 app.get('/api', (req, res) => {

@@ -13,6 +13,7 @@ const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const ocorrencias_1 = __importDefault(require("./routes/ocorrencias"));
 const prestadores_1 = __importDefault(require("./routes/prestadores"));
 const clientes_1 = __importDefault(require("./routes/clientes"));
+const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 console.log('Iniciando configuração do Express...');
 const app = (0, express_1.default)();
 // Configuração de segurança
@@ -45,6 +46,7 @@ app.use('/api/auth', authRoutes_1.default);
 app.use('/api/ocorrencias', ocorrencias_1.default);
 app.use('/api/prestadores', prestadores_1.default);
 app.use('/api/clientes', clientes_1.default);
+app.use('/api/users', userRoutes_1.default);
 // Rota básica para /api
 app.get('/api', (req, res) => {
     res.status(200).json({ message: 'API Segtrack online!' });
