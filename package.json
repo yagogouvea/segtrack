@@ -15,7 +15,8 @@
     "prod:pm2": "pm2 start ecosystem.config.js --env production",
     "prod:stop": "pm2 stop ecosystem.config.js",
     "swagger:generate": "tsoa spec-and-routes",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "fix:admin-permissions": "ts-node scripts/fixAdminPermissions.ts"
   },
   "engines": {
     "node": ">=18.0.0"
