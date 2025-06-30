@@ -30,4 +30,4 @@ EXPOSE 8080
 CMD [ "npm", "start" ]
 
 # Debug: listar variáveis de ambiente no start (apenas para debug)
-CMD printenv
+# CMD printenv
