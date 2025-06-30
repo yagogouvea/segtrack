@@ -6,7 +6,7 @@ const adminEmails = ['segtrack@admin.com', 'admin@segtrack.com'];
 
 const allPermissions = [
   'create:user','read:user','update:user','delete:user',
-  'create:client','read:client','update:client','delete:client',
+  'create:cliente','read:cliente','update:cliente','delete:cliente',
   'create:ocorrencia','read:ocorrencia','update:ocorrencia','delete:ocorrencia',
   'create:prestador','read:prestador','update:prestador','delete:prestador',
   'create:relatorio','read:relatorio','update:relatorio','delete:relatorio',

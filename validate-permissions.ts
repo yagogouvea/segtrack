@@ -82,7 +82,7 @@ async function validatePermissions() {
       const testPermissions = [
         'create:user',
         'read:ocorrencia', 
-        'update:client',
+        'update:cliente',
         'delete:prestador'
       ];
       

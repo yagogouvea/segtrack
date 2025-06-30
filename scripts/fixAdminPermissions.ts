@@ -11,11 +11,11 @@ const adminPermissions = [
   'update:user',
   'delete:user',
   
-  // Permissões para client
-  'create:client',
-  'read:client',
-  'update:client', 
-  'delete:client',
+  // Permissões para cliente
+  'create:cliente',
+  'read:cliente',
+  'update:cliente', 
+  'delete:cliente',
   
   // Permissões para ocorrencia
   'create:ocorrencia',
