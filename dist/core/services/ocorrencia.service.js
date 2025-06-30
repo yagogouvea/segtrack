@@ -13,8 +13,8 @@ var __rest = (this && this.__rest) || function (s, e) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OcorrenciaService = void 0;
 const client_1 = require("@prisma/client");
-const AppError_1 = require("../../src/shared/errors/AppError");
-const prisma_1 = require("../../src/lib/prisma");
+const AppError_1 = require("../../shared/errors/AppError");
+const prisma_1 = require("../../lib/prisma");
 class OcorrenciaService {
     async list(filters = {}) {
         try {

@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
-const prisma_1 = require("../src/lib/prisma");
+const prisma_1 = require("../lib/prisma");
 const router = express_1.default.Router();
 router.get('/:placa', async (req, res) => {
     var _a, _b;

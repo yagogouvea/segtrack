@@ -7,8 +7,8 @@ exports.exemploListarUsuarios = exemploListarUsuarios;
 exports.exemploCriarUsuario = exemploCriarUsuario;
 exports.exemploTransacao = exemploTransacao;
 exports.exemploQueryRaw = exemploQueryRaw;
-const prisma_1 = require("../src/lib/prisma");
-const logger_1 = __importDefault(require("../src/infrastructure/logger"));
+const prisma_1 = require("../lib/prisma");
+const logger_1 = __importDefault(require("../infrastructure/logger"));
 /**
  * Este arquivo serve como exemplo de como usar o prisma de forma segura
  * após a atualização que adiciona verificação de null.
