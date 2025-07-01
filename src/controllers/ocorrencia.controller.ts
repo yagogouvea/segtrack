@@ -142,6 +142,9 @@ export class OcorrenciaController {
         throw new AppError('Nenhuma foto foi enviada', 400);
       }
 
+      // Log do caminho dos arquivos salvos
+      files.forEach(file => console.log('Arquivo salvo (ocorrencia.controller.ts):', file.path));
+
       const urls = files.map(file => file.path);
       const ocorrencia = await this.service.addFotos(Number(id), urls);
       return res.json(ocorrencia);

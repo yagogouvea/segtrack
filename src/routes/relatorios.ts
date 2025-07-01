@@ -24,6 +24,9 @@ router.post('/upload', upload.single('arquivo'), async (req: Request, res: Respo
       return;
     }
 
+    // Log do caminho do arquivo salvo
+    console.log('Arquivo salvo (relatorios.ts):', req.file.path);
+
     const { filename } = req.file;
     const { ocorrenciaId, cliente, tipo, dataAcionamento } = req.body;
 

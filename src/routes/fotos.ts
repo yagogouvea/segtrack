@@ -62,6 +62,9 @@ router.post('/', upload.single('foto'), async (req: Request, res: Response): Pro
     return;
   }
 
+  // Log do caminho do arquivo salvo
+  console.log('Arquivo salvo (fotos.ts):', arquivo.path);
+
   try {
     // Verificar se a ocorrência existe
     const ocorrencia = await prisma.ocorrencia.findUnique({
