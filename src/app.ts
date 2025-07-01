@@ -9,6 +9,7 @@ import ocorrenciasRouter from './routes/ocorrencias';
 import prestadoresRouter from './routes/prestadores';
 import clientesRouter from './routes/clientes';
 import userRoutes from './routes/userRoutes';
+import cnpjRouter from './routes/cnpj';
 
 console.log('Iniciando configuração do Express...');
 
@@ -51,6 +52,7 @@ app.use('/api/ocorrencias', ocorrenciasRouter);
 app.use('/api/prestadores', prestadoresRouter);
 app.use('/api/clientes', clientesRouter);
 app.use('/api/users', userRoutes);
+app.use('/api/cnpj', cnpjRouter);
 
 // Rota básica para /api
 app.get('/api', (req, res) => {
