@@ -100,8 +100,8 @@ router.get('/:cnpj', async (req: Request, res: Response) => {
         email: dados.email || ''
       }
     };
-
-    console.log('📋 Resposta formatada:', formattedResponse);
+    // Log para debug
+    console.log('📋 Resposta formatada:', JSON.stringify(formattedResponse, null, 2));
     return res.json(formattedResponse);
 
   } catch (err: any) {
