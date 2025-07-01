@@ -48,36 +48,82 @@ router.get('/:cnpj', async (req: Request, res: Response) => {
   }
 
   try {
-    console.log('🔍 Consultando CNPJ na API Brasil:', cnpjLimpo);
+    console.log('🔍 Consultando CNPJ:', cnpjLimpo);
     
-    const response = await axios.post(
-      'https://gateway.apibrasil.io/api/v2/companies/cnpj',
-      { cnpj: cnpjLimpo },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'DeviceToken': process.env.API_BRASIL_DEVICE,
-          'Authorization': `Bearer ${process.env.API_BRASIL_BEARER}`
+    // Tentar primeiro com API Brasil se os tokens estiverem configurados
+    if (process.env.API_BRASIL_DEVICE && process.env.API_BRASIL_BEARER) {
+      try {
+        const response = await axios.post(
+          'https://gateway.apibrasil.io/api/v2/companies/cnpj',
+          { cnpj: cnpjLimpo },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'DeviceToken': process.env.API_BRASIL_DEVICE,
+              'Authorization': `Bearer ${process.env.API_BRASIL_BEARER}`
+            }
+          }
+        );
+
+        const dados = response.data?.response;
+        console.log('✅ Dados recebidos da API Brasil:', dados);
+
+        if (dados?.nome) {
+          const formattedResponse: CNPJResponse = {
+            company: {
+              name: dados.nome || '',
+              fantasy_name: dados.nome_fantasia,
+              legal_nature: dados.natureza_juridica,
+              cnae_main: dados.cnae_principal,
+              situation: dados.situacao,
+              registration_date: dados.data_abertura
+            },
+            address: {
+              street: dados.logradouro || '',
+              number: dados.numero || '',
+              complement: dados.complemento,
+              district: dados.bairro || '',
+              city: dados.municipio || '',
+              state: dados.uf || '',
+              zip: dados.cep
+            },
+            contact: {
+              phone: dados.telefone,
+              email: dados.email
+            }
+          };
+
+          return res.json(formattedResponse);
         }
+      } catch (apiError: any) {
+        console.log('⚠️ Erro na API Brasil, tentando API pública:', apiError.message);
+      }
+    }
+
+    // Fallback para API pública gratuita
+    const publicResponse = await axios.get(
+      `https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`,
+      {
+        timeout: 10000
       }
     );
 
-    const dados = response.data?.response;
-    console.log('✅ Dados recebidos da API Brasil:', dados);
+    const dados = publicResponse.data;
+    console.log('✅ Dados recebidos da API pública:', dados);
 
-    if (!dados?.nome) {
+    if (!dados?.razao_social) {
       return res.status(404).json({ error: 'CNPJ não encontrado' });
     }
 
     // Formatar resposta conforme interface CNPJResponse
     const formattedResponse: CNPJResponse = {
       company: {
-        name: dados.nome || '',
+        name: dados.razao_social || '',
         fantasy_name: dados.nome_fantasia,
         legal_nature: dados.natureza_juridica,
         cnae_main: dados.cnae_principal,
-        situation: dados.situacao,
-        registration_date: dados.data_abertura
+        situation: dados.descricao_situacao_cadastral,
+        registration_date: dados.data_inicio_atividade
       },
       address: {
         street: dados.logradouro || '',
@@ -89,7 +135,7 @@ router.get('/:cnpj', async (req: Request, res: Response) => {
         zip: dados.cep
       },
       contact: {
-        phone: dados.telefone,
+        phone: dados.ddd_telefone_1 ? `${dados.ddd_telefone_1}${dados.telefone_1}` : undefined,
         email: dados.email
       }
     };
