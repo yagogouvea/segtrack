@@ -13,6 +13,7 @@ import userRoutes from './routes/userRoutes';
 import cnpjRouter from './routes/cnpj';
 import veiculosRouter from './routes/veiculos';
 import fotosRouter from './routes/fotos';
+import fs from 'fs';
 
 console.log('Iniciando configuração do Express...');
 
@@ -124,6 +125,15 @@ app.get('/api/health', async (req, res) => {
 // Endpoint temporário para debug do caminho da pasta uploads
 app.get('/api/debug/uploads-path', (req, res) => {
   res.json({ uploadsPath: path.join(__dirname, '../uploads') });
+});
+
+// Endpoint temporário para listar arquivos da pasta uploads
+app.get('/api/debug/list-uploads', (req, res) => {
+  const uploadsPath = path.join(__dirname, '../uploads');
+  fs.readdir(uploadsPath, (err, files) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ files });
+  });
 });
 
 // Middleware fallback 404
