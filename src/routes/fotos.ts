@@ -49,7 +49,7 @@ router.use(authenticateToken);
 
 // 🔹 Upload de novas fotos
 router.post('/', upload.single('foto'), async (req: Request, res: Response): Promise<void> => {
-  const { ocorrenciaId, legenda } = req.body;
+  const { ocorrenciaId, legenda, cropX, cropY, zoom, cropArea } = req.body;
   const arquivo = req.file as Express.Multer.File;
 
   if (!ocorrenciaId) {
@@ -77,12 +77,27 @@ router.post('/', upload.single('foto'), async (req: Request, res: Response): Pro
     // Garantir que a URL comece com /uploads/
     const url = nomeArquivo.startsWith('uploads/') ? `/${nomeArquivo}` : `/uploads/${nomeArquivo}`;
 
-    const fotoCriada = await prisma.foto.create({
-      data: {
-        url,
-        legenda: legenda || '',
-        ocorrenciaId: Number(ocorrenciaId)
+    // Preparar dados para salvar
+    const fotoData: any = {
+      url,
+      legenda: legenda || '',
+      ocorrenciaId: Number(ocorrenciaId)
+    };
+
+    // Adicionar campos de crop e zoom se fornecidos
+    if (cropX !== undefined) fotoData.cropX = parseFloat(cropX);
+    if (cropY !== undefined) fotoData.cropY = parseFloat(cropY);
+    if (zoom !== undefined) fotoData.zoom = parseFloat(zoom);
+    if (cropArea !== undefined) {
+      try {
+        fotoData.cropArea = typeof cropArea === 'string' ? JSON.parse(cropArea) : cropArea;
+      } catch (e) {
+        console.warn('Erro ao parsear cropArea:', e);
       }
+    }
+
+    const fotoCriada = await prisma.foto.create({
+      data: fotoData
     });
 
     // Log para debug
@@ -103,10 +118,10 @@ router.post('/', upload.single('foto'), async (req: Request, res: Response): Pro
   }
 });
 
-// 🔹 Atualizar legenda da foto
+// 🔹 Atualizar foto (legenda, crop e zoom)
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { legenda } = req.body;
+  const { legenda, cropX, cropY, zoom, cropArea } = req.body;
 
   if (!legenda || typeof legenda !== 'string') {
     res.status(400).json({ error: 'Legenda inválida.' });
@@ -114,15 +129,30 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    // Preparar dados para atualizar
+    const updateData: any = { legenda };
+
+    // Adicionar campos de crop e zoom se fornecidos
+    if (cropX !== undefined) updateData.cropX = parseFloat(cropX);
+    if (cropY !== undefined) updateData.cropY = parseFloat(cropY);
+    if (zoom !== undefined) updateData.zoom = parseFloat(zoom);
+    if (cropArea !== undefined) {
+      try {
+        updateData.cropArea = typeof cropArea === 'string' ? JSON.parse(cropArea) : cropArea;
+      } catch (e) {
+        console.warn('Erro ao parsear cropArea:', e);
+      }
+    }
+
     const fotoAtualizada = await prisma.foto.update({
       where: { id: Number(id) },
-      data: { legenda }
+      data: updateData
     });
 
     res.json(fotoAtualizada);
   } catch (error) {
-    console.error('Erro ao atualizar legenda:', error);
-    res.status(500).json({ error: 'Erro ao atualizar legenda da foto.', detalhes: String(error) });
+    console.error('Erro ao atualizar foto:', error);
+    res.status(500).json({ error: 'Erro ao atualizar foto.', detalhes: String(error) });
   }
 });
 
