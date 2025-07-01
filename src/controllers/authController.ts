@@ -74,7 +74,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       try {
         let permissions: string[];
         try {
-          permissions = JSON.parse(user.permissions);
+          if (Array.isArray(user.permissions)) {
+            permissions = user.permissions;
+          } else if (typeof user.permissions === 'string') {
+            permissions = JSON.parse(user.permissions);
+          } else {
+            throw new Error('Formato de permissões inválido');
+          }
           if (!Array.isArray(permissions)) {
             throw new Error('Formato de permissões inválido');
           }
