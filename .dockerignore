@@ -35,7 +35,6 @@ __tests__
 # Temporary files
 tmp
 temp
-uploads/*
 !uploads/.gitkeep
 relatorios-pdf/*
 !relatorios-pdf/.gitkeep
