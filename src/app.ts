@@ -121,6 +121,11 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Endpoint temporário para debug do caminho da pasta uploads
+app.get('/api/debug/uploads-path', (req, res) => {
+  res.json({ uploadsPath: path.join(__dirname, '../uploads') });
+});
+
 // Middleware fallback 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });
