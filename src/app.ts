@@ -10,6 +10,8 @@ import prestadoresRouter from './routes/prestadores';
 import clientesRouter from './routes/clientes';
 import userRoutes from './routes/userRoutes';
 import cnpjRouter from './routes/cnpj';
+import veiculosRouter from './routes/veiculos';
+import fotosRouter from './routes/fotos';
 
 console.log('Iniciando configuração do Express...');
 
@@ -29,6 +31,9 @@ app.use(cors({
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'Content-Type']
 }));
 
 app.use(helmet());
@@ -53,6 +58,8 @@ app.use('/api/prestadores', prestadoresRouter);
 app.use('/api/clientes', clientesRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/cnpj', cnpjRouter);
+app.use('/api/veiculos', veiculosRouter);
+app.use('/api/fotos', fotosRouter);
 
 // Rota básica para /api
 app.get('/api', (req, res) => {

@@ -1,6 +1,7 @@
 import express, { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { ensurePrisma } from '@/lib/prisma';
+import { authenticateToken } from '@/infrastructure/middleware/auth.middleware';
 
 interface ApiBrasilResponse {
   response: {
@@ -14,6 +15,9 @@ interface ApiBrasilResponse {
 }
 
 const router: Router = express.Router();
+
+// Add authentication middleware to all vehicle routes
+router.use(authenticateToken);
 
 router.get('/:placa', async (req: Request, res: Response) => {
   const { placa } = req.params;

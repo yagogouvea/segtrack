@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { authenticateToken } from '@/infrastructure/middleware/auth.middleware';
 
 const prisma = new PrismaClient();
 
@@ -43,18 +44,29 @@ const upload = multer({
 
 const router = express.Router();
 
+// Add authentication middleware to all photo routes
+router.use(authenticateToken);
+
+// Handle preflight requests for photos endpoint
+router.options('/', (req: Request, res: Response) => {
+  res.header('Access-Control-Allow-Origin', 'https://segtrack-frontend-production-fe95.up.railway.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
 // 🔹 Upload de novas fotos
-router.post('/', upload.array('imagens'), async (req: Request, res: Response): Promise<void> => {
-  const { ocorrenciaId } = req.body;
-  const arquivos = req.files as Express.Multer.File[];
-  const legendas = Array.isArray(req.body.legendas) ? req.body.legendas : [req.body.legendas];
+router.post('/', upload.single('foto'), async (req: Request, res: Response): Promise<void> => {
+  const { ocorrenciaId, legenda } = req.body;
+  const arquivo = req.file as Express.Multer.File;
 
   if (!ocorrenciaId) {
     res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
     return;
   }
 
-  if (!arquivos || arquivos.length === 0) {
+  if (!arquivo) {
     res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
     return;
   }
@@ -70,37 +82,33 @@ router.post('/', upload.array('imagens'), async (req: Request, res: Response): P
       return;
     }
 
-    const fotosCriadas = await Promise.all(
-      arquivos.map(async (file, i) => {
-        const nomeArquivo = file.filename;
-        // Garantir que a URL comece com /uploads/
-        const url = nomeArquivo.startsWith('uploads/') ? `/${nomeArquivo}` : `/uploads/${nomeArquivo}`;
+    const nomeArquivo = arquivo.filename;
+    // Garantir que a URL comece com /uploads/
+    const url = nomeArquivo.startsWith('uploads/') ? `/${nomeArquivo}` : `/uploads/${nomeArquivo}`;
 
-        return prisma.foto.create({
-          data: {
-            url,
-            legenda: legendas[i] || '',
-            ocorrenciaId: Number(ocorrenciaId)
-          }
-        });
-      })
-    );
-
-    // Log para debug
-    console.log('Fotos criadas:', fotosCriadas);
-
-    res.status(201).json(fotosCriadas);
-  } catch (error) {
-    // Limpar arquivos em caso de erro
-    arquivos.forEach(file => {
-      const filepath = path.join(UPLOAD_DIR, file.filename);
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
+    const fotoCriada = await prisma.foto.create({
+      data: {
+        url,
+        legenda: legenda || '',
+        ocorrenciaId: Number(ocorrenciaId)
       }
     });
 
-    console.error('Erro ao salvar fotos:', error);
-    res.status(500).json({ error: 'Erro ao salvar fotos.', detalhes: String(error) });
+    // Log para debug
+    console.log('Foto criada:', fotoCriada);
+
+    res.status(201).json(fotoCriada);
+  } catch (error) {
+    // Limpar arquivo em caso de erro
+    if (arquivo) {
+      const filepath = path.join(UPLOAD_DIR, arquivo.filename);
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+      }
+    }
+
+    console.error('Erro ao salvar foto:', error);
+    res.status(500).json({ error: 'Erro ao salvar foto.', detalhes: String(error) });
   }
 });
 
