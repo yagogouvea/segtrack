@@ -49,70 +49,20 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // 🔹 Upload de novas fotos
-router.post('/', upload.single('foto'), async (req: Request, res: Response) => {
-  const { ocorrenciaId, legenda, cropX, cropY, zoom, cropArea } = req.body;
-  const arquivo = req.file as Express.Multer.File;
-
-  if (!ocorrenciaId) {
-    res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
-    return;
-  }
-
-  if (!arquivo) {
-    res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
-    return;
-  }
-
+router.post('/', async (req: Request, res: Response) => {
   try {
-    // Verificar se a ocorrência existe
-    const ocorrencia = await prisma.ocorrencia.findUnique({
-      where: { id: Number(ocorrenciaId) }
-    });
+    const { url, legenda, ocorrenciaId } = req.body;
 
-    if (!ocorrencia) {
-      res.status(404).json({ error: 'Ocorrência não encontrada.' });
-      return;
-    }
-
-    // Gerar nome único para o arquivo
-    const filename = `${Date.now()}-${arquivo.originalname}`;
-
-    // Upload para Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from('segtrackfotos')
-      .upload(filename, arquivo.buffer, {
-        contentType: arquivo.mimetype,
-      });
-
-    if (uploadError) {
-      return res.status(500).json({ error: uploadError.message });
-    }
-
-    // Obter URL pública
-    const { data: urlData } = supabase.storage.from('segtrackfotos').getPublicUrl(filename);
-    const url = urlData?.publicUrl;
-
-    // Preparar dados para salvar
-    const fotoData: any = {
-      url,
-      legenda: legenda || '',
-      ocorrenciaId: Number(ocorrenciaId)
-    };
-
-    // Adicionar campos de crop e zoom se fornecidos
-    if (cropX !== undefined) fotoData.cropX = parseFloat(cropX);
-    if (cropY !== undefined) fotoData.cropY = parseFloat(cropY);
-    if (zoom !== undefined) fotoData.zoom = parseFloat(zoom);
-    if (cropArea !== undefined) {
-      try {
-        fotoData.cropArea = typeof cropArea === 'string' ? JSON.parse(cropArea) : cropArea;
-      } catch (e) {
-        console.warn('Erro ao parsear cropArea:', e);
-      }
+    if (!url || !ocorrenciaId) {
+      return res.status(400).json({ error: 'URL e ocorrenciaId são obrigatórios.' });
     }
 
     const fotoCriada = await prisma.foto.create({
-      data: fotoData
+      data: {
+        url,
+        legenda: legenda || '',
+        ocorrenciaId: Number(ocorrenciaId)
+      }
     });
 
     res.status(201).json(fotoCriada);
