@@ -43,6 +43,8 @@ export class FotoController {
         return;
       }
 
+      console.log('Arquivo salvo:', req.file.path);
+
       const foto = await this.service.upload({
         url: req.file.path,
         legenda: req.body.legenda || '',
