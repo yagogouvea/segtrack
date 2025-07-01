@@ -40,6 +40,15 @@ app.use(helmet());
 app.use(compression());
 app.use(express.json());
 
+// Global OPTIONS handler for preflight requests
+app.options('*', (req: Request, res: Response) => {
+  res.header('Access-Control-Allow-Origin', 'https://segtrack-frontend-production-fe95.up.railway.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
 // Middleware de log para todas as requisições
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin')}`);

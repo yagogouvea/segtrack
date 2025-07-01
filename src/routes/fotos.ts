@@ -47,15 +47,6 @@ const router = express.Router();
 // Add authentication middleware to all photo routes
 router.use(authenticateToken);
 
-// Handle preflight requests for photos endpoint
-router.options('/', (req: Request, res: Response) => {
-  res.header('Access-Control-Allow-Origin', 'https://segtrack-frontend-production-fe95.up.railway.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
-});
-
 // 🔹 Upload de novas fotos
 router.post('/', upload.single('foto'), async (req: Request, res: Response): Promise<void> => {
   const { ocorrenciaId, legenda } = req.body;
