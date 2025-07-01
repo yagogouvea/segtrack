@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { authenticateToken } from '@/infrastructure/middleware/auth.middleware';
+import { supabase } from '../lib/supabase';
 
 const prisma = new PrismaClient();
 
@@ -48,7 +49,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // 🔹 Upload de novas fotos
-router.post('/', upload.single('foto'), async (req: Request, res: Response): Promise<void> => {
+router.post('/', upload.single('foto'), async (req: Request, res: Response) => {
   const { ocorrenciaId, legenda, cropX, cropY, zoom, cropArea } = req.body;
   const arquivo = req.file as Express.Multer.File;
 
@@ -62,9 +63,6 @@ router.post('/', upload.single('foto'), async (req: Request, res: Response): Pro
     return;
   }
 
-  // Log do caminho do arquivo salvo
-  console.log('Arquivo salvo (fotos.ts):', arquivo.path);
-
   try {
     // Verificar se a ocorrência existe
     const ocorrencia = await prisma.ocorrencia.findUnique({
@@ -76,9 +74,23 @@ router.post('/', upload.single('foto'), async (req: Request, res: Response): Pro
       return;
     }
 
-    const nomeArquivo = arquivo.filename;
-    // Garantir que a URL comece com /uploads/
-    const url = nomeArquivo.startsWith('uploads/') ? `/${nomeArquivo}` : `/uploads/${nomeArquivo}`;
+    // Gerar nome único para o arquivo
+    const filename = `${Date.now()}-${arquivo.originalname}`;
+
+    // Upload para Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('segtrackfotos')
+      .upload(filename, arquivo.buffer, {
+        contentType: arquivo.mimetype,
+      });
+
+    if (uploadError) {
+      return res.status(500).json({ error: uploadError.message });
+    }
+
+    // Obter URL pública
+    const { data: urlData } = supabase.storage.from('segtrackfotos').getPublicUrl(filename);
+    const url = urlData?.publicUrl;
 
     // Preparar dados para salvar
     const fotoData: any = {
@@ -103,19 +115,8 @@ router.post('/', upload.single('foto'), async (req: Request, res: Response): Pro
       data: fotoData
     });
 
-    // Log para debug
-    console.log('Foto criada:', fotoCriada);
-
     res.status(201).json(fotoCriada);
   } catch (error) {
-    // Limpar arquivo em caso de erro
-    if (arquivo) {
-      const filepath = path.join(UPLOAD_DIR, arquivo.filename);
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
-      }
-    }
-
     console.error('Erro ao salvar foto:', error);
     res.status(500).json({ error: 'Erro ao salvar foto.', detalhes: String(error) });
   }
