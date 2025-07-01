@@ -42,7 +42,16 @@ app.use(compression());
 app.use(express.json());
 
 // Configuração para servir arquivos estáticos da pasta uploads
-app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://segtrack-frontend-production-fe95.up.railway.app');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // Global OPTIONS handler for preflight requests
 app.options('*', (req: Request, res: Response) => {
