@@ -200,7 +200,20 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response):
       orderBy: { id: 'asc' }
     });
 
-    res.json(fotos);
+    // Verificar se os arquivos físicos existem
+    const fotosComStatus = fotos.map(foto => {
+      const filename = path.basename(foto.url);
+      const filepath = path.join(UPLOAD_DIR, filename);
+      const arquivoExiste = fs.existsSync(filepath);
+      
+      return {
+        ...foto,
+        arquivoExiste,
+        erroArquivo: !arquivoExiste ? 'Arquivo físico não encontrado' : null
+      };
+    });
+
+    res.json(fotosComStatus);
   } catch (error) {
     console.error('Erro ao buscar fotos:', error);
     res.status(500).json({ error: 'Erro ao buscar fotos.', detalhes: String(error) });

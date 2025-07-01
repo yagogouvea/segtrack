@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { testConnection } from './lib/prisma';
 import authRoutes from './routes/authRoutes';
 import ocorrenciasRouter from './routes/ocorrencias';
@@ -39,6 +40,9 @@ app.use(cors({
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
+
+// Configuração para servir arquivos estáticos da pasta uploads
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Global OPTIONS handler for preflight requests
 app.options('*', (req: Request, res: Response) => {
