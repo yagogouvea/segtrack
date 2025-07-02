@@ -4,11 +4,19 @@ import { PrestadorPublicoInput } from '../types/prestadorPublico';
 
 const router = express.Router();
 
+// Rota de teste sem autenticação
+router.get('/test', (req, res) => {
+  console.log('[prestadoresPublico] Rota de teste acessada');
+  res.json({ message: 'Rota de prestadores públicos funcionando!', timestamp: new Date().toISOString() });
+});
+
 // Cadastro público de prestadores
 router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Response): Promise<void> => {
   console.log('📥 Recebendo requisição de cadastro público');
   console.log('📥 Headers:', req.headers);
   console.log('📥 Body completo:', JSON.stringify(req.body, null, 2));
+  console.log('📥 Content-Type:', req.get('Content-Type'));
+  console.log('📥 Content-Length:', req.get('Content-Length'));
   
   const {
     nome, cpf, cod_nome, telefone, email,

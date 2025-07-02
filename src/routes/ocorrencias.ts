@@ -34,6 +34,9 @@ router.delete('/:id', requirePermission('delete:ocorrencia'), (req, res) => cont
 router.get('/status/:status', (req, res) => controller.findByStatus(req, res));
 router.get('/placa/:placa', (req, res) => controller.findByPlaca(req, res));
 
+// Rota para buscar resultado de uma ocorrência
+router.get('/:id/resultado', (req, res) => controller.findResultado(req, res));
+
 // Upload de fotos
 router.post('/:id/fotos', requirePermission('upload:foto'), upload.array('fotos'), (req, res) => controller.addFotos(req, res));
 

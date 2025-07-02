@@ -48,6 +48,8 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     console.log('[auth.middleware] URL:', req.url);
     console.log('[auth.middleware] Method:', req.method);
     console.log('[auth.middleware] Headers:', req.headers);
+    console.log('[auth.middleware] Authorization header:', req.headers.authorization);
+    console.log('[auth.middleware] JWT_SECRET:', process.env.JWT_SECRET ? 'PRESENTE' : 'AUSENTE');
     
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -137,6 +139,8 @@ export const requirePermission = (permission: Permission) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     console.log('[requirePermission] Verificando permissão:', permission);
     console.log('[requirePermission] Usuário:', req.user);
+    console.log('[requirePermission] URL:', req.url);
+    console.log('[requirePermission] Method:', req.method);
     
     if (!req.user) {
       console.log('[requirePermission] Usuário não autenticado');

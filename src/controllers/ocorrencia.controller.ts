@@ -155,4 +155,25 @@ export class OcorrenciaController {
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
   }
+
+  async findResultado(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const ocorrencia = await this.service.findById(Number(id));
+      
+      if (!ocorrencia) {
+        return res.status(404).json({ error: 'Ocorrência não encontrada' });
+      }
+
+      return res.json({ 
+        resultado: ocorrencia.resultado,
+        status: ocorrencia.status
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
 } 
