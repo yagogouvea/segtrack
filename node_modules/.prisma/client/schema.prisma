@@ -93,11 +93,11 @@ model Prestador {
   bairro            String?
   cidade            String?
   estado            String?
-  valor_acionamento Float?                 @default(0)
-  franquia_horas    String?                @default("")
-  franquia_km       Float?                 @default(0)
-  valor_hora_adc    Float?                 @default(0)
-  valor_km_adc      Float?                 @default(0)
+  valor_acionamento Float?
+  franquia_horas    String?
+  franquia_km       Float?
+  valor_hora_adc    Float?
+  valor_km_adc      Float?
   criado_em         DateTime               @default(now())
   origem            String?                @default("interno")
   funcoes           FuncaoPrestador[]
