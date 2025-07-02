@@ -2,10 +2,14 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { ClienteController } from '../controllers/cliente.controller';
+import { authenticateToken } from '../infrastructure/middleware/auth.middleware';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 const controller = new ClienteController();
+
+// Middleware de autenticação para todas as rotas
+router.use(authenticateToken);
 
 // ✅ NOVA ROTA PARA LISTAR CLIENTES COM ID E NOME
 router.get('/resumo', (req, res) => controller.list(req, res));
