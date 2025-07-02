@@ -106,11 +106,19 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
     console.log('[auth.middleware] Usuário encontrado:', user);
 
-    const permissions = jsonUtils.parse(user.permissions);
-    if (!Array.isArray(permissions)) {
-      console.error('[auth.middleware] Formato de permissões inválido:', user.permissions);
-      sendResponse.error(res, new Error('Formato de permissões inválido'));
-      return;
+    // Garantir que permissions seja sempre um array de strings
+    let parsedPermissions: string[] = [];
+    try {
+      if (Array.isArray(user.permissions)) {
+        parsedPermissions = user.permissions;
+      } else if (typeof user.permissions === 'string') {
+        parsedPermissions = JSON.parse(user.permissions);
+      } else {
+        parsedPermissions = [];
+      }
+    } catch (e) {
+      console.error('[auth.middleware] Erro ao parsear permissions:', user.permissions, e);
+      parsedPermissions = [];
     }
 
     req.user = {
@@ -118,11 +126,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       name: user.name,
       email: user.email,
       role: user.role,
-      permissions: Array.isArray(user.permissions)
-        ? user.permissions
-        : typeof user.permissions === 'string'
-          ? JSON.parse(user.permissions)
-          : [],
+      permissions: parsedPermissions,
     };
 
     console.log('[auth.middleware] Autenticação concluída com sucesso');
