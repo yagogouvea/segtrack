@@ -22,16 +22,13 @@ const app = express();
 // Configuração de segurança
 app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 
-const allowedOrigins = ['https://segtrack-frontend-production-fe95.up.railway.app'];
-
+// CORS - deve vir antes de qualquer rota
+const allowedOrigins = [
+  'https://app.painelsegtrack.com.br',
+  'http://localhost:5173'
+];
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -43,33 +40,9 @@ app.use(compression());
 app.use(express.json());
 
 // Configuração para servir arquivos estáticos da pasta uploads
-app.use('/api/uploads', (req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://segtrack-frontend-production-fe95.up.railway.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-}, express.static(path.join(__dirname, '../uploads'), {
-  maxAge: 0,
-  setHeaders: (res) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://segtrack-frontend-production-fe95.up.railway.app');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), {
+  maxAge: 0
 }));
-
-// Global OPTIONS handler for preflight requests
-app.options('*', (req: Request, res: Response) => {
-  res.header('Access-Control-Allow-Origin', 'https://segtrack-frontend-production-fe95.up.railway.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
-});
 
 // Middleware de log para todas as requisições
 app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -78,10 +51,6 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 console.log('Configurando rotas básicas...');
-
-// Outras rotas podem ser adicionadas aqui, ex:
-// router.use('/ocorrencias', ocorrenciasRoutes);
-// router.use('/veiculos', veiculosRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/ocorrencias', ocorrenciasRouter);
