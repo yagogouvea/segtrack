@@ -169,7 +169,8 @@ export const requirePermission = (permission: Permission) => {
         ? JSON.parse(req.user.permissions)
         : [];
     
-    console.log('[requirePermission] Permissões do usuário:', perms);
+    // LOG DETALHADO DO ARRAY DE PERMISSÕES
+    console.log('[requirePermission] Permissões do usuário (array):', perms);
     console.log('[requirePermission] Permissão necessária:', permission);
     
     if (!perms.includes(permission)) {
