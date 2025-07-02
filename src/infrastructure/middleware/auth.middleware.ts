@@ -110,11 +110,12 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     let parsedPermissions: string[] = [];
     try {
       if (Array.isArray(user.permissions)) {
-        parsedPermissions = user.permissions;
+        parsedPermissions = user.permissions.filter((p): p is string => typeof p === 'string');
       } else if (typeof user.permissions === 'string') {
-        parsedPermissions = JSON.parse(user.permissions);
-      } else {
-        parsedPermissions = [];
+        const arr = JSON.parse(user.permissions);
+        if (Array.isArray(arr)) {
+          parsedPermissions = arr.filter((p): p is string => typeof p === 'string');
+        }
       }
     } catch (e) {
       console.error('[auth.middleware] Erro ao parsear permissions:', user.permissions, e);
