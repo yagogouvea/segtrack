@@ -66,6 +66,8 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     }
 
     console.log('[auth.middleware] Verificando token JWT...');
+    console.log('[auth.middleware] Token recebido:', token.substring(0, 20) + '...');
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as JwtPayload & { sub?: string };
     console.log('[auth.middleware] Token decodificado:', decoded);
 
@@ -124,6 +126,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     };
 
     console.log('[auth.middleware] Autenticação concluída com sucesso');
+    console.log('[auth.middleware] Usuário final:', req.user);
     next();
   } catch (error) {
     console.error('[auth.middleware] Erro na autenticação:', error);
