@@ -57,6 +57,34 @@ router.get('/buscar-por-nome/:nome', async (req: Request, res: Response) => {
   }
 });
 
+// ✅ ROTA - Buscar prestadores por termo de busca (usado no autocomplete)
+router.get('/buscar', async (req: Request, res: Response) => {
+  const { q } = req.query;
+
+  try {
+    const db = await ensurePrisma();
+    const prestadores = await db.prestador.findMany({
+      where: {
+        nome: {
+          contains: String(q || ''),
+          mode: 'insensitive'
+        }
+      },
+      select: {
+        id: true,
+        nome: true,
+        cod_nome: true
+      },
+      orderBy: { nome: 'asc' },
+      take: 10
+    });
+
+    return res.json(prestadores);
+  } catch (err) {
+    console.error('❌ Erro ao buscar prestadores:', err);
+    return res.status(500).json({ erro: 'Erro ao buscar prestadores' });
+  }
+});
 
 // POST - Criar novo prestador
 router.post('/', async (req: Request, res: Response): Promise<void> => {
