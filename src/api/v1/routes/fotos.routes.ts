@@ -11,8 +11,10 @@ const upload = multer(uploadConfig);
 router.use(authenticateToken);
 
 router.get('/', controller.list);
+router.get('/por-ocorrencia/:ocorrenciaId', controller.getByOcorrencia);
 router.get('/:id', controller.getById);
 router.post('/', upload.single('foto'), controller.upload);
+router.put('/:id', controller.update);
 router.delete('/:id', controller.delete);
 
 export default router; 

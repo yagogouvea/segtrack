@@ -36,6 +36,52 @@ export class FotoController {
     }
   };
 
+  getByOcorrencia = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { ocorrenciaId } = req.params;
+      const fotos = await this.service.findByOcorrencia(Number(ocorrenciaId));
+      res.json(fotos);
+    } catch (error) {
+      console.error('Erro ao buscar fotos da ocorrência:', error);
+      res.status(500).json({ error: 'Erro ao buscar fotos da ocorrência' });
+    }
+  };
+
+  update = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { legenda, cropX, cropY, zoom, cropArea } = req.body;
+
+      // Permitir legenda vazia ou null, mas deve ser string se fornecida
+      if (legenda !== undefined && legenda !== null && typeof legenda !== 'string') {
+        res.status(400).json({ error: 'Legenda deve ser uma string.' });
+        return;
+      }
+
+      const updateData: any = { 
+        legenda: legenda || '' // Garantir que legenda seja sempre string
+      };
+
+      // Adicionar campos de crop e zoom se fornecidos
+      if (cropX !== undefined) updateData.cropX = parseFloat(cropX);
+      if (cropY !== undefined) updateData.cropY = parseFloat(cropY);
+      if (zoom !== undefined) updateData.zoom = parseFloat(zoom);
+      if (cropArea !== undefined) {
+        try {
+          updateData.cropArea = typeof cropArea === 'string' ? JSON.parse(cropArea) : cropArea;
+        } catch (e) {
+          console.warn('Erro ao parsear cropArea:', e);
+        }
+      }
+
+      const fotoAtualizada = await this.service.update(Number(id), updateData);
+      res.json(fotoAtualizada);
+    } catch (error) {
+      console.error('Erro ao atualizar foto:', error);
+      res.status(500).json({ error: 'Erro ao atualizar foto.', detalhes: String(error) });
+    }
+  };
+
   upload = async (req: Request, res: Response): Promise<void> => {
     try {
       if (!req.file) {

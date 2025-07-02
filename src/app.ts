@@ -14,6 +14,7 @@ import userRoutes from './routes/userRoutes';
 import cnpjRouter from './routes/cnpj';
 import veiculosRouter from './routes/veiculos';
 import fotosRouter from './routes/fotos';
+import v1Router from './api/v1/routes';
 import fs from 'fs';
 
 console.log('Iniciando configuração do Express...');
@@ -83,6 +84,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/cnpj', cnpjRouter);
 app.use('/api/veiculos', veiculosRouter);
 app.use('/api/fotos', fotosRouter);
+
+// Adicionar rotas da API v1
+app.use('/api/v1', v1Router);
 
 // Rota básica para /api
 app.get('/api', (req, res) => {
