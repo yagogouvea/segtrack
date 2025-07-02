@@ -77,14 +77,17 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { legenda, cropX, cropY, zoom, cropArea } = req.body;
 
-  if (!legenda || typeof legenda !== 'string') {
-    res.status(400).json({ error: 'Legenda inválida.' });
+  // Permitir legenda vazia ou null, mas deve ser string se fornecida
+  if (legenda !== undefined && legenda !== null && typeof legenda !== 'string') {
+    res.status(400).json({ error: 'Legenda deve ser uma string.' });
     return;
   }
 
   try {
     // Preparar dados para atualizar
-    const updateData: any = { legenda };
+    const updateData: any = { 
+      legenda: legenda || '' // Garantir que legenda seja sempre string
+    };
 
     // Adicionar campos de crop e zoom se fornecidos
     if (cropX !== undefined) updateData.cropX = parseFloat(cropX);
