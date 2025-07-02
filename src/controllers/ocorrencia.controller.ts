@@ -83,10 +83,24 @@ export class OcorrenciaController {
 
   async update(req: Request, res: Response) {
     try {
+      console.log('[OcorrenciaController] Iniciando atualização de ocorrência');
+      console.log('[OcorrenciaController] ID:', req.params.id);
+      console.log('[OcorrenciaController] Body recebido:', JSON.stringify(req.body, null, 2));
+      console.log('[OcorrenciaController] Headers:', req.headers);
+      
       const { id } = req.params;
       const ocorrencia = await this.service.update(Number(id), req.body);
+      
+      console.log('[OcorrenciaController] Ocorrência atualizada com sucesso:', ocorrencia.id);
       return res.json(ocorrencia);
     } catch (error) {
+      console.error('[OcorrenciaController] Erro ao atualizar ocorrência:', {
+        error,
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      });
+      
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });
       }

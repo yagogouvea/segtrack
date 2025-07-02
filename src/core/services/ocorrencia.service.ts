@@ -141,15 +141,28 @@ export class OcorrenciaService {
 
   async update(id: number, data: UpdateOcorrenciaDTO): Promise<Ocorrencia> {
     try {
+      console.log('[OcorrenciaService] Iniciando atualização de ocorrência');
+      console.log('[OcorrenciaService] ID:', id);
+      console.log('[OcorrenciaService] Dados recebidos:', JSON.stringify(data, null, 2));
+      
       const db = await ensurePrisma();
-      const { fotos, ...rest } = data;
+      const { fotos, despesas_detalhadas, ...rest } = data;
+
+      console.log('[OcorrenciaService] Dados para atualização:', JSON.stringify(rest, null, 2));
+      console.log('[OcorrenciaService] Fotos:', fotos);
+      console.log('[OcorrenciaService] Despesas detalhadas:', despesas_detalhadas);
+
+      // Tratar despesas_detalhadas corretamente
+      const despesasDetalhadasValue = despesas_detalhadas !== undefined && despesas_detalhadas !== null 
+        ? despesas_detalhadas 
+        : Prisma.JsonNull;
 
       const ocorrencia = await db.ocorrencia.update({
         where: { id },
         data: {
           ...rest,
           atualizado_em: new Date(),
-          despesas_detalhadas: data.despesas_detalhadas ?? Prisma.JsonNull,
+          despesas_detalhadas: despesasDetalhadasValue,
           fotos: fotos && fotos.length > 0 ? {
             create: fotos.map(foto => ({
               url: foto.url,
@@ -162,9 +175,20 @@ export class OcorrenciaService {
         }
       });
 
+      console.log('[OcorrenciaService] Ocorrência atualizada com sucesso:', ocorrencia.id);
       return ocorrencia;
     } catch (error) {
-      console.error('Erro ao atualizar ocorrência:', error);
+      console.error('[OcorrenciaService] Erro ao atualizar ocorrência:', {
+        error,
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+        code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined
+      });
+      
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        throw new AppError(`Erro no banco de dados: ${error.message} (código: ${error.code})`);
+      }
       throw new AppError('Erro ao atualizar ocorrência');
     }
   }
