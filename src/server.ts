@@ -2,7 +2,7 @@ import 'dotenv/config';
 import app from '@/app';
 import { testConnection } from './lib/prisma';
 
-const port = parseInt(process.env.PORT || '3000', 10);
+const port = parseInt(process.env.PORT || '8080', 10);
 const host = process.env.HOST || '0.0.0.0';
 
 process.on('uncaughtException', (err) => {

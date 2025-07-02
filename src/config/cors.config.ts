@@ -3,9 +3,10 @@ import { CorsOptions } from 'cors';
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
   : [
-      'http://localhost:3000',
       'http://localhost:5173',
-      'http://localhost:8080'
+      'http://localhost:8080',
+      'https://app.painelsegtrack.com.br',
+      'https://web-production-19090.up.railway.app'
     ];
 
 const corsOptions: CorsOptions = {

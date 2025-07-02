@@ -8,7 +8,7 @@ async function testarAPI() {
   console.log('CNPJ de teste:', cnpjTeste);
   
   try {
-    const response = await axios.get(`http://localhost:3002/api/cnpj/${cnpjTeste}`);
+    const response = await axios.get(`http://localhost:8080/api/cnpj/${cnpjTeste}`);
     
     console.log('✅ Sucesso!');
     console.log('📋 Dados recebidos:');

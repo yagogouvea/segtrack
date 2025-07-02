@@ -24,7 +24,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
 # Start the server normalmente
 CMD [ "npm", "start" ]
