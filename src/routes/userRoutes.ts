@@ -1,9 +1,12 @@
 import { Router } from 'express';
-import { requirePermission } from '../infrastructure/middleware/auth.middleware';
+import { authenticateToken, requirePermission } from '../infrastructure/middleware/auth.middleware';
 import { UserController } from '../controllers/user.controller';
 
 const router = Router();
 const controller = new UserController();
+
+// Protege todas as rotas abaixo com autenticação
+router.use(authenticateToken);
 
 // Rotas que requerem autenticação
 router.get('/me', controller.getCurrentUser);
