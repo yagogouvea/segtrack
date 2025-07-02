@@ -45,6 +45,9 @@ declare global {
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     console.log('[auth.middleware] Iniciando autenticação...');
+    console.log('[auth.middleware] URL:', req.url);
+    console.log('[auth.middleware] Method:', req.method);
+    console.log('[auth.middleware] Headers:', req.headers);
     
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -132,13 +135,18 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
 export const requirePermission = (permission: Permission) => {
   return (req: Request, res: Response, next: NextFunction): void => {
+    console.log('[requirePermission] Verificando permissão:', permission);
+    console.log('[requirePermission] Usuário:', req.user);
+    
     if (!req.user) {
+      console.log('[requirePermission] Usuário não autenticado');
       sendResponse.unauthorized(res, 'Usuário não autenticado');
       return;
     }
 
     // Admin tem todas as permissões
     if (req.user.role === 'admin') {
+      console.log('[requirePermission] Usuário é admin, permitindo acesso');
       next();
       return;
     }
@@ -148,11 +156,17 @@ export const requirePermission = (permission: Permission) => {
       : typeof req.user.permissions === 'string'
         ? JSON.parse(req.user.permissions)
         : [];
+    
+    console.log('[requirePermission] Permissões do usuário:', perms);
+    console.log('[requirePermission] Permissão necessária:', permission);
+    
     if (!perms.includes(permission)) {
+      console.log('[requirePermission] Acesso negado - permissão não encontrada');
       sendResponse.forbidden(res, 'Acesso negado');
       return;
     }
 
+    console.log('[requirePermission] Permissão concedida');
     next();
   };
 }; 

@@ -7,7 +7,19 @@ import { upload } from '../config/upload';
 const router = Router();
 const controller = new OcorrenciaController();
 
+// Rota de teste sem autenticação
+router.get('/test', (req, res) => {
+  console.log('[ocorrencias] Rota de teste acessada');
+  res.json({ message: 'Rota de teste funcionando!' });
+});
+
 router.use(authenticateToken);
+
+// Rota de teste com autenticação
+router.get('/test-auth', (req, res) => {
+  console.log('[ocorrencias] Rota de teste com auth acessada');
+  res.json({ message: 'Rota de teste com auth funcionando!', user: req.user });
+});
 
 // Listagem e busca
 router.get('/', (req, res) => controller.list(req, res));

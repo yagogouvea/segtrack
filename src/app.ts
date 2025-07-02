@@ -48,10 +48,31 @@ app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), {
 // Middleware de log para todas as requisições
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
+  console.log(`🔍 Headers:`, req.headers);
+  console.log(`🔍 Query:`, req.query);
+  console.log(`🔍 Params:`, req.params);
   next();
 });
 
 console.log('Configurando rotas básicas...');
+
+// Rota de teste simples
+app.get('/api/test', (req, res) => {
+  console.log('[app] Rota de teste acessada');
+  res.json({ message: 'API funcionando!', timestamp: new Date().toISOString() });
+});
+
+// Rota de teste para ocorrências sem autenticação
+app.get('/api/ocorrencias-test', (req, res) => {
+  console.log('[app] Rota de teste de ocorrências acessada');
+  res.json({ message: 'Rota de ocorrências funcionando!', timestamp: new Date().toISOString() });
+});
+
+// Rota de teste para fotos sem autenticação
+app.get('/api/fotos-test', (req, res) => {
+  console.log('[app] Rota de teste de fotos acessada');
+  res.json({ message: 'Rota de fotos funcionando!', timestamp: new Date().toISOString() });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/ocorrencias', ocorrenciasRouter);
