@@ -9,6 +9,7 @@ export type CreateOcorrenciaDTO = {
   placa1: string;
   placa2?: string;
   placa3?: string;
+  operador?: string;
   despesas_detalhadas?: Prisma.JsonValue;
   fotos?: {
     url: string;

@@ -24,6 +24,7 @@ export type CreateOcorrenciaDTO = {
   origem_cidade?: string;
   origem_estado?: string;
   prestador?: string;
+  operador?: string;
   inicio?: Date;
   chegada?: Date;
   termino?: Date;
