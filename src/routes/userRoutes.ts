@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken, requirePermission } from '../infrastructure/middleware/auth.middleware';
 import { UserController } from '../controllers/user.controller';
+import { updateUserPassword } from '../controllers/userController';
 
 const router = Router();
 const controller = new UserController();
@@ -18,6 +19,7 @@ router.get('/', requirePermission('read:user'), controller.list);
 router.post('/', requirePermission('create:user'), controller.create);
 router.get('/:id', requirePermission('read:user'), controller.getById);
 router.put('/:id', requirePermission('update:user'), controller.update);
+router.patch('/:id/password', requirePermission('update:user'), updateUserPassword);
 router.delete('/:id', requirePermission('delete:user'), controller.delete);
 
 export default router;
