@@ -43,7 +43,9 @@ export class ClienteController {
 
   create = async (req: Request, res: Response): Promise<void> => {
     try {
+      console.log('📝 Criando cliente com dados:', req.body);
       const cliente = await this.service.create(req.body);
+      console.log('✅ Cliente criado:', cliente);
       res.status(201).json(cliente);
     } catch (error) {
       console.error('Erro ao criar cliente:', error);
@@ -59,6 +61,7 @@ export class ClienteController {
         return;
       }
 
+      console.log('📝 Atualizando cliente ID:', id, 'com dados:', req.body);
       const cliente = await this.service.update(id, req.body);
       
       if (!cliente) {
@@ -66,6 +69,7 @@ export class ClienteController {
         return;
       }
       
+      console.log('✅ Cliente atualizado:', cliente);
       res.json(cliente);
     } catch (error) {
       console.error('Erro ao atualizar cliente:', error);

@@ -7,6 +7,7 @@ interface ClienteData {
   telefone?: string;
   email?: string;
   endereco?: string;
+  logo?: string;
   camposAdicionais?: Array<{
     label: string;
     campo: string;
@@ -43,6 +44,7 @@ export class ClienteService {
         telefone: data.telefone,
         email: data.email,
         endereco: data.endereco,
+        logo: data.logo,
         camposAdicionais: {
           create: data.camposAdicionais
         }
@@ -70,6 +72,7 @@ export class ClienteService {
         telefone: data.telefone,
         email: data.email,
         endereco: data.endereco,
+        logo: data.logo,
         camposAdicionais: data.camposAdicionais ? {
           create: data.camposAdicionais
         } : undefined
