@@ -90,9 +90,29 @@ export class OcorrenciaController {
       console.log('[OcorrenciaController] ID:', req.params.id);
       console.log('[OcorrenciaController] Body recebido:', JSON.stringify(req.body, null, 2));
       console.log('[OcorrenciaController] Headers:', req.headers);
+      console.log('[OcorrenciaController] Content-Type:', req.headers['content-type']);
+      console.log('[OcorrenciaController] User:', req.user);
       
       const { id } = req.params;
       const operador = req.body.operador;
+      
+      // Validar dados obrigatórios
+      if (!req.body.placa1 || !req.body.cliente || !req.body.tipo) {
+        console.log('[OcorrenciaController] Dados obrigatórios faltando:', {
+          placa1: req.body.placa1,
+          cliente: req.body.cliente,
+          tipo: req.body.tipo
+        });
+        return res.status(400).json({ 
+          error: 'Campos obrigatórios faltando: placa1, cliente, tipo',
+          received: {
+            placa1: req.body.placa1,
+            cliente: req.body.cliente,
+            tipo: req.body.tipo
+          }
+        });
+      }
+      
       const ocorrencia = await this.service.update(Number(id), req.body);
       
       console.log('[OcorrenciaController] Ocorrência atualizada com sucesso:', ocorrencia.id);

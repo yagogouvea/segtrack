@@ -37,6 +37,7 @@ export type CreateOcorrenciaDTO = {
   km_final?: number;
   km_inicial?: number;
   despesas_detalhadas?: Prisma.JsonValue;
+  passagem_servico?: string;
 };
 
 export type UpdateOcorrenciaDTO = Partial<CreateOcorrenciaDTO>;
