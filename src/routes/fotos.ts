@@ -72,6 +72,41 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+// 🔹 Upload de fotos via multipart/form-data (fallback para quando Supabase não estiver disponível)
+router.post('/upload', upload.single('foto'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo foi enviado.' });
+    }
+
+    const { legenda, ocorrenciaId } = req.body;
+
+    if (!ocorrenciaId) {
+      return res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
+    }
+
+    // Criar URL relativa para o arquivo salvo
+    const filename = req.file.filename;
+    const url = `/api/uploads/${filename}`;
+
+    const fotoCriada = await prisma.foto.create({
+      data: {
+        url,
+        legenda: legenda || '',
+        ocorrenciaId: Number(ocorrenciaId)
+      }
+    });
+
+    res.status(201).json({
+      ...fotoCriada,
+      url: `${req.protocol}://${req.get('host')}${url}` // URL completa
+    });
+  } catch (error) {
+    console.error('Erro ao fazer upload de foto:', error);
+    res.status(500).json({ error: 'Erro ao fazer upload de foto.', detalhes: String(error) });
+  }
+});
+
 // 🔹 Atualizar foto (legenda, crop e zoom)
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
