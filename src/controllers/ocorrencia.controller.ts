@@ -16,14 +16,16 @@ export class OcorrenciaController {
       console.log('[OcorrenciaController] Query params:', req.query);
       console.log('[OcorrenciaController] User:', req.user);
 
-      const { status, placa, cliente, data_inicio, data_fim } = req.query;
+      const { id, status, placa, cliente, prestador, inicio, fim } = req.query;
 
       const filters = {
+        id: id ? Number(id) : undefined,
         status: status as OcorrenciaStatus,
         placa: placa as string,
         cliente: cliente as string,
-        data_inicio: data_inicio ? new Date(data_inicio as string) : undefined,
-        data_fim: data_fim ? new Date(data_fim as string) : undefined
+        prestador: prestador as string,
+        data_inicio: inicio ? new Date(inicio as string) : undefined,
+        data_fim: fim ? new Date(fim as string) : undefined
       };
 
       console.log('[OcorrenciaController] Filtros aplicados:', filters);
@@ -58,6 +60,7 @@ export class OcorrenciaController {
 
   async create(req: Request, res: Response) {
     try {
+      const operador = req.body.operador;
       const ocorrencia = await this.service.create(req.body);
       return res.status(201).json(ocorrencia);
     } catch (error) {
@@ -89,6 +92,7 @@ export class OcorrenciaController {
       console.log('[OcorrenciaController] Headers:', req.headers);
       
       const { id } = req.params;
+      const operador = req.body.operador;
       const ocorrencia = await this.service.update(Number(id), req.body);
       
       console.log('[OcorrenciaController] Ocorrência atualizada com sucesso:', ocorrencia.id);

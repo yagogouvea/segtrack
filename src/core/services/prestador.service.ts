@@ -27,16 +27,58 @@ interface PrestadorData {
 }
 
 export class PrestadorService {
-  async list() {
+  async list(filters: any = {}, pagination: { page: number, pageSize: number } = { page: 1, pageSize: 20 }) {
     try {
       const db = await ensurePrisma();
-      return await db.prestador.findMany({
-        include: {
-          funcoes: true,
-          veiculos: true,
-          regioes: true
-        }
-      });
+      
+      // Se não há filtros, retornar array direto para compatibilidade
+      if (!filters.nome && !filters.cod_nome && !filters.regioes && !filters.funcoes) {
+        return await db.prestador.findMany({
+          include: {
+            funcoes: true,
+            veiculos: true,
+            regioes: true
+          },
+          orderBy: { nome: 'asc' }
+        });
+      }
+      
+      // Se há filtros, aplicar lógica de filtros e paginação
+      const where: any = {};
+      if (filters.nome) {
+        where.nome = { contains: filters.nome, mode: 'insensitive' };
+      }
+      if (filters.cod_nome) {
+        where.cod_nome = { contains: filters.cod_nome, mode: 'insensitive' };
+      }
+      if (filters.regioes && Array.isArray(filters.regioes) && filters.regioes.length > 0) {
+        where.regioes = { some: { regiao: { in: filters.regioes } } };
+      }
+      if (filters.funcoes && Array.isArray(filters.funcoes) && filters.funcoes.length > 0) {
+        where.funcoes = { some: { funcao: { in: filters.funcoes } } };
+      }
+      const skip = (pagination.page - 1) * pagination.pageSize;
+      const take = pagination.pageSize;
+      const [data, total] = await Promise.all([
+        db.prestador.findMany({
+          where,
+          include: {
+            funcoes: true,
+            veiculos: true,
+            regioes: true
+          },
+          skip,
+          take,
+          orderBy: { nome: 'asc' }
+        }),
+        db.prestador.count({ where })
+      ]);
+      return {
+        data,
+        total,
+        page: pagination.page,
+        pageSize: pagination.pageSize
+      };
     } catch (error) {
       console.error('Erro ao buscar prestadores:', error);
       throw new AppError('Erro ao buscar prestadores');

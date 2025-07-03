@@ -6,6 +6,7 @@ const router = express.Router();
 const controller = new PrestadorController();
 
 // GET - Listar todos os prestadores (completo)
+// Query params suportados: nome, cod_nome, regioes (csv), funcoes (csv), page, pageSize
 router.get('/', (req, res) => controller.list(req, res));
 
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)

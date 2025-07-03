@@ -12,7 +12,7 @@ interface ListOcorrenciaFilters {
 }
 
 export class OcorrenciaService {
-  async list(filters: ListOcorrenciaFilters = {}): Promise<Ocorrencia[]> {
+  async list(filters: ListOcorrenciaFilters & { id?: number, prestador?: string } = {}): Promise<Ocorrencia[]> {
     try {
       console.log('[OcorrenciaService] Iniciando listagem com filtros:', filters);
       
@@ -23,6 +23,10 @@ export class OcorrenciaService {
       }
 
       const where: Prisma.OcorrenciaWhereInput = {};
+
+      if (filters.id) {
+        where.id = filters.id;
+      }
 
       if (filters.status) {
         where.status = filters.status;
@@ -39,6 +43,12 @@ export class OcorrenciaService {
       if (filters.cliente) {
         where.cliente = {
           contains: filters.cliente
+        };
+      }
+
+      if (filters.prestador) {
+        where.prestador = {
+          contains: filters.prestador
         };
       }
 
@@ -98,6 +108,7 @@ export class OcorrenciaService {
           criado_em: new Date(),
           atualizado_em: new Date(),
           despesas_detalhadas: data.despesas_detalhadas ?? Prisma.JsonNull,
+          operador: data.operador,
           fotos: fotos && fotos.length > 0 ? {
             create: fotos.map(foto => ({
               url: foto.url,
@@ -163,6 +174,7 @@ export class OcorrenciaService {
           ...rest,
           atualizado_em: new Date(),
           despesas_detalhadas: despesasDetalhadasValue,
+          operador: data.operador,
           fotos: fotos && fotos.length > 0 ? {
             create: fotos.map(foto => ({
               url: foto.url,
