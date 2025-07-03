@@ -12,13 +12,15 @@ class OcorrenciaController {
             console.log('[OcorrenciaController] Iniciando listagem de ocorrências');
             console.log('[OcorrenciaController] Query params:', req.query);
             console.log('[OcorrenciaController] User:', req.user);
-            const { status, placa, cliente, data_inicio, data_fim } = req.query;
+            const { id, status, placa, cliente, prestador, inicio, fim } = req.query;
             const filters = {
+                id: id ? Number(id) : undefined,
                 status: status,
                 placa: placa,
                 cliente: cliente,
-                data_inicio: data_inicio ? new Date(data_inicio) : undefined,
-                data_fim: data_fim ? new Date(data_fim) : undefined
+                prestador: prestador,
+                data_inicio: inicio ? new Date(inicio) : undefined,
+                data_fim: fim ? new Date(fim) : undefined
             };
             console.log('[OcorrenciaController] Filtros aplicados:', filters);
             const ocorrencias = await this.service.list(filters);
@@ -48,10 +50,13 @@ class OcorrenciaController {
     }
     async create(req, res) {
         try {
+            console.log('🔍 Controller - Dados recebidos:', req.body);
+            const operador = req.body.operador;
             const ocorrencia = await this.service.create(req.body);
             return res.status(201).json(ocorrencia);
         }
         catch (error) {
+            console.error('❌ Erro no controller de ocorrência:', error);
             if (error instanceof AppError_1.AppError) {
                 return res.status(error.statusCode).json({ error: error.message });
             }
@@ -73,11 +78,41 @@ class OcorrenciaController {
     }
     async update(req, res) {
         try {
+            console.log('[OcorrenciaController] Iniciando atualização de ocorrência');
+            console.log('[OcorrenciaController] ID:', req.params.id);
+            console.log('[OcorrenciaController] Body recebido:', JSON.stringify(req.body, null, 2));
+            console.log('[OcorrenciaController] Headers:', req.headers);
+            console.log('[OcorrenciaController] Content-Type:', req.headers['content-type']);
+            console.log('[OcorrenciaController] User:', req.user);
             const { id } = req.params;
+            const operador = req.body.operador;
+            // Validar dados obrigatórios
+            if (!req.body.placa1 || !req.body.cliente || !req.body.tipo) {
+                console.log('[OcorrenciaController] Dados obrigatórios faltando:', {
+                    placa1: req.body.placa1,
+                    cliente: req.body.cliente,
+                    tipo: req.body.tipo
+                });
+                return res.status(400).json({
+                    error: 'Campos obrigatórios faltando: placa1, cliente, tipo',
+                    received: {
+                        placa1: req.body.placa1,
+                        cliente: req.body.cliente,
+                        tipo: req.body.tipo
+                    }
+                });
+            }
             const ocorrencia = await this.service.update(Number(id), req.body);
+            console.log('[OcorrenciaController] Ocorrência atualizada com sucesso:', ocorrencia.id);
             return res.json(ocorrencia);
         }
         catch (error) {
+            console.error('[OcorrenciaController] Erro ao atualizar ocorrência:', {
+                error,
+                message: error instanceof Error ? error.message : 'Erro desconhecido',
+                stack: error instanceof Error ? error.stack : undefined,
+                name: error instanceof Error ? error.name : undefined
+            });
             if (error instanceof AppError_1.AppError) {
                 return res.status(error.statusCode).json({ error: error.message });
             }
@@ -130,9 +165,30 @@ class OcorrenciaController {
             if (!files || files.length === 0) {
                 throw new AppError_1.AppError('Nenhuma foto foi enviada', 400);
             }
+            // Log do caminho dos arquivos salvos
+            files.forEach(file => console.log('Arquivo salvo (ocorrencia.controller.ts):', file.path));
             const urls = files.map(file => file.path);
             const ocorrencia = await this.service.addFotos(Number(id), urls);
             return res.json(ocorrencia);
+        }
+        catch (error) {
+            if (error instanceof AppError_1.AppError) {
+                return res.status(error.statusCode).json({ error: error.message });
+            }
+            return res.status(500).json({ error: 'Erro interno do servidor' });
+        }
+    }
+    async findResultado(req, res) {
+        try {
+            const { id } = req.params;
+            const ocorrencia = await this.service.findById(Number(id));
+            if (!ocorrencia) {
+                return res.status(404).json({ error: 'Ocorrência não encontrada' });
+            }
+            return res.json({
+                resultado: ocorrencia.resultado,
+                status: ocorrencia.status
+            });
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {

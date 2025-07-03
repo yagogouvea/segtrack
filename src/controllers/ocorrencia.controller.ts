@@ -60,10 +60,12 @@ export class OcorrenciaController {
 
   async create(req: Request, res: Response) {
     try {
+      console.log('🔍 Controller - Dados recebidos:', req.body);
       const operador = req.body.operador;
       const ocorrencia = await this.service.create(req.body);
       return res.status(201).json(ocorrencia);
     } catch (error) {
+      console.error('❌ Erro no controller de ocorrência:', error);
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });
       }

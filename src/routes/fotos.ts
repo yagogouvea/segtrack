@@ -51,18 +51,38 @@ router.use(authenticateToken);
 // 🔹 Upload de novas fotos
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { url, legenda, ocorrenciaId } = req.body;
+    const { url, legenda, ocorrenciaId, cropX, cropY, zoom, cropArea } = req.body;
 
     if (!url || !ocorrenciaId) {
       return res.status(400).json({ error: 'URL e ocorrenciaId são obrigatórios.' });
     }
 
-    const fotoCriada = await prisma.foto.create({
-      data: {
-        url,
-        legenda: legenda || '',
-        ocorrenciaId: Number(ocorrenciaId)
+    // Proteção: não criar duplicada
+    const fotoExistente = await prisma.foto.findFirst({
+      where: { url, ocorrenciaId: Number(ocorrenciaId) }
+    });
+    if (fotoExistente) {
+      return res.status(200).json(fotoExistente);
+    }
+
+    const data: any = {
+      url,
+      legenda: legenda || '',
+      ocorrenciaId: Number(ocorrenciaId)
+    };
+    if (cropX !== undefined) data.cropX = parseFloat(cropX);
+    if (cropY !== undefined) data.cropY = parseFloat(cropY);
+    if (zoom !== undefined) data.zoom = parseFloat(zoom);
+    if (cropArea !== undefined) {
+      try {
+        data.cropArea = typeof cropArea === 'string' ? JSON.parse(cropArea) : cropArea;
+      } catch (e) {
+        console.warn('Erro ao parsear cropArea:', e);
       }
+    }
+
+    const fotoCriada = await prisma.foto.create({
+      data
     });
 
     res.status(201).json(fotoCriada);

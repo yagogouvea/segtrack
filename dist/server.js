@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const app_1 = __importDefault(require("./app"));
 const prisma_1 = require("./lib/prisma");
-const port = parseInt(process.env.PORT || '3000', 10);
+const port = parseInt(process.env.PORT || '8080', 10);
 const host = process.env.HOST || '0.0.0.0';
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);

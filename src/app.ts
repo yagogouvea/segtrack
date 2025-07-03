@@ -12,7 +12,7 @@ import prestadoresPublicoRouter from './routes/prestadoresPublico';
 import clientesRouter from './routes/clientes';
 import userRoutes from './routes/userRoutes';
 import cnpjRouter from './routes/cnpj';
-import veiculosRouter from './routes/veiculos';
+// import veiculosRouter from './routes/veiculos';
 import fotosRouter from './routes/fotos';
 import v1Router from './api/v1/routes';
 import fs from 'fs';
@@ -43,7 +43,13 @@ app.use(express.json());
 
 // Configuração para servir arquivos estáticos da pasta uploads
 app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), {
-  maxAge: 0
+  maxAge: 0,
+  setHeaders: (res, path) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
 }));
 
 // Middleware de log para todas as requisições
@@ -82,7 +88,8 @@ app.use('/api/prestadores-publico', prestadoresPublicoRouter);
 app.use('/api/clientes', clientesRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/cnpj', cnpjRouter);
-app.use('/api/veiculos', veiculosRouter);
+// Removida rota de veículos - não é mais necessária
+// app.use('/api/veiculos', veiculosRouter);
 app.use('/api/fotos', fotosRouter);
 
 // Adicionar rotas da API v1

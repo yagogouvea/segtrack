@@ -94,8 +94,15 @@ export class OcorrenciaService {
 
   async create(data: CreateOcorrenciaDTO): Promise<Ocorrencia> {
     try {
+      console.log('📝 Dados recebidos para criar ocorrência:', data);
+      
       if (!data.placa1 || !data.cliente || !data.tipo) {
-        throw new AppError('Campos obrigatórios faltando: placa1, cliente, tipo', 400);
+        const camposFaltando = [];
+        if (!data.placa1) camposFaltando.push('placa1');
+        if (!data.cliente) camposFaltando.push('cliente');
+        if (!data.tipo) camposFaltando.push('tipo');
+        
+        throw new AppError(`Campos obrigatórios faltando: ${camposFaltando.join(', ')}`, 400);
       }
 
       const db = await ensurePrisma();

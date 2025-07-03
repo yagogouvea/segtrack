@@ -24,6 +24,8 @@ router.post('/upload', upload.single('arquivo'), async (req, res) => {
             res.status(400).json({ error: 'Nenhum arquivo enviado' });
             return;
         }
+        // Log do caminho do arquivo salvo
+        console.log('Arquivo salvo (relatorios.ts):', req.file.path);
         const { filename } = req.file;
         const { ocorrenciaId, cliente, tipo, dataAcionamento } = req.body;
         const relatorio = await prisma_1.prisma.relatorio.create({

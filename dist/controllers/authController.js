@@ -58,39 +58,24 @@ const login = async (req, res) => {
             }
             try {
                 let permissions;
-                // Se for admin, define todas as permissões
-                if (user.role === 'admin') {
-                    permissions = [
-                        'create:user',
-                        'read:user',
-                        'update:user',
-                        'delete:user',
-                        'create:ocorrencia',
-                        'read:ocorrencia',
-                        'update:ocorrencia',
-                        'delete:ocorrencia',
-                        'read:dashboard',
-                        'read:relatorio',
-                        'create:foto',
-                        'read:foto',
-                        'update:foto',
-                        'delete:foto',
-                        'upload:foto'
-                    ];
-                }
-                else {
-                    // Para usuários não-admin, usa as permissões do banco
-                    try {
+                try {
+                    if (Array.isArray(user.permissions)) {
+                        permissions = user.permissions;
+                    }
+                    else if (typeof user.permissions === 'string') {
                         permissions = JSON.parse(user.permissions);
-                        if (!Array.isArray(permissions)) {
-                            throw new Error('Formato de permissões inválido');
-                        }
                     }
-                    catch (parseError) {
-                        console.error('Erro ao converter permissões:', parseError);
-                        res.status(500).json({ message: 'Erro ao processar permissões do usuário' });
-                        return;
+                    else {
+                        throw new Error('Formato de permissões inválido');
                     }
+                    if (!Array.isArray(permissions)) {
+                        throw new Error('Formato de permissões inválido');
+                    }
+                }
+                catch (parseError) {
+                    console.error('Erro ao converter permissões:', parseError);
+                    res.status(500).json({ message: 'Erro ao processar permissões do usuário' });
+                    return;
                 }
                 console.log('Permissões do usuário:', permissions);
                 const token = jsonwebtoken_1.default.sign({

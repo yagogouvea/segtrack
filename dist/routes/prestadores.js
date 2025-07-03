@@ -9,6 +9,7 @@ const prestador_controller_1 = require("../controllers/prestador.controller");
 const router = express_1.default.Router();
 const controller = new prestador_controller_1.PrestadorController();
 // GET - Listar todos os prestadores (completo)
+// Query params suportados: nome, cod_nome, regioes (csv), funcoes (csv), page, pageSize
 router.get('/', (req, res) => controller.list(req, res));
 // 🔹 NOVA ROTA - Listar prestadores para popup de seleção (nome e codinome)
 router.get('/popup', async (_req, res) => {
@@ -54,6 +55,33 @@ router.get('/buscar-por-nome/:nome', async (req, res) => {
     catch (err) {
         console.error('❌ Erro ao buscar prestador por nome:', err);
         return res.status(500).json({ erro: 'Erro ao buscar prestador' });
+    }
+});
+// ✅ ROTA - Buscar prestadores por termo de busca (usado no autocomplete)
+router.get('/buscar', async (req, res) => {
+    const { q } = req.query;
+    try {
+        const db = await (0, prisma_1.ensurePrisma)();
+        const prestadores = await db.prestador.findMany({
+            where: {
+                nome: {
+                    contains: String(q || ''),
+                    mode: 'insensitive'
+                }
+            },
+            select: {
+                id: true,
+                nome: true,
+                cod_nome: true
+            },
+            orderBy: { nome: 'asc' },
+            take: 10
+        });
+        return res.json(prestadores);
+    }
+    catch (err) {
+        console.error('❌ Erro ao buscar prestadores:', err);
+        return res.status(500).json({ erro: 'Erro ao buscar prestadores' });
     }
 });
 // POST - Criar novo prestador

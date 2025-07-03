@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken, requirePermission } from '../infrastructure/middleware/auth.middleware';
 import { OcorrenciaController } from '@/controllers/ocorrencia.controller';
+import { validateCreateOcorrencia } from '@/api/v1/validators/ocorrencia.validator';
 import multer from 'multer';
 import { upload } from '../config/upload';
 
@@ -26,7 +27,7 @@ router.get('/', (req, res) => controller.list(req, res));
 router.get('/:id', (req, res) => controller.findById(req, res));
 
 // Criação e atualização
-router.post('/', requirePermission('create:ocorrencia'), (req, res) => controller.create(req, res));
+router.post('/', requirePermission('create:ocorrencia'), validateCreateOcorrencia, (req: any, res: any) => controller.create(req, res));
 router.put('/:id', requirePermission('update:ocorrencia'), (req, res) => controller.update(req, res));
 router.delete('/:id', requirePermission('delete:ocorrencia'), (req, res) => controller.delete(req, res));
 

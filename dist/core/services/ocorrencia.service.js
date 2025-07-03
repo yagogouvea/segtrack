@@ -25,6 +25,9 @@ class OcorrenciaService {
                 throw new AppError_1.AppError('Erro de conexão com o banco de dados');
             }
             const where = {};
+            if (filters.id) {
+                where.id = filters.id;
+            }
             if (filters.status) {
                 where.status = filters.status;
             }
@@ -38,6 +41,11 @@ class OcorrenciaService {
             if (filters.cliente) {
                 where.cliente = {
                     contains: filters.cliente
+                };
+            }
+            if (filters.prestador) {
+                where.prestador = {
+                    contains: filters.prestador
                 };
             }
             if (filters.data_inicio || filters.data_fim) {
@@ -79,13 +87,21 @@ class OcorrenciaService {
     async create(data) {
         var _a;
         try {
+            console.log('📝 Dados recebidos para criar ocorrência:', data);
             if (!data.placa1 || !data.cliente || !data.tipo) {
-                throw new AppError_1.AppError('Campos obrigatórios faltando: placa1, cliente, tipo', 400);
+                const camposFaltando = [];
+                if (!data.placa1)
+                    camposFaltando.push('placa1');
+                if (!data.cliente)
+                    camposFaltando.push('cliente');
+                if (!data.tipo)
+                    camposFaltando.push('tipo');
+                throw new AppError_1.AppError(`Campos obrigatórios faltando: ${camposFaltando.join(', ')}`, 400);
             }
             const db = await (0, prisma_1.ensurePrisma)();
             const { fotos } = data, rest = __rest(data, ["fotos"]);
             const ocorrencia = await db.ocorrencia.create({
-                data: Object.assign(Object.assign({}, rest), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull, fotos: fotos && fotos.length > 0 ? {
+                data: Object.assign(Object.assign({}, rest), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull, operador: data.operador, fotos: fotos && fotos.length > 0 ? {
                         create: fotos.map(foto => ({
                             url: foto.url,
                             legenda: foto.legenda || ''
@@ -124,13 +140,22 @@ class OcorrenciaService {
         }
     }
     async update(id, data) {
-        var _a;
         try {
+            console.log('[OcorrenciaService] Iniciando atualização de ocorrência');
+            console.log('[OcorrenciaService] ID:', id);
+            console.log('[OcorrenciaService] Dados recebidos:', JSON.stringify(data, null, 2));
             const db = await (0, prisma_1.ensurePrisma)();
-            const { fotos } = data, rest = __rest(data, ["fotos"]);
+            const { fotos, despesas_detalhadas } = data, rest = __rest(data, ["fotos", "despesas_detalhadas"]);
+            console.log('[OcorrenciaService] Dados para atualização:', JSON.stringify(rest, null, 2));
+            console.log('[OcorrenciaService] Fotos:', fotos);
+            console.log('[OcorrenciaService] Despesas detalhadas:', despesas_detalhadas);
+            // Tratar despesas_detalhadas corretamente
+            const despesasDetalhadasValue = despesas_detalhadas !== undefined && despesas_detalhadas !== null
+                ? despesas_detalhadas
+                : client_1.Prisma.JsonNull;
             const ocorrencia = await db.ocorrencia.update({
                 where: { id },
-                data: Object.assign(Object.assign({}, rest), { atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull, fotos: fotos && fotos.length > 0 ? {
+                data: Object.assign(Object.assign({}, rest), { atualizado_em: new Date(), despesas_detalhadas: despesasDetalhadasValue, operador: data.operador, fotos: fotos && fotos.length > 0 ? {
                         create: fotos.map(foto => ({
                             url: foto.url,
                             legenda: foto.legenda || ''
@@ -140,10 +165,20 @@ class OcorrenciaService {
                     fotos: true
                 }
             });
+            console.log('[OcorrenciaService] Ocorrência atualizada com sucesso:', ocorrencia.id);
             return ocorrencia;
         }
         catch (error) {
-            console.error('Erro ao atualizar ocorrência:', error);
+            console.error('[OcorrenciaService] Erro ao atualizar ocorrência:', {
+                error,
+                message: error instanceof Error ? error.message : 'Erro desconhecido',
+                stack: error instanceof Error ? error.stack : undefined,
+                name: error instanceof Error ? error.name : undefined,
+                code: error instanceof client_1.Prisma.PrismaClientKnownRequestError ? error.code : undefined
+            });
+            if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+                throw new AppError_1.AppError(`Erro no banco de dados: ${error.message} (código: ${error.code})`);
+            }
             throw new AppError_1.AppError('Erro ao atualizar ocorrência');
         }
     }

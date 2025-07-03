@@ -36,7 +36,9 @@ class ClienteController {
         };
         this.create = async (req, res) => {
             try {
+                console.log('📝 Criando cliente com dados:', req.body);
                 const cliente = await this.service.create(req.body);
+                console.log('✅ Cliente criado:', cliente);
                 res.status(201).json(cliente);
             }
             catch (error) {
@@ -51,11 +53,13 @@ class ClienteController {
                     res.status(400).json({ error: 'ID inválido' });
                     return;
                 }
+                console.log('📝 Atualizando cliente ID:', id, 'com dados:', req.body);
                 const cliente = await this.service.update(id, req.body);
                 if (!cliente) {
                     res.status(404).json({ error: 'Cliente não encontrado' });
                     return;
                 }
+                console.log('✅ Cliente atualizado:', cliente);
                 res.json(cliente);
             }
             catch (error) {

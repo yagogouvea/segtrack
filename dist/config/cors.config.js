@@ -1,26 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const allowedOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',')
-    : [
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'http://localhost:8080'
-    ];
+const allowedOrigins = [
+    'https://app.painelsegtrack.com.br',
+    'http://localhost:5173'
+];
 const corsOptions = {
-    origin: (origin, callback) => {
-        if (!origin) {
-            return callback(null, true);
-        }
-        if (allowedOrigins.includes(origin) ||
-            process.env.NODE_ENV === 'development') {
-            callback(null, true);
-        }
-        else {
-            console.warn(`Origem ${origin} não permitida por CORS`);
-            callback(new Error('Não permitido por CORS'));
-        }
-    },
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: [

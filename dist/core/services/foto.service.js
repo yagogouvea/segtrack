@@ -15,6 +15,12 @@ class FotoService {
             where: { id }
         });
     }
+    async findByOcorrencia(ocorrenciaId) {
+        return this.prisma.foto.findMany({
+            where: { ocorrenciaId },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
     async upload(data) {
         return this.prisma.foto.create({
             data: {
@@ -27,6 +33,12 @@ class FotoService {
     async delete(id) {
         return this.prisma.foto.delete({
             where: { id }
+        });
+    }
+    async update(id, data) {
+        return this.prisma.foto.update({
+            where: { id },
+            data
         });
     }
 }

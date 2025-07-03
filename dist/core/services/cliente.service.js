@@ -30,6 +30,7 @@ class ClienteService {
                 telefone: data.telefone,
                 email: data.email,
                 endereco: data.endereco,
+                logo: data.logo,
                 camposAdicionais: {
                     create: data.camposAdicionais
                 }
@@ -55,6 +56,7 @@ class ClienteService {
                 telefone: data.telefone,
                 email: data.email,
                 endereco: data.endereco,
+                logo: data.logo,
                 camposAdicionais: data.camposAdicionais ? {
                     create: data.camposAdicionais
                 } : undefined

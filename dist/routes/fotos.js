@@ -8,6 +8,7 @@ const client_1 = require("@prisma/client");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const auth_middleware_1 = require("../infrastructure/middleware/auth.middleware");
 const prisma = new client_1.PrismaClient();
 const UPLOAD_DIR = path_1.default.resolve(__dirname, '../../uploads');
 // Garantir que a pasta uploads existe
@@ -42,74 +43,95 @@ const upload = (0, multer_1.default)({
     }
 });
 const router = express_1.default.Router();
+// Add authentication middleware to all photo routes
+router.use(auth_middleware_1.authenticateToken);
 // 🔹 Upload de novas fotos
-router.post('/', upload.array('imagens'), async (req, res) => {
-    const { ocorrenciaId } = req.body;
-    const arquivos = req.files;
-    const legendas = Array.isArray(req.body.legendas) ? req.body.legendas : [req.body.legendas];
-    if (!ocorrenciaId) {
-        res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
-        return;
-    }
-    if (!arquivos || arquivos.length === 0) {
-        res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
-        return;
-    }
+router.post('/', async (req, res) => {
     try {
-        // Verificar se a ocorrência existe
-        const ocorrencia = await prisma.ocorrencia.findUnique({
-            where: { id: Number(ocorrenciaId) }
-        });
-        if (!ocorrencia) {
-            res.status(404).json({ error: 'Ocorrência não encontrada.' });
-            return;
+        const { url, legenda, ocorrenciaId } = req.body;
+        if (!url || !ocorrenciaId) {
+            return res.status(400).json({ error: 'URL e ocorrenciaId são obrigatórios.' });
         }
-        const fotosCriadas = await Promise.all(arquivos.map(async (file, i) => {
-            const nomeArquivo = file.filename;
-            // Garantir que a URL comece com /uploads/
-            const url = nomeArquivo.startsWith('uploads/') ? `/${nomeArquivo}` : `/uploads/${nomeArquivo}`;
-            return prisma.foto.create({
-                data: {
-                    url,
-                    legenda: legendas[i] || '',
-                    ocorrenciaId: Number(ocorrenciaId)
-                }
-            });
-        }));
-        // Log para debug
-        console.log('Fotos criadas:', fotosCriadas);
-        res.status(201).json(fotosCriadas);
-    }
-    catch (error) {
-        // Limpar arquivos em caso de erro
-        arquivos.forEach(file => {
-            const filepath = path_1.default.join(UPLOAD_DIR, file.filename);
-            if (fs_1.default.existsSync(filepath)) {
-                fs_1.default.unlinkSync(filepath);
+        const fotoCriada = await prisma.foto.create({
+            data: {
+                url,
+                legenda: legenda || '',
+                ocorrenciaId: Number(ocorrenciaId)
             }
         });
-        console.error('Erro ao salvar fotos:', error);
-        res.status(500).json({ error: 'Erro ao salvar fotos.', detalhes: String(error) });
+        res.status(201).json(fotoCriada);
+    }
+    catch (error) {
+        console.error('Erro ao salvar foto:', error);
+        res.status(500).json({ error: 'Erro ao salvar foto.', detalhes: String(error) });
     }
 });
-// 🔹 Atualizar legenda da foto
+// 🔹 Upload de fotos via multipart/form-data (fallback para quando Supabase não estiver disponível)
+router.post('/upload', upload.single('foto'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Nenhum arquivo foi enviado.' });
+        }
+        const { legenda, ocorrenciaId } = req.body;
+        if (!ocorrenciaId) {
+            return res.status(400).json({ error: 'ocorrenciaId é obrigatório.' });
+        }
+        // Criar URL relativa para o arquivo salvo
+        const filename = req.file.filename;
+        const url = `/api/uploads/${filename}`;
+        const fotoCriada = await prisma.foto.create({
+            data: {
+                url,
+                legenda: legenda || '',
+                ocorrenciaId: Number(ocorrenciaId)
+            }
+        });
+        res.status(201).json(Object.assign(Object.assign({}, fotoCriada), { url: `${req.protocol}://${req.get('host')}${url}` // URL completa
+         }));
+    }
+    catch (error) {
+        console.error('Erro ao fazer upload de foto:', error);
+        res.status(500).json({ error: 'Erro ao fazer upload de foto.', detalhes: String(error) });
+    }
+});
+// 🔹 Atualizar foto (legenda, crop e zoom)
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { legenda } = req.body;
-    if (!legenda || typeof legenda !== 'string') {
-        res.status(400).json({ error: 'Legenda inválida.' });
+    const { legenda, cropX, cropY, zoom, cropArea } = req.body;
+    // Permitir legenda vazia ou null, mas deve ser string se fornecida
+    if (legenda !== undefined && legenda !== null && typeof legenda !== 'string') {
+        res.status(400).json({ error: 'Legenda deve ser uma string.' });
         return;
     }
     try {
+        // Preparar dados para atualizar
+        const updateData = {
+            legenda: legenda || '' // Garantir que legenda seja sempre string
+        };
+        // Adicionar campos de crop e zoom se fornecidos
+        if (cropX !== undefined)
+            updateData.cropX = parseFloat(cropX);
+        if (cropY !== undefined)
+            updateData.cropY = parseFloat(cropY);
+        if (zoom !== undefined)
+            updateData.zoom = parseFloat(zoom);
+        if (cropArea !== undefined) {
+            try {
+                updateData.cropArea = typeof cropArea === 'string' ? JSON.parse(cropArea) : cropArea;
+            }
+            catch (e) {
+                console.warn('Erro ao parsear cropArea:', e);
+            }
+        }
         const fotoAtualizada = await prisma.foto.update({
             where: { id: Number(id) },
-            data: { legenda }
+            data: updateData
         });
         res.json(fotoAtualizada);
     }
     catch (error) {
-        console.error('Erro ao atualizar legenda:', error);
-        res.status(500).json({ error: 'Erro ao atualizar legenda da foto.', detalhes: String(error) });
+        console.error('Erro ao atualizar foto:', error);
+        res.status(500).json({ error: 'Erro ao atualizar foto.', detalhes: String(error) });
     }
 });
 // 🔹 Remover foto
@@ -121,8 +143,8 @@ router.delete('/:id', async (req, res) => {
             res.status(404).json({ error: 'Foto não encontrada.' });
             return;
         }
-        // Remover arquivo físico
-        if (foto.url) {
+        // Remover arquivo físico apenas se for uma foto local
+        if (foto.url && !foto.url.startsWith('http')) {
             const filename = path_1.default.basename(foto.url);
             const filepath = path_1.default.join(UPLOAD_DIR, filename);
             if (fs_1.default.existsSync(filepath)) {
@@ -149,7 +171,19 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req, res) => {
             where: { ocorrenciaId: Number(ocorrenciaId) },
             orderBy: { id: 'asc' }
         });
-        res.json(fotos);
+        // Para fotos do Supabase, não precisamos verificar arquivos físicos
+        const fotosProcessadas = fotos.map(foto => {
+            // Se a URL é do Supabase, não verificar arquivo físico
+            if (foto.url.startsWith('http') && foto.url.includes('supabase')) {
+                return Object.assign(Object.assign({}, foto), { arquivoExiste: true, erroArquivo: null });
+            }
+            // Para fotos locais, verificar se o arquivo existe
+            const filename = path_1.default.basename(foto.url);
+            const filepath = path_1.default.join(UPLOAD_DIR, filename);
+            const arquivoExiste = fs_1.default.existsSync(filepath);
+            return Object.assign(Object.assign({}, foto), { arquivoExiste, erroArquivo: !arquivoExiste ? 'Arquivo físico não encontrado' : null });
+        });
+        res.json(fotosProcessadas);
     }
     catch (error) {
         console.error('Erro ao buscar fotos:', error);
