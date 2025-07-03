@@ -160,8 +160,8 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Remover arquivo físico
-    if (foto.url) {
+    // Remover arquivo físico apenas se for uma foto local
+    if (foto.url && !foto.url.startsWith('http')) {
       const filename = path.basename(foto.url);
       const filepath = path.join(UPLOAD_DIR, filename);
       if (fs.existsSync(filepath)) {
@@ -192,8 +192,18 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response):
       orderBy: { id: 'asc' }
     });
 
-    // Verificar se os arquivos físicos existem
-    const fotosComStatus = fotos.map(foto => {
+    // Para fotos do Supabase, não precisamos verificar arquivos físicos
+    const fotosProcessadas = fotos.map(foto => {
+      // Se a URL é do Supabase, não verificar arquivo físico
+      if (foto.url.startsWith('http') && foto.url.includes('supabase')) {
+        return {
+          ...foto,
+          arquivoExiste: true,
+          erroArquivo: null
+        };
+      }
+      
+      // Para fotos locais, verificar se o arquivo existe
       const filename = path.basename(foto.url);
       const filepath = path.join(UPLOAD_DIR, filename);
       const arquivoExiste = fs.existsSync(filepath);
@@ -205,7 +215,7 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response):
       };
     });
 
-    res.json(fotosComStatus);
+    res.json(fotosProcessadas);
   } catch (error) {
     console.error('Erro ao buscar fotos:', error);
     res.status(500).json({ error: 'Erro ao buscar fotos.', detalhes: String(error) });
