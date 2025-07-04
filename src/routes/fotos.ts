@@ -214,22 +214,27 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response):
 
     // Para fotos do Supabase, não precisamos verificar arquivos físicos
     const fotosProcessadas = fotos.map(foto => {
-      // Se a URL é do Supabase, não verificar arquivo físico
-      if (foto.url.startsWith('http') && foto.url.includes('supabase')) {
+      let url = foto.url;
+      // Se a URL é do Supabase, não modificar
+      if (url.startsWith('http') && url.includes('supabase')) {
         return {
           ...foto,
           arquivoExiste: true,
           erroArquivo: null
         };
       }
-      
+      // Se a URL é absoluta mas aponta para o backend local, transformar em relativa
+      if (url.startsWith('http') && url.includes('/api/uploads/')) {
+        const idx = url.indexOf('/api/uploads/');
+        url = url.substring(idx);
+      }
       // Para fotos locais, verificar se o arquivo existe
-      const filename = path.basename(foto.url);
+      const filename = path.basename(url);
       const filepath = path.join(UPLOAD_DIR, filename);
       const arquivoExiste = fs.existsSync(filepath);
-      
       return {
         ...foto,
+        url, // sempre relativa para fotos locais
         arquivoExiste,
         erroArquivo: !arquivoExiste ? 'Arquivo físico não encontrado' : null
       };
