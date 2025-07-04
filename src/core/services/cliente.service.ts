@@ -21,7 +21,8 @@ export class ClienteService {
     return this.prisma.cliente.findMany({
       orderBy: { nome: 'asc' },
       include: {
-        camposAdicionais: true
+        camposAdicionais: true,
+        contratos: true
       }
     });
   }
@@ -30,7 +31,8 @@ export class ClienteService {
     return this.prisma.cliente.findUnique({
       where: { id },
       include: {
-        camposAdicionais: true
+        camposAdicionais: true,
+        contratos: true
       }
     });
   }
@@ -50,7 +52,8 @@ export class ClienteService {
         }
       },
       include: {
-        camposAdicionais: true
+        camposAdicionais: true,
+        contratos: true
       }
     });
   }
@@ -78,7 +81,8 @@ export class ClienteService {
         } : undefined
       },
       include: {
-        camposAdicionais: true
+        camposAdicionais: true,
+        contratos: true
       }
     });
   }
