@@ -27,7 +27,12 @@ app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 // CORS - deve vir antes de qualquer rota
 const allowedOrigins = [
   'https://app.painelsegtrack.com.br',
-  'http://localhost:5173'
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:8080',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:8080'
 ];
 app.use(cors({
   origin: allowedOrigins,

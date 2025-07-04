@@ -98,20 +98,12 @@ export class OcorrenciaController {
       const { id } = req.params;
       const operador = req.body.operador;
       
-      // Validar dados obrigatórios
-      if (!req.body.placa1 || !req.body.cliente || !req.body.tipo) {
-        console.log('[OcorrenciaController] Dados obrigatórios faltando:', {
-          placa1: req.body.placa1,
-          cliente: req.body.cliente,
-          tipo: req.body.tipo
-        });
-        return res.status(400).json({ 
-          error: 'Campos obrigatórios faltando: placa1, cliente, tipo',
-          received: {
-            placa1: req.body.placa1,
-            cliente: req.body.cliente,
-            tipo: req.body.tipo
-          }
+      // Para atualizações parciais (como horários), não exigir campos obrigatórios
+      // Apenas validar se a ocorrência existe
+      const existingOcorrencia = await this.service.findById(Number(id));
+      if (!existingOcorrencia) {
+        return res.status(404).json({ 
+          error: 'Ocorrência não encontrada'
         });
       }
       

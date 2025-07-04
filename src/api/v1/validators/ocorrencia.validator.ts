@@ -28,9 +28,9 @@ const ocorrenciaSchema = z.object({
   origem_cidade: z.string().nullable().optional(),
   origem_estado: z.string().nullable().optional(),
   prestador: z.string().nullable().optional(),
-  inicio: z.date().nullable().optional(),
-  chegada: z.date().nullable().optional(),
-  termino: z.date().nullable().optional(),
+  inicio: z.union([z.string(), z.date()]).nullable().optional(),
+  chegada: z.union([z.string(), z.date()]).nullable().optional(),
+  termino: z.union([z.string(), z.date()]).nullable().optional(),
   km: z.number().nullable().optional(),
   km_inicial: z.number().nullable().optional(),
   km_final: z.number().nullable().optional(),
@@ -39,7 +39,7 @@ const ocorrenciaSchema = z.object({
   descricao: z.string().nullable().optional(),
   resultado: z.string().nullable().optional(),
   status: z.enum(['em_andamento', 'concluida', 'cancelada', 'aguardando']).optional(),
-  data_acionamento: z.date().nullable().optional(),
+  data_acionamento: z.union([z.string(), z.date()]).nullable().optional(),
   fotos: z.array(z.object({
     url: z.string(),
     legenda: z.string().optional()

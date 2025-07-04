@@ -108,9 +108,25 @@ export class OcorrenciaService {
       const db = await ensurePrisma();
       const { fotos, ...rest } = data;
 
+      // Converter campos de data de string para Date se necessário
+      const processedData: any = { ...rest };
+      
+      if (processedData.inicio && typeof processedData.inicio === 'string') {
+        processedData.inicio = new Date(processedData.inicio);
+      }
+      if (processedData.chegada && typeof processedData.chegada === 'string') {
+        processedData.chegada = new Date(processedData.chegada);
+      }
+      if (processedData.termino && typeof processedData.termino === 'string') {
+        processedData.termino = new Date(processedData.termino);
+      }
+      if (processedData.data_acionamento && typeof processedData.data_acionamento === 'string') {
+        processedData.data_acionamento = new Date(processedData.data_acionamento);
+      }
+
       const ocorrencia = await db.ocorrencia.create({
         data: {
-          ...rest,
+          ...processedData,
           status: data.status || 'em_andamento',
           criado_em: new Date(),
           atualizado_em: new Date(),
@@ -166,7 +182,23 @@ export class OcorrenciaService {
       const db = await ensurePrisma();
       const { fotos, despesas_detalhadas, ...rest } = data;
 
-      console.log('[OcorrenciaService] Dados para atualização:', JSON.stringify(rest, null, 2));
+      // Converter campos de data de string para Date se necessário
+      const processedData: any = { ...rest };
+      
+      if (processedData.inicio && typeof processedData.inicio === 'string') {
+        processedData.inicio = new Date(processedData.inicio);
+      }
+      if (processedData.chegada && typeof processedData.chegada === 'string') {
+        processedData.chegada = new Date(processedData.chegada);
+      }
+      if (processedData.termino && typeof processedData.termino === 'string') {
+        processedData.termino = new Date(processedData.termino);
+      }
+      if (processedData.data_acionamento && typeof processedData.data_acionamento === 'string') {
+        processedData.data_acionamento = new Date(processedData.data_acionamento);
+      }
+
+      console.log('[OcorrenciaService] Dados processados para atualização:', JSON.stringify(processedData, null, 2));
       console.log('[OcorrenciaService] Fotos:', fotos);
       console.log('[OcorrenciaService] Despesas detalhadas:', despesas_detalhadas);
 
@@ -178,7 +210,7 @@ export class OcorrenciaService {
       const ocorrencia = await db.ocorrencia.update({
         where: { id },
         data: {
-          ...rest,
+          ...processedData,
           atualizado_em: new Date(),
           despesas_detalhadas: despesasDetalhadasValue,
           operador: data.operador,
