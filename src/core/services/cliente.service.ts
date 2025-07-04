@@ -37,7 +37,7 @@ export class ClienteService {
     });
   }
 
-  async create(data: ClienteData) {
+  async create(data: ClienteData & { contratos?: any[] }) {
     return this.prisma.cliente.create({
       data: {
         nome: data.nome,
@@ -49,7 +49,10 @@ export class ClienteService {
         logo: data.logo,
         camposAdicionais: {
           create: data.camposAdicionais
-        }
+        },
+        contratos: data.contratos && data.contratos.length > 0
+          ? { create: data.contratos }
+          : undefined
       },
       include: {
         camposAdicionais: true,
@@ -58,12 +61,14 @@ export class ClienteService {
     });
   }
 
-  async update(id: number, data: Partial<ClienteData>) {
-    // Se houver campos adicionais, primeiro deletamos os existentes
+  async update(id: number, data: Partial<ClienteData> & { contratos?: any[] }) {
+    // Deletar contratos antigos se vierem novos
+    if (data.contratos) {
+      await this.prisma.contrato.deleteMany({ where: { clienteId: id } });
+    }
+    // Deletar campos adicionais antigos se vierem novos
     if (data.camposAdicionais) {
-      await this.prisma.campoAdicionalCliente.deleteMany({
-        where: { clienteId: id }
-      });
+      await this.prisma.campoAdicionalCliente.deleteMany({ where: { clienteId: id } });
     }
 
     return this.prisma.cliente.update({
@@ -76,9 +81,10 @@ export class ClienteService {
         email: data.email,
         endereco: data.endereco,
         logo: data.logo,
-        camposAdicionais: data.camposAdicionais ? {
-          create: data.camposAdicionais
-        } : undefined
+        camposAdicionais: data.camposAdicionais ? { create: data.camposAdicionais } : undefined,
+        contratos: data.contratos && data.contratos.length > 0
+          ? { create: data.contratos }
+          : undefined
       },
       include: {
         camposAdicionais: true,
@@ -88,12 +94,17 @@ export class ClienteService {
   }
 
   async delete(id: number) {
-    // Primeiro deletamos os campos adicionais
+    // Primeiro deletamos os contratos
+    await this.prisma.contrato.deleteMany({
+      where: { clienteId: id }
+    });
+
+    // Depois deletamos os campos adicionais
     await this.prisma.campoAdicionalCliente.deleteMany({
       where: { clienteId: id }
     });
 
-    // Depois deletamos o cliente
+    // Por último deletamos o cliente
     return this.prisma.cliente.delete({
       where: { id }
     });
