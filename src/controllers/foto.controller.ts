@@ -52,6 +52,15 @@ export class FotoController {
       const { id } = req.params;
       const { legenda, cropX, cropY, zoom, cropArea } = req.body;
 
+      console.log('📸 Atualizando foto:', {
+        id,
+        legenda,
+        cropX,
+        cropY,
+        zoom,
+        cropArea: typeof cropArea
+      });
+
       // Permitir legenda vazia ou null, mas deve ser string se fornecida
       if (legenda !== undefined && legenda !== null && typeof legenda !== 'string') {
         res.status(400).json({ error: 'Legenda deve ser uma string.' });
@@ -69,15 +78,19 @@ export class FotoController {
       if (cropArea !== undefined) {
         try {
           updateData.cropArea = typeof cropArea === 'string' ? JSON.parse(cropArea) : cropArea;
+          console.log('✅ cropArea parseado com sucesso:', updateData.cropArea);
         } catch (e) {
-          console.warn('Erro ao parsear cropArea:', e);
+          console.warn('❌ Erro ao parsear cropArea:', e);
         }
       }
 
+      console.log('💾 Dados para atualização:', updateData);
+
       const fotoAtualizada = await this.service.update(Number(id), updateData);
+      console.log('✅ Foto atualizada:', fotoAtualizada);
       res.json(fotoAtualizada);
     } catch (error) {
-      console.error('Erro ao atualizar foto:', error);
+      console.error('❌ Erro ao atualizar foto:', error);
       res.status(500).json({ error: 'Erro ao atualizar foto.', detalhes: String(error) });
     }
   };
