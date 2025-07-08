@@ -34,9 +34,9 @@ export class OcorrenciaService {
 
       if (filters.placa) {
         where.OR = [
-          { placa1: filters.placa },
-          { placa2: filters.placa },
-          { placa3: filters.placa }
+          { placa1: { contains: filters.placa, mode: 'insensitive' } },
+          { placa2: { contains: filters.placa, mode: 'insensitive' } },
+          { placa3: { contains: filters.placa, mode: 'insensitive' } }
         ];
       }
 
@@ -52,13 +52,22 @@ export class OcorrenciaService {
         };
       }
 
+      function parseDateLocalToUTC(dateStr: string | Date) {
+        if (dateStr instanceof Date) return dateStr;
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(Date.UTC(year, month - 1, day, 3, 0, 0));
+      }
+
       if (filters.data_inicio || filters.data_fim) {
-        where.criado_em = {};
+        where.data_acionamento = {};
         if (filters.data_inicio) {
-          where.criado_em.gte = filters.data_inicio;
+          where.data_acionamento.gte = parseDateLocalToUTC(filters.data_inicio);
         }
         if (filters.data_fim) {
-          where.criado_em.lte = filters.data_fim;
+          const dataFim = parseDateLocalToUTC(filters.data_fim);
+          const dataFimExclusive = new Date(dataFim);
+          dataFimExclusive.setUTCDate(dataFim.getUTCDate() + 1);
+          where.data_acionamento.lt = dataFimExclusive;
         }
       }
 

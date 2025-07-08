@@ -7,6 +7,11 @@ interface ClienteData {
   telefone?: string;
   email?: string;
   endereco?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  nome_fantasia?: string;
   logo?: string;
   camposAdicionais?: Array<{
     label: string;
@@ -46,6 +51,11 @@ export class ClienteService {
         telefone: data.telefone,
         email: data.email,
         endereco: data.endereco,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        estado: data.estado,
+        cep: data.cep,
+        nome_fantasia: data.nome_fantasia,
         logo: data.logo,
         camposAdicionais: {
           create: data.camposAdicionais
@@ -80,6 +90,11 @@ export class ClienteService {
         telefone: data.telefone,
         email: data.email,
         endereco: data.endereco,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        estado: data.estado,
+        cep: data.cep,
+        nome_fantasia: data.nome_fantasia,
         logo: data.logo,
         camposAdicionais: data.camposAdicionais ? { create: data.camposAdicionais } : undefined,
         contratos: data.contratos && data.contratos.length > 0

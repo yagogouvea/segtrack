@@ -22,24 +22,18 @@ export class PrestadorController {
     try {
       const { nome, cod_nome, regioes, funcoes, page = 1, pageSize = 20 } = req.query;
       
-      // Se não há filtros, retornar array direto para compatibilidade
-      if (!nome && !cod_nome && !regioes && !funcoes) {
-        const prestadores = await this.service.list();
-        res.json(prestadores);
-        return;
-      }
-      
-      // Se há filtros, retornar formato paginado
       const filters = {
         nome: nome ? String(nome) : undefined,
         cod_nome: cod_nome ? String(cod_nome) : undefined,
         regioes: regioes ? String(regioes).split(',') : undefined,
         funcoes: funcoes ? String(funcoes).split(',') : undefined,
       };
+      
       const pagination = {
         page: Number(page),
         pageSize: Number(pageSize)
       };
+      
       const result = await this.service.list(filters, pagination);
       res.json(result);
     } catch (error) {

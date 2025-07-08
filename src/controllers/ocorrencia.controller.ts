@@ -16,7 +16,7 @@ export class OcorrenciaController {
       console.log('[OcorrenciaController] Query params:', req.query);
       console.log('[OcorrenciaController] User:', req.user);
 
-      const { id, status, placa, cliente, prestador, inicio, fim } = req.query;
+      const { id, status, placa, cliente, prestador, data_inicio, data_fim } = req.query;
 
       const filters = {
         id: id ? Number(id) : undefined,
@@ -24,8 +24,8 @@ export class OcorrenciaController {
         placa: placa as string,
         cliente: cliente as string,
         prestador: prestador as string,
-        data_inicio: inicio ? new Date(inicio as string) : undefined,
-        data_fim: fim ? new Date(fim as string) : undefined
+        data_inicio: data_inicio ? new Date(data_inicio as string) : undefined,
+        data_fim: data_fim ? new Date(data_fim as string) : undefined
       };
 
       console.log('[OcorrenciaController] Filtros aplicados:', filters);

@@ -31,19 +31,7 @@ export class PrestadorService {
     try {
       const db = await ensurePrisma();
       
-      // Se não há filtros, retornar array direto para compatibilidade
-      if (!filters.nome && !filters.cod_nome && !filters.regioes && !filters.funcoes) {
-        return await db.prestador.findMany({
-          include: {
-            funcoes: true,
-            veiculos: true,
-            regioes: true
-          },
-          orderBy: { nome: 'asc' }
-        });
-      }
-      
-      // Se há filtros, aplicar lógica de filtros e paginação
+      // Construir filtros
       const where: any = {};
       if (filters.nome) {
         where.nome = { contains: filters.nome, mode: 'insensitive' };
@@ -57,8 +45,10 @@ export class PrestadorService {
       if (filters.funcoes && Array.isArray(filters.funcoes) && filters.funcoes.length > 0) {
         where.funcoes = { some: { funcao: { in: filters.funcoes } } };
       }
+      
       const skip = (pagination.page - 1) * pagination.pageSize;
       const take = pagination.pageSize;
+      
       const [data, total] = await Promise.all([
         db.prestador.findMany({
           where,
@@ -73,6 +63,7 @@ export class PrestadorService {
         }),
         db.prestador.count({ where })
       ]);
+      
       return {
         data,
         total,
