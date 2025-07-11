@@ -21,6 +21,7 @@ interface PrestadorData {
   valor_hora_adc: number;
   valor_km_adc: number;
   aprovado: boolean;
+  modelo_antena?: string;
   funcoes: { funcao: string }[];
   veiculos: { tipo: string }[];
   regioes: { regiao: string }[];
@@ -140,6 +141,7 @@ export class PrestadorService {
           valor_hora_adc: data.valor_hora_adc,
           valor_km_adc: data.valor_km_adc,
           aprovado: data.aprovado,
+          modelo_antena: data.modelo_antena,
           funcoes: {
             create: data.funcoes
           },
@@ -208,6 +210,7 @@ export class PrestadorService {
           valor_hora_adc: data.valor_hora_adc,
           valor_km_adc: data.valor_km_adc,
           aprovado: data.aprovado,
+          modelo_antena: data.modelo_antena,
           funcoes: {
             create: data.funcoes
           },
