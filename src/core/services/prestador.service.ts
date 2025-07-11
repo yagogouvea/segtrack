@@ -27,12 +27,181 @@ interface PrestadorData {
   regioes: { regiao: string }[];
 }
 
+// Função utilitária para normalizar texto (remover acentos e converter para minúsculas)
+function normalizarTexto(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .toLowerCase()
+    .trim();
+}
+
 export class PrestadorService {
   async list(filters: any = {}, pagination: { page: number, pageSize: number } = { page: 1, pageSize: 20 }) {
     try {
       const db = await ensurePrisma();
       
-      // Construir filtros
+      // Parâmetros de paginação
+      const page = pagination.page || 1;
+      const pageSize = pagination.pageSize || 20;
+      const offset = (page - 1) * pageSize;
+
+      // Se houver filtro de região/local, usar query bruta com unaccent
+      if (filters.local && typeof filters.local === 'string' && filters.local.trim().length > 0) {
+        console.log('🔍 Usando busca com unaccent para região:', filters.local);
+        
+        const valor = filters.local.trim();
+        const likeValue = `%${valor}%`;
+
+        // Montar condições WHERE para outros filtros
+        let whereConditions = [];
+        let params: any[] = [likeValue];
+        let paramIndex = 2; // $1 já é o likeValue
+
+        // Filtro por nome
+        if (filters.nome) {
+          whereConditions.push(`unaccent(lower(p.nome)) LIKE unaccent(lower($${paramIndex}))`);
+          params.push(`%${filters.nome.toLowerCase()}%`);
+          paramIndex++;
+        }
+
+        // Filtro por cod_nome
+        if (filters.cod_nome) {
+          whereConditions.push(`unaccent(lower(p.cod_nome)) LIKE unaccent(lower($${paramIndex}))`);
+          params.push(`%${filters.cod_nome.toLowerCase()}%`);
+          paramIndex++;
+        }
+
+        // Filtro por funções
+        if (filters.funcoes && Array.isArray(filters.funcoes) && filters.funcoes.length > 0) {
+          const funcoesPlaceholders = filters.funcoes.map((_: any, i: number) => `$${paramIndex + i}`).join(',');
+          whereConditions.push(`EXISTS (
+            SELECT 1 FROM "FuncaoPrestador" f 
+            WHERE f."prestadorId" = p.id 
+            AND unaccent(lower(f.funcao)) IN (${funcoesPlaceholders})
+          )`);
+          filters.funcoes.forEach((f: string) => params.push(f.toLowerCase()));
+          paramIndex += filters.funcoes.length;
+        }
+
+        // Filtro por regiões específicas
+        if (filters.regioes && Array.isArray(filters.regioes) && filters.regioes.length > 0) {
+          const regioesPlaceholders = filters.regioes.map((_: any, i: number) => `$${paramIndex + i}`).join(',');
+          whereConditions.push(`EXISTS (
+            SELECT 1 FROM "RegiaoPrestador" r 
+            WHERE r."prestadorId" = p.id 
+            AND unaccent(lower(r.regiao)) IN (${regioesPlaceholders})
+          )`);
+          filters.regioes.forEach((r: string) => params.push(r.toLowerCase()));
+          paramIndex += filters.regioes.length;
+        }
+
+        // Construir a cláusula WHERE completa
+        const whereClause = whereConditions.length > 0 ? `AND ${whereConditions.join(' AND ')}` : '';
+
+        // Query principal com unaccent para busca insensível a acentos
+        const query = `
+          SELECT DISTINCT p.*
+          FROM "Prestador" p
+          LEFT JOIN "RegiaoPrestador" r ON r."prestadorId" = p.id
+          WHERE (
+            unaccent(lower(COALESCE(p.bairro, ''))) LIKE unaccent(lower($1))
+            OR unaccent(lower(COALESCE(p.cidade, ''))) LIKE unaccent(lower($1))
+            OR unaccent(lower(COALESCE(p.estado, ''))) LIKE unaccent(lower($1))
+            OR unaccent(lower(COALESCE(r.regiao, ''))) LIKE unaccent(lower($1))
+          )
+          ${whereClause}
+          ORDER BY p.nome ASC
+          LIMIT ${pageSize} OFFSET ${offset}
+        `;
+
+        // Query para contar total
+        const countQuery = `
+          SELECT COUNT(DISTINCT p.id) as total
+          FROM "Prestador" p
+          LEFT JOIN "RegiaoPrestador" r ON r."prestadorId" = p.id
+          WHERE (
+            unaccent(lower(COALESCE(p.bairro, ''))) LIKE unaccent(lower($1))
+            OR unaccent(lower(COALESCE(p.cidade, ''))) LIKE unaccent(lower($1))
+            OR unaccent(lower(COALESCE(p.estado, ''))) LIKE unaccent(lower($1))
+            OR unaccent(lower(COALESCE(r.regiao, ''))) LIKE unaccent(lower($1))
+          )
+          ${whereClause}
+        `;
+
+        console.log('🔍 Query executada:', query);
+        console.log('🔍 Parâmetros:', params);
+
+        // Executar queries
+        const data = await db.$queryRawUnsafe(query, ...params);
+        const totalResult = await db.$queryRawUnsafe(countQuery, ...params) as any[];
+        const total = Number(totalResult[0]?.total) || 0;
+
+        // Buscar relacionamentos para os prestadores encontrados
+        if (Array.isArray(data) && data.length > 0) {
+          const prestadorIds = data.map((p: any) => p.id);
+          
+          const [funcoes, veiculos, regioes] = await Promise.all([
+            db.funcaoPrestador.findMany({
+              where: { prestadorId: { in: prestadorIds } },
+              orderBy: { funcao: 'asc' }
+            }),
+            db.tipoVeiculoPrestador.findMany({
+              where: { prestadorId: { in: prestadorIds } },
+              orderBy: { tipo: 'asc' }
+            }),
+            db.regiaoPrestador.findMany({
+              where: { prestadorId: { in: prestadorIds } },
+              orderBy: { regiao: 'asc' }
+            })
+          ]);
+
+          // Agrupar relacionamentos por prestador
+          const funcoesPorPrestador = funcoes.reduce((acc: any, f) => {
+            if (!acc[f.prestadorId]) acc[f.prestadorId] = [];
+            acc[f.prestadorId].push(f);
+            return acc;
+          }, {});
+
+          const veiculosPorPrestador = veiculos.reduce((acc: any, v) => {
+            if (!acc[v.prestadorId]) acc[v.prestadorId] = [];
+            acc[v.prestadorId].push(v);
+            return acc;
+          }, {});
+
+          const regioesPorPrestador = regioes.reduce((acc: any, r) => {
+            if (!acc[r.prestadorId]) acc[r.prestadorId] = [];
+            acc[r.prestadorId].push(r);
+            return acc;
+          }, {});
+
+          // Adicionar relacionamentos aos prestadores
+          const prestadoresCompletos = data.map((prestador: any) => ({
+            ...prestador,
+            funcoes: funcoesPorPrestador[prestador.id] || [],
+            veiculos: veiculosPorPrestador[prestador.id] || [],
+            regioes: regioesPorPrestador[prestador.id] || []
+          }));
+
+          return {
+            data: prestadoresCompletos,
+            total,
+            page,
+            pageSize
+          };
+        }
+
+        return {
+          data: [],
+          total: 0,
+          page,
+          pageSize
+        };
+      }
+
+      // Fallback: busca normal do Prisma se não houver filtro de local/região
+      console.log('🔍 Usando busca normal do Prisma');
+      
       const where: any = {};
       if (filters.nome) {
         where.nome = { contains: filters.nome, mode: 'insensitive' };
@@ -46,10 +215,10 @@ export class PrestadorService {
       if (filters.funcoes && Array.isArray(filters.funcoes) && filters.funcoes.length > 0) {
         where.funcoes = { some: { funcao: { in: filters.funcoes } } };
       }
-      
+
       const skip = (pagination.page - 1) * pagination.pageSize;
       const take = pagination.pageSize;
-      
+
       const [data, total] = await Promise.all([
         db.prestador.findMany({
           where,
@@ -64,7 +233,7 @@ export class PrestadorService {
         }),
         db.prestador.count({ where })
       ]);
-      
+
       return {
         data,
         total,
@@ -72,7 +241,7 @@ export class PrestadorService {
         pageSize: pagination.pageSize
       };
     } catch (error) {
-      console.error('Erro ao buscar prestadores:', error);
+      console.error('❌ Erro ao buscar prestadores:', error);
       throw new AppError('Erro ao buscar prestadores');
     }
   }

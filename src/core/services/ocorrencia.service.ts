@@ -84,6 +84,16 @@ export class OcorrenciaService {
       });
 
       console.log('[OcorrenciaService] Ocorrências encontradas:', ocorrencias.length);
+      
+      // Log para verificar as despesas_detalhadas de cada ocorrência
+      ocorrencias.forEach((oc, index) => {
+        console.log(`[OcorrenciaService] Ocorrência ${index + 1} (ID: ${oc.id}):`, {
+          despesas_detalhadas: oc.despesas_detalhadas,
+          tipo_despesas_detalhadas: typeof oc.despesas_detalhadas,
+          despesas: oc.despesas
+        });
+      });
+      
       return ocorrencias;
     } catch (error) {
       console.error('[OcorrenciaService] Erro ao listar ocorrências:', {
@@ -223,9 +233,30 @@ export class OcorrenciaService {
           }))
         } : undefined
       };
-      // Só sobrescreve despesas_detalhadas se vier no payload
+      
+      // Preservar despesas_detalhadas existentes se não fornecidas no payload
       if (despesas_detalhadas !== undefined) {
         updateData.despesas_detalhadas = despesas_detalhadas;
+        console.log('[OcorrenciaService] Usando despesas_detalhadas do payload:', despesas_detalhadas);
+      } else {
+        // Se despesas_detalhadas não foi fornecida, buscar a ocorrência atual para preservar as existentes
+        const ocorrenciaAtual = await db.ocorrencia.findUnique({
+          where: { id },
+          select: { despesas_detalhadas: true }
+        });
+        
+        console.log('[OcorrenciaService] Buscando ocorrência atual para preservar despesas:', {
+          id,
+          despesas_detalhadas_atual: ocorrenciaAtual?.despesas_detalhadas,
+          tipo_despesas_detalhadas: typeof ocorrenciaAtual?.despesas_detalhadas
+        });
+        
+        if (ocorrenciaAtual && ocorrenciaAtual.despesas_detalhadas) {
+          console.log('[OcorrenciaService] Preservando despesas_detalhadas existentes:', ocorrenciaAtual.despesas_detalhadas);
+          updateData.despesas_detalhadas = ocorrenciaAtual.despesas_detalhadas;
+        } else {
+          console.log('[OcorrenciaService] Nenhuma despesa_detalhada encontrada para preservar');
+        }
       }
 
       const ocorrencia = await db.ocorrencia.update({

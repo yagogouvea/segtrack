@@ -20,13 +20,14 @@ export class PrestadorController {
 
   list = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { nome, cod_nome, regioes, funcoes, page = 1, pageSize = 20 } = req.query;
+      const { nome, cod_nome, regioes, funcoes, local, page = 1, pageSize = 20 } = req.query;
       
       const filters = {
         nome: nome ? String(nome) : undefined,
         cod_nome: cod_nome ? String(cod_nome) : undefined,
         regioes: regioes ? String(regioes).split(',') : undefined,
         funcoes: funcoes ? String(funcoes).split(',') : undefined,
+        local: local ? String(local) : undefined,
       };
       
       const pagination = {
