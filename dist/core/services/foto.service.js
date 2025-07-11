@@ -16,10 +16,20 @@ class FotoService {
         });
     }
     async findByOcorrencia(ocorrenciaId) {
-        return this.prisma.foto.findMany({
+        const fotos = await this.prisma.foto.findMany({
             where: { ocorrenciaId },
             orderBy: { createdAt: 'desc' }
         });
+        console.log('📸 Fotos encontradas para ocorrência', ocorrenciaId, ':', fotos.map(f => ({
+            id: f.id,
+            url: f.url,
+            legenda: f.legenda,
+            cropX: f.cropX,
+            cropY: f.cropY,
+            zoom: f.zoom,
+            cropArea: f.cropArea
+        })));
+        return fotos;
     }
     async upload(data) {
         return this.prisma.foto.create({

@@ -8,18 +8,7 @@ class PrestadorService {
     async list(filters = {}, pagination = { page: 1, pageSize: 20 }) {
         try {
             const db = await (0, prisma_1.ensurePrisma)();
-            // Se não há filtros, retornar array direto para compatibilidade
-            if (!filters.nome && !filters.cod_nome && !filters.regioes && !filters.funcoes) {
-                return await db.prestador.findMany({
-                    include: {
-                        funcoes: true,
-                        veiculos: true,
-                        regioes: true
-                    },
-                    orderBy: { nome: 'asc' }
-                });
-            }
-            // Se há filtros, aplicar lógica de filtros e paginação
+            // Construir filtros
             const where = {};
             if (filters.nome) {
                 where.nome = { contains: filters.nome, mode: 'insensitive' };

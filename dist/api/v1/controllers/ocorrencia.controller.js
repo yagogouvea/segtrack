@@ -55,10 +55,13 @@ class OcorrenciaController {
     async update(req, res) {
         try {
             const { id } = req.params;
+            console.log('[OcorrenciaController] Update request for ID:', id);
+            console.log('[OcorrenciaController] Request body:', JSON.stringify(req.body, null, 2));
             const ocorrencia = await this.service.update(Number(id), req.body);
             return res.json(ocorrencia);
         }
         catch (error) {
+            console.error('[OcorrenciaController] Error in update:', error);
             if (error instanceof AppError_1.AppError) {
                 return res.status(error.statusCode).json({ error: error.message });
             }

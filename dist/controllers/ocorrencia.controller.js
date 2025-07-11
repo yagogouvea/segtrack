@@ -12,15 +12,15 @@ class OcorrenciaController {
             console.log('[OcorrenciaController] Iniciando listagem de ocorrências');
             console.log('[OcorrenciaController] Query params:', req.query);
             console.log('[OcorrenciaController] User:', req.user);
-            const { id, status, placa, cliente, prestador, inicio, fim } = req.query;
+            const { id, status, placa, cliente, prestador, data_inicio, data_fim } = req.query;
             const filters = {
                 id: id ? Number(id) : undefined,
                 status: status,
                 placa: placa,
                 cliente: cliente,
                 prestador: prestador,
-                data_inicio: inicio ? new Date(inicio) : undefined,
-                data_fim: fim ? new Date(fim) : undefined
+                data_inicio: data_inicio ? new Date(data_inicio) : undefined,
+                data_fim: data_fim ? new Date(data_fim) : undefined
             };
             console.log('[OcorrenciaController] Filtros aplicados:', filters);
             const ocorrencias = await this.service.list(filters);
@@ -86,20 +86,12 @@ class OcorrenciaController {
             console.log('[OcorrenciaController] User:', req.user);
             const { id } = req.params;
             const operador = req.body.operador;
-            // Validar dados obrigatórios
-            if (!req.body.placa1 || !req.body.cliente || !req.body.tipo) {
-                console.log('[OcorrenciaController] Dados obrigatórios faltando:', {
-                    placa1: req.body.placa1,
-                    cliente: req.body.cliente,
-                    tipo: req.body.tipo
-                });
-                return res.status(400).json({
-                    error: 'Campos obrigatórios faltando: placa1, cliente, tipo',
-                    received: {
-                        placa1: req.body.placa1,
-                        cliente: req.body.cliente,
-                        tipo: req.body.tipo
-                    }
+            // Para atualizações parciais (como horários), não exigir campos obrigatórios
+            // Apenas validar se a ocorrência existe
+            const existingOcorrencia = await this.service.findById(Number(id));
+            if (!existingOcorrencia) {
+                return res.status(404).json({
+                    error: 'Ocorrência não encontrada'
                 });
             }
             const ocorrencia = await this.service.update(Number(id), req.body);

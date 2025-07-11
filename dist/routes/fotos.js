@@ -48,16 +48,38 @@ router.use(auth_middleware_1.authenticateToken);
 // 🔹 Upload de novas fotos
 router.post('/', async (req, res) => {
     try {
-        const { url, legenda, ocorrenciaId } = req.body;
+        const { url, legenda, ocorrenciaId, cropX, cropY, zoom, cropArea } = req.body;
         if (!url || !ocorrenciaId) {
             return res.status(400).json({ error: 'URL e ocorrenciaId são obrigatórios.' });
         }
-        const fotoCriada = await prisma.foto.create({
-            data: {
-                url,
-                legenda: legenda || '',
-                ocorrenciaId: Number(ocorrenciaId)
+        // Proteção: não criar duplicada
+        const fotoExistente = await prisma.foto.findFirst({
+            where: { url, ocorrenciaId: Number(ocorrenciaId) }
+        });
+        if (fotoExistente) {
+            return res.status(200).json(fotoExistente);
+        }
+        const data = {
+            url,
+            legenda: legenda || '',
+            ocorrenciaId: Number(ocorrenciaId)
+        };
+        if (cropX !== undefined)
+            data.cropX = parseFloat(cropX);
+        if (cropY !== undefined)
+            data.cropY = parseFloat(cropY);
+        if (zoom !== undefined)
+            data.zoom = parseFloat(zoom);
+        if (cropArea !== undefined) {
+            try {
+                data.cropArea = typeof cropArea === 'string' ? JSON.parse(cropArea) : cropArea;
             }
+            catch (e) {
+                console.warn('Erro ao parsear cropArea:', e);
+            }
+        }
+        const fotoCriada = await prisma.foto.create({
+            data
         });
         res.status(201).json(fotoCriada);
     }
@@ -173,15 +195,22 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req, res) => {
         });
         // Para fotos do Supabase, não precisamos verificar arquivos físicos
         const fotosProcessadas = fotos.map(foto => {
-            // Se a URL é do Supabase, não verificar arquivo físico
-            if (foto.url.startsWith('http') && foto.url.includes('supabase')) {
+            let url = foto.url;
+            // Se a URL é do Supabase, não modificar
+            if (url.startsWith('http') && url.includes('supabase')) {
                 return Object.assign(Object.assign({}, foto), { arquivoExiste: true, erroArquivo: null });
             }
+            // Se a URL é absoluta mas aponta para o backend local, transformar em relativa
+            if (url.startsWith('http') && url.includes('/api/uploads/')) {
+                const idx = url.indexOf('/api/uploads/');
+                url = url.substring(idx);
+            }
             // Para fotos locais, verificar se o arquivo existe
-            const filename = path_1.default.basename(foto.url);
+            const filename = path_1.default.basename(url);
             const filepath = path_1.default.join(UPLOAD_DIR, filename);
             const arquivoExiste = fs_1.default.existsSync(filepath);
-            return Object.assign(Object.assign({}, foto), { arquivoExiste, erroArquivo: !arquivoExiste ? 'Arquivo físico não encontrado' : null });
+            return Object.assign(Object.assign({}, foto), { url, // sempre relativa para fotos locais
+                arquivoExiste, erroArquivo: !arquivoExiste ? 'Arquivo físico não encontrado' : null });
         });
         res.json(fotosProcessadas);
     }

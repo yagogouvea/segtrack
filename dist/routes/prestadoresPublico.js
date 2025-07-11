@@ -18,7 +18,8 @@ router.post('/', async (req, res) => {
     console.log('📥 Body completo:', JSON.stringify(req.body, null, 2));
     console.log('📥 Content-Type:', req.get('Content-Type'));
     console.log('📥 Content-Length:', req.get('Content-Length'));
-    const { nome, cpf, cod_nome, telefone, email, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, funcoes, regioes, tipo_veiculo } = req.body;
+    const { nome, cpf, cod_nome, telefone, email, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, funcoes, regioes, tipo_veiculo, modelo_antena // <-- novo campo
+     } = req.body;
     // Validação de campos obrigatórios
     const camposObrigatorios = {
         nome: !!nome,
@@ -340,6 +341,7 @@ router.post('/', async (req, res) => {
                 valor_km_adc: 0,
                 franquia_km: 0,
                 franquia_horas: '',
+                modelo_antena, // <-- novo campo
                 funcoes: {
                     create: funcoes.map((funcao) => ({ funcao }))
                 },

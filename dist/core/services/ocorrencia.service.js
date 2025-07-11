@@ -33,9 +33,9 @@ class OcorrenciaService {
             }
             if (filters.placa) {
                 where.OR = [
-                    { placa1: filters.placa },
-                    { placa2: filters.placa },
-                    { placa3: filters.placa }
+                    { placa1: { contains: filters.placa, mode: 'insensitive' } },
+                    { placa2: { contains: filters.placa, mode: 'insensitive' } },
+                    { placa3: { contains: filters.placa, mode: 'insensitive' } }
                 ];
             }
             if (filters.cliente) {
@@ -48,13 +48,22 @@ class OcorrenciaService {
                     contains: filters.prestador
                 };
             }
+            function parseDateLocalToUTC(dateStr) {
+                if (dateStr instanceof Date)
+                    return dateStr;
+                const [year, month, day] = dateStr.split('-').map(Number);
+                return new Date(Date.UTC(year, month - 1, day, 3, 0, 0));
+            }
             if (filters.data_inicio || filters.data_fim) {
-                where.criado_em = {};
+                where.data_acionamento = {};
                 if (filters.data_inicio) {
-                    where.criado_em.gte = filters.data_inicio;
+                    where.data_acionamento.gte = parseDateLocalToUTC(filters.data_inicio);
                 }
                 if (filters.data_fim) {
-                    where.criado_em.lte = filters.data_fim;
+                    const dataFim = parseDateLocalToUTC(filters.data_fim);
+                    const dataFimExclusive = new Date(dataFim);
+                    dataFimExclusive.setUTCDate(dataFim.getUTCDate() + 1);
+                    where.data_acionamento.lt = dataFimExclusive;
                 }
             }
             console.log('[OcorrenciaService] Query where:', where);
@@ -100,8 +109,22 @@ class OcorrenciaService {
             }
             const db = await (0, prisma_1.ensurePrisma)();
             const { fotos } = data, rest = __rest(data, ["fotos"]);
+            // Converter campos de data de string para Date se necessário
+            const processedData = Object.assign({}, rest);
+            if (processedData.inicio && typeof processedData.inicio === 'string') {
+                processedData.inicio = new Date(processedData.inicio);
+            }
+            if (processedData.chegada && typeof processedData.chegada === 'string') {
+                processedData.chegada = new Date(processedData.chegada);
+            }
+            if (processedData.termino && typeof processedData.termino === 'string') {
+                processedData.termino = new Date(processedData.termino);
+            }
+            if (processedData.data_acionamento && typeof processedData.data_acionamento === 'string') {
+                processedData.data_acionamento = new Date(processedData.data_acionamento);
+            }
             const ocorrencia = await db.ocorrencia.create({
-                data: Object.assign(Object.assign({}, rest), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull, operador: data.operador, fotos: fotos && fotos.length > 0 ? {
+                data: Object.assign(Object.assign({}, processedData), { status: data.status || 'em_andamento', criado_em: new Date(), atualizado_em: new Date(), despesas_detalhadas: (_a = data.despesas_detalhadas) !== null && _a !== void 0 ? _a : client_1.Prisma.JsonNull, operador: data.operador, fotos: fotos && fotos.length > 0 ? {
                         create: fotos.map(foto => ({
                             url: foto.url,
                             legenda: foto.legenda || ''
@@ -146,21 +169,37 @@ class OcorrenciaService {
             console.log('[OcorrenciaService] Dados recebidos:', JSON.stringify(data, null, 2));
             const db = await (0, prisma_1.ensurePrisma)();
             const { fotos, despesas_detalhadas } = data, rest = __rest(data, ["fotos", "despesas_detalhadas"]);
-            console.log('[OcorrenciaService] Dados para atualização:', JSON.stringify(rest, null, 2));
+            // Converter campos de data de string para Date se necessário
+            const processedData = Object.assign({}, rest);
+            if (processedData.inicio && typeof processedData.inicio === 'string') {
+                processedData.inicio = new Date(processedData.inicio);
+            }
+            if (processedData.chegada && typeof processedData.chegada === 'string') {
+                processedData.chegada = new Date(processedData.chegada);
+            }
+            if (processedData.termino && typeof processedData.termino === 'string') {
+                processedData.termino = new Date(processedData.termino);
+            }
+            if (processedData.data_acionamento && typeof processedData.data_acionamento === 'string') {
+                processedData.data_acionamento = new Date(processedData.data_acionamento);
+            }
+            console.log('[OcorrenciaService] Dados processados para atualização:', JSON.stringify(processedData, null, 2));
             console.log('[OcorrenciaService] Fotos:', fotos);
             console.log('[OcorrenciaService] Despesas detalhadas:', despesas_detalhadas);
-            // Tratar despesas_detalhadas corretamente
-            const despesasDetalhadasValue = despesas_detalhadas !== undefined && despesas_detalhadas !== null
-                ? despesas_detalhadas
-                : client_1.Prisma.JsonNull;
+            // Montar objeto de update
+            const updateData = Object.assign(Object.assign({}, processedData), { atualizado_em: new Date(), operador: data.operador, fotos: fotos && fotos.length > 0 ? {
+                    create: fotos.map(foto => ({
+                        url: foto.url,
+                        legenda: foto.legenda || ''
+                    }))
+                } : undefined });
+            // Só sobrescreve despesas_detalhadas se vier no payload
+            if (despesas_detalhadas !== undefined) {
+                updateData.despesas_detalhadas = despesas_detalhadas;
+            }
             const ocorrencia = await db.ocorrencia.update({
                 where: { id },
-                data: Object.assign(Object.assign({}, rest), { atualizado_em: new Date(), despesas_detalhadas: despesasDetalhadasValue, operador: data.operador, fotos: fotos && fotos.length > 0 ? {
-                        create: fotos.map(foto => ({
-                            url: foto.url,
-                            legenda: foto.legenda || ''
-                        }))
-                    } : undefined }),
+                data: updateData,
                 include: {
                     fotos: true
                 }

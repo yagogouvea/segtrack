@@ -90,12 +90,12 @@ router.get('/buscar', async (req: Request, res: Response) => {
 // POST - Criar novo prestador
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const {
-      nome, cpf, cod_nome, telefone, email, aprovado,
-      tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
-      valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
-      funcoes, regioes, veiculos
-    } = req.body;
+      const {
+    nome, cpf, cod_nome, telefone, email, aprovado,
+    tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
+    valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
+    funcoes, regioes, veiculos, modelo_antena
+  } = req.body;
 
     // Validações básicas
     if (!nome || !cpf) {
@@ -163,6 +163,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         franquia_km: franquiaKmFloat,
         valor_hora_adc: valorHoraAdcFloat,
         valor_km_adc: valorKmAdcFloat,
+        modelo_antena,
         funcoes: {
           create: processarFuncoes(funcoes)
         },
@@ -209,7 +210,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     nome, cpf, cod_nome, telefone, email, aprovado,
     tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
     valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc,
-    funcoes, regioes, veiculos
+    funcoes, regioes, veiculos, modelo_antena
   } = req.body;
 
   try {
@@ -272,6 +273,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         franquia_km: franquiaKmFloat,
         valor_hora_adc: valorHoraAdcFloat,
         valor_km_adc: valorKmAdcFloat,
+        modelo_antena,
         funcoes: { 
           create: processarFuncoes(funcoes)
         },

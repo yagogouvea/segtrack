@@ -109,6 +109,7 @@ model Prestador {
   funcoes           FuncaoPrestador[]
   regioes           RegiaoPrestador[]
   veiculos          TipoVeiculoPrestador[]
+  modelo_antena     String?
 }
 
 model FuncaoPrestador {

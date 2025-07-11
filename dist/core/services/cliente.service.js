@@ -9,7 +9,8 @@ class ClienteService {
         return this.prisma.cliente.findMany({
             orderBy: { nome: 'asc' },
             include: {
-                camposAdicionais: true
+                camposAdicionais: true,
+                contratos: true
             }
         });
     }
@@ -17,7 +18,8 @@ class ClienteService {
         return this.prisma.cliente.findUnique({
             where: { id },
             include: {
-                camposAdicionais: true
+                camposAdicionais: true,
+                contratos: true
             }
         });
     }
@@ -30,22 +32,33 @@ class ClienteService {
                 telefone: data.telefone,
                 email: data.email,
                 endereco: data.endereco,
+                bairro: data.bairro,
+                cidade: data.cidade,
+                estado: data.estado,
+                cep: data.cep,
+                nome_fantasia: data.nome_fantasia,
                 logo: data.logo,
                 camposAdicionais: {
                     create: data.camposAdicionais
-                }
+                },
+                contratos: data.contratos && data.contratos.length > 0
+                    ? { create: data.contratos }
+                    : undefined
             },
             include: {
-                camposAdicionais: true
+                camposAdicionais: true,
+                contratos: true
             }
         });
     }
     async update(id, data) {
-        // Se houver campos adicionais, primeiro deletamos os existentes
+        // Deletar contratos antigos se vierem novos
+        if (data.contratos) {
+            await this.prisma.contrato.deleteMany({ where: { clienteId: id } });
+        }
+        // Deletar campos adicionais antigos se vierem novos
         if (data.camposAdicionais) {
-            await this.prisma.campoAdicionalCliente.deleteMany({
-                where: { clienteId: id }
-            });
+            await this.prisma.campoAdicionalCliente.deleteMany({ where: { clienteId: id } });
         }
         return this.prisma.cliente.update({
             where: { id },
@@ -56,22 +69,33 @@ class ClienteService {
                 telefone: data.telefone,
                 email: data.email,
                 endereco: data.endereco,
+                bairro: data.bairro,
+                cidade: data.cidade,
+                estado: data.estado,
+                cep: data.cep,
+                nome_fantasia: data.nome_fantasia,
                 logo: data.logo,
-                camposAdicionais: data.camposAdicionais ? {
-                    create: data.camposAdicionais
-                } : undefined
+                camposAdicionais: data.camposAdicionais ? { create: data.camposAdicionais } : undefined,
+                contratos: data.contratos && data.contratos.length > 0
+                    ? { create: data.contratos }
+                    : undefined
             },
             include: {
-                camposAdicionais: true
+                camposAdicionais: true,
+                contratos: true
             }
         });
     }
     async delete(id) {
-        // Primeiro deletamos os campos adicionais
+        // Primeiro deletamos os contratos
+        await this.prisma.contrato.deleteMany({
+            where: { clienteId: id }
+        });
+        // Depois deletamos os campos adicionais
         await this.prisma.campoAdicionalCliente.deleteMany({
             where: { clienteId: id }
         });
-        // Depois deletamos o cliente
+        // Por último deletamos o cliente
         return this.prisma.cliente.delete({
             where: { id }
         });

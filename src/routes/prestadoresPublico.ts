@@ -21,7 +21,8 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
   const {
     nome, cpf, cod_nome, telefone, email,
     tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
-    funcoes, regioes, tipo_veiculo
+    funcoes, regioes, tipo_veiculo,
+    modelo_antena // <-- novo campo
   } = req.body;
 
   // Validação de campos obrigatórios
@@ -370,6 +371,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
         valor_km_adc: 0,
         franquia_km: 0,
         franquia_horas: '',
+        modelo_antena, // <-- novo campo
         funcoes: {
           create: funcoes.map((funcao: string) => ({ funcao }))
         },

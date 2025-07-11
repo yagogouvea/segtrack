@@ -16,6 +16,7 @@ export interface PrestadorPublicoInput {
   funcoes: string[];     // Ex: ['Pronta Resposta', 'Drone']
   regioes: string[];     // Localidades de atuação
   tipo_veiculo: string[]; // Ex: ['Carro', 'Moto']
+  modelo_antena?: string; // Novo campo para antenista
 }
 
 // Dica adicional: você pode expandir esse tipo para incluir validações com Zod ou Joi futuramente.

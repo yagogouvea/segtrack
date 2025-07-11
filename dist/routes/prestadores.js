@@ -87,7 +87,7 @@ router.get('/buscar', async (req, res) => {
 // POST - Criar novo prestador
 router.post('/', async (req, res) => {
     try {
-        const { nome, cpf, cod_nome, telefone, email, aprovado, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc, funcoes, regioes, veiculos } = req.body;
+        const { nome, cpf, cod_nome, telefone, email, aprovado, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc, funcoes, regioes, veiculos, modelo_antena } = req.body;
         // Validações básicas
         if (!nome || !cpf) {
             res.status(400).json({ erro: 'Nome e CPF são obrigatórios' });
@@ -150,6 +150,7 @@ router.post('/', async (req, res) => {
                 franquia_km: franquiaKmFloat,
                 valor_hora_adc: valorHoraAdcFloat,
                 valor_km_adc: valorKmAdcFloat,
+                modelo_antena,
                 funcoes: {
                     create: processarFuncoes(funcoes)
                 },
@@ -183,7 +184,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     console.log('Atualizando prestador:', { id, body: req.body });
-    const { nome, cpf, cod_nome, telefone, email, aprovado, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc, funcoes, regioes, veiculos } = req.body;
+    const { nome, cpf, cod_nome, telefone, email, aprovado, tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado, valor_acionamento, franquia_horas, franquia_km, valor_hora_adc, valor_km_adc, funcoes, regioes, veiculos, modelo_antena } = req.body;
     try {
         const db = await (0, prisma_1.ensurePrisma)();
         // Converter valores numéricos
@@ -242,6 +243,7 @@ router.put('/:id', async (req, res) => {
                 franquia_km: franquiaKmFloat,
                 valor_hora_adc: valorHoraAdcFloat,
                 valor_km_adc: valorKmAdcFloat,
+                modelo_antena,
                 funcoes: {
                     create: processarFuncoes(funcoes)
                 },

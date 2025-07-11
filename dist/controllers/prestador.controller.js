@@ -17,13 +17,6 @@ class PrestadorController {
         this.list = async (req, res) => {
             try {
                 const { nome, cod_nome, regioes, funcoes, page = 1, pageSize = 20 } = req.query;
-                // Se não há filtros, retornar array direto para compatibilidade
-                if (!nome && !cod_nome && !regioes && !funcoes) {
-                    const prestadores = await this.service.list();
-                    res.json(prestadores);
-                    return;
-                }
-                // Se há filtros, retornar formato paginado
                 const filters = {
                     nome: nome ? String(nome) : undefined,
                     cod_nome: cod_nome ? String(cod_nome) : undefined,

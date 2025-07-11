@@ -28,7 +28,12 @@ app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 // CORS - deve vir antes de qualquer rota
 const allowedOrigins = [
     'https://app.painelsegtrack.com.br',
-    'http://localhost:5173'
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:8080'
 ];
 app.use((0, cors_1.default)({
     origin: allowedOrigins,
@@ -42,7 +47,13 @@ app.use((0, compression_1.default)());
 app.use(express_1.default.json());
 // Configuração para servir arquivos estáticos da pasta uploads
 app.use('/api/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads'), {
-    maxAge: 0
+    maxAge: 0,
+    setHeaders: (res, path) => {
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Methods', 'GET');
+        res.set('Access-Control-Allow-Headers', 'Content-Type');
+        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
 }));
 // Middleware de log para todas as requisições
 app.use((req, _res, next) => {
