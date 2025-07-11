@@ -211,25 +211,26 @@ export class OcorrenciaService {
       console.log('[OcorrenciaService] Fotos:', fotos);
       console.log('[OcorrenciaService] Despesas detalhadas:', despesas_detalhadas);
 
-      // Tratar despesas_detalhadas corretamente
-      const despesasDetalhadasValue = despesas_detalhadas !== undefined && despesas_detalhadas !== null 
-        ? despesas_detalhadas 
-        : Prisma.JsonNull;
+      // Montar objeto de update
+      const updateData: any = {
+        ...processedData,
+        atualizado_em: new Date(),
+        operador: data.operador,
+        fotos: fotos && fotos.length > 0 ? {
+          create: fotos.map(foto => ({
+            url: foto.url,
+            legenda: foto.legenda || ''
+          }))
+        } : undefined
+      };
+      // Só sobrescreve despesas_detalhadas se vier no payload
+      if (despesas_detalhadas !== undefined) {
+        updateData.despesas_detalhadas = despesas_detalhadas;
+      }
 
       const ocorrencia = await db.ocorrencia.update({
         where: { id },
-        data: {
-          ...processedData,
-          atualizado_em: new Date(),
-          despesas_detalhadas: despesasDetalhadasValue,
-          operador: data.operador,
-          fotos: fotos && fotos.length > 0 ? {
-            create: fotos.map(foto => ({
-              url: foto.url,
-              legenda: foto.legenda || ''
-            }))
-          } : undefined
-        },
+        data: updateData,
         include: {
           fotos: true
         }
