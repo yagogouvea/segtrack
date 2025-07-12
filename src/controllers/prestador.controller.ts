@@ -97,4 +97,14 @@ export class PrestadorController {
       res.status(500).json({ error: 'Erro ao deletar prestador' });
     }
   };
+
+  mapa = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const prestadores = await this.service.listMapa();
+      res.json(prestadores);
+    } catch (error) {
+      console.error('Erro ao listar prestadores para o mapa:', error);
+      res.status(500).json({ error: 'Erro ao listar prestadores para o mapa' });
+    }
+  };
 } 

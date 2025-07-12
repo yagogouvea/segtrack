@@ -36,6 +36,40 @@ function normalizarTexto(texto: string): string {
     .trim();
 }
 
+// Função para obter coordenadas via geocodificação
+async function getCoordinates(endereco: string, cidade: string, estado: string): Promise<{ latitude: number | null, longitude: number | null }> {
+  try {
+    // Validar se temos os dados mínimos necessários
+    if (!endereco || !cidade || !estado) {
+      console.log('⚠️ Dados de endereço incompletos:', { endereco, cidade, estado });
+      return { latitude: null, longitude: null };
+    }
+
+    const enderecoCompleto = `${endereco}, ${cidade}, ${estado}, Brasil`;
+    console.log('🔍 Geocodificando endereço:', enderecoCompleto);
+    
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1`;
+    
+    const response = await fetch(url);
+    const data = await response.json() as any[];
+    
+    if (data && data.length > 0) {
+      const result = {
+        latitude: parseFloat(data[0].lat),
+        longitude: parseFloat(data[0].lon)
+      };
+      console.log('✅ Coordenadas encontradas:', result);
+      return result;
+    }
+    
+    console.log('⚠️ Nenhuma coordenada encontrada para:', enderecoCompleto);
+    return { latitude: null, longitude: null };
+  } catch (error) {
+    console.error('❌ Erro ao geocodificar endereço:', error);
+    return { latitude: null, longitude: null };
+  }
+}
+
 export class PrestadorService {
   async list(filters: any = {}, pagination: { page: number, pageSize: number } = { page: 1, pageSize: 20 }) {
     try {
@@ -203,11 +237,21 @@ export class PrestadorService {
       console.log('🔍 Usando busca normal do Prisma');
       
       const where: any = {};
-      if (filters.nome) {
-        where.nome = { contains: filters.nome, mode: 'insensitive' };
-      }
-      if (filters.cod_nome) {
-        where.cod_nome = { contains: filters.cod_nome, mode: 'insensitive' };
+      
+      // Se ambos nome e cod_nome são fornecidos, usar OR
+      if (filters.nome && filters.cod_nome) {
+        where.OR = [
+          { nome: { contains: filters.nome, mode: 'insensitive' } },
+          { cod_nome: { contains: filters.cod_nome, mode: 'insensitive' } }
+        ];
+      } else {
+        // Caso contrário, usar filtros individuais
+        if (filters.nome) {
+          where.nome = { contains: filters.nome, mode: 'insensitive' };
+        }
+        if (filters.cod_nome) {
+          where.cod_nome = { contains: filters.cod_nome, mode: 'insensitive' };
+        }
       }
       if (filters.regioes && Array.isArray(filters.regioes) && filters.regioes.length > 0) {
         where.regioes = { some: { regiao: { in: filters.regioes } } };
@@ -290,6 +334,10 @@ export class PrestadorService {
   async create(data: PrestadorData) {
     try {
       const db = await ensurePrisma();
+      
+      // Obter coordenadas automaticamente
+      const coordinates = await getCoordinates(data.endereco, data.cidade, data.estado);
+      
       return await db.prestador.create({
         data: {
           nome: data.nome,
@@ -311,6 +359,8 @@ export class PrestadorService {
           valor_km_adc: data.valor_km_adc,
           aprovado: data.aprovado,
           modelo_antena: data.modelo_antena,
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
           funcoes: {
             create: data.funcoes
           },
@@ -342,7 +392,17 @@ export class PrestadorService {
     try {
       const db = await ensurePrisma();
       // Verificar se o prestador existe
-      await this.findById(id);
+      const prestadorExistente = await this.findById(id);
+
+      // Obter coordenadas automaticamente sempre que o endereço for atualizado
+      console.log('📍 Atualizando coordenadas para endereço:', data.endereco, data.cidade, data.estado);
+      const coordinates = await getCoordinates(data.endereco, data.cidade, data.estado);
+      
+      if (coordinates.latitude && coordinates.longitude) {
+        console.log('✅ Coordenadas obtidas:', coordinates);
+      } else {
+        console.log('⚠️ Não foi possível obter coordenadas para o endereço');
+      }
 
       // Deletar relacionamentos existentes
       await db.$transaction([
@@ -380,6 +440,8 @@ export class PrestadorService {
           valor_km_adc: data.valor_km_adc,
           aprovado: data.aprovado,
           modelo_antena: data.modelo_antena,
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
           funcoes: {
             create: data.funcoes
           },
@@ -480,5 +542,23 @@ export class PrestadorService {
       console.error('Erro ao buscar prestadores por função:', error);
       throw new AppError('Erro ao buscar prestadores por função');
     }
+  }
+
+  async listMapa() {
+    const db = await ensurePrisma();
+    return db.prestador.findMany({
+      select: {
+        id: true,
+        nome: true,
+        telefone: true, // Adicionado telefone
+        latitude: true,
+        longitude: true,
+        cidade: true,
+        estado: true,
+        bairro: true,
+        regioes: { select: { regiao: true } },
+        funcoes: { select: { funcao: true } } // Adicionado tipo de apoio
+      }
+    });
   }
 } 

@@ -87,6 +87,9 @@ router.get('/buscar', async (req: Request, res: Response) => {
   }
 });
 
+// Rota otimizada para o mapa de prestadores
+router.get('/mapa', (req, res) => controller.mapa(req, res));
+
 // POST - Criar novo prestador
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -214,92 +217,54 @@ router.put('/:id', async (req: Request, res: Response) => {
   } = req.body;
 
   try {
-    const db = await ensurePrisma();
-    // Converter valores numéricos
-    const valorAcionamentoFloat = valor_acionamento ? parseFloat(valor_acionamento.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
-    const franquiaKmFloat = franquia_km ? parseFloat(String(franquia_km)) : 0;
-    const valorHoraAdcFloat = valor_hora_adc ? parseFloat(valor_hora_adc.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
-    const valorKmAdcFloat = valor_km_adc ? parseFloat(valor_km_adc.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0;
-
-    // Processar arrays de funções, regiões e veículos
-    const processarFuncoes = (funcs: any[] | null | undefined) => {
-      if (!funcs) return [];
-      return funcs.map(f => ({
+    // Usar o serviço que tem geocodificação automática
+    const { PrestadorService } = require('../core/services/prestador.service');
+    const prestadorService = new PrestadorService();
+    
+    // Preparar dados para o serviço
+    const dadosPrestador = {
+      nome,
+      cpf: cpf ? cpf.replace(/\D/g, '') : '',
+      cod_nome,
+      telefone,
+      email,
+      tipo_pix,
+      chave_pix,
+      cep,
+      endereco,
+      bairro,
+      cidade,
+      estado,
+      valor_acionamento: valor_acionamento ? parseFloat(valor_acionamento.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0,
+      franquia_horas,
+      franquia_km: franquia_km ? parseFloat(String(franquia_km)) : 0,
+      valor_hora_adc: valor_hora_adc ? parseFloat(valor_hora_adc.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0,
+      valor_km_adc: valor_km_adc ? parseFloat(valor_km_adc.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : 0,
+      aprovado: aprovado || false,
+      modelo_antena,
+      funcoes: funcoes ? funcoes.map((f: any) => ({
         funcao: typeof f === 'string' ? f : f.funcao || f.nome || String(f)
-      }));
-    };
-
-    const processarRegioes = (regs: any[] | null | undefined) => {
-      if (!regs) return [];
-      return regs.map(r => ({
+      })) : [],
+      regioes: regioes ? regioes.map((r: any) => ({
         regiao: typeof r === 'string' ? r : r.regiao || r.nome || String(r)
-      }));
-    };
-
-    const processarVeiculos = (veics: any[] | null | undefined) => {
-      if (!veics) return [];
-      return veics.map(v => ({
+      })) : [],
+      veiculos: veiculos ? veiculos.map((v: any) => ({
         tipo: typeof v === 'string' ? v : v.tipo || v.nome || String(v)
-      }));
+      })) : []
     };
 
-    // Deletar registros relacionados existentes
-    console.log('Deletando registros relacionados antigos...');
-    await Promise.all([
-      db.funcaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-      db.regiaoPrestador.deleteMany({ where: { prestadorId: Number(id) } }),
-      db.tipoVeiculoPrestador.deleteMany({ where: { prestadorId: Number(id) } })
-    ]);
-
-    console.log('Atualizando prestador com novos dados...');
-    const atualizado = await db.prestador.update({
-      where: { id: Number(id) },
-      data: {
-        nome,
-        cpf: cpf ? cpf.replace(/\D/g, '') : undefined,
-        cod_nome,
-        telefone,
-        email,
-        aprovado: aprovado || false,
-        tipo_pix,
-        chave_pix,
-        cep,
-        endereco,
-        bairro,
-        cidade,
-        estado,
-        valor_acionamento: valorAcionamentoFloat,
-        franquia_horas,
-        franquia_km: franquiaKmFloat,
-        valor_hora_adc: valorHoraAdcFloat,
-        valor_km_adc: valorKmAdcFloat,
-        modelo_antena,
-        funcoes: { 
-          create: processarFuncoes(funcoes)
-        },
-        regioes: { 
-          create: processarRegioes(regioes)
-        },
-        veiculos: {
-          create: processarVeiculos(veiculos)
-        }
-      },
-      include: { 
-        funcoes: true, 
-        regioes: true,
-        veiculos: true
-      }
-    });
+    console.log('📍 Atualizando prestador com geocodificação automática...');
+    const prestadorAtualizado = await prestadorService.update(Number(id), dadosPrestador);
 
     // Formatar a resposta
     const prestadorFormatado = {
-      ...atualizado,
-      funcoes: atualizado.funcoes.map(f => f.funcao),
-      regioes: atualizado.regioes.map(r => r.regiao),
-      tipo_veiculo: atualizado.veiculos.map(v => v.tipo)
+      ...prestadorAtualizado,
+      funcoes: prestadorAtualizado.funcoes.map((f: any) => f.funcao),
+      regioes: prestadorAtualizado.regioes.map((r: any) => r.regiao),
+      tipo_veiculo: prestadorAtualizado.veiculos.map((v: any) => v.tipo)
     };
 
-    console.log('Prestador atualizado com sucesso:', prestadorFormatado);
+    console.log('✅ Prestador atualizado com sucesso:', prestadorFormatado);
     res.json(prestadorFormatado);
   } catch (err) {
     console.error('❌ Erro ao editar prestador:', err);
