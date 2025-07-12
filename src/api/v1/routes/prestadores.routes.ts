@@ -7,7 +7,6 @@ const controller = new PrestadorController();
 
 // Rotas públicas
 router.get('/public', controller.listPublic);
-router.get('/mapa', controller.mapa); // Rota pública para o mapa
 
 // Rotas protegidas
 router.use(authenticateToken);

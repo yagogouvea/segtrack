@@ -1,20 +1,23 @@
 # Solução para Erro no Mapa em Produção
 
 ## Problema
-O erro `TypeError: (b || []).filter is not a function` ocorre quando o frontend tenta acessar o mapa via domínio (não localmente). Isso indica que a API não está retornando um array como esperado.
+O erro `TypeError: (b || []).filter is not a function` ocorre quando o frontend tenta acessar o mapa via domínio (não localmente). A API estava retornando HTML em vez de JSON, indicando que o endpoint não estava sendo encontrado.
 
 ## Causa Raiz
-O endpoint `/api/prestadores/mapa` não estava registrado nas rotas do backend, causando erro 404 que retorna HTML em vez de JSON.
+O endpoint `/api/prestadores/mapa` não estava registrado corretamente nas rotas do backend. A rota estava sendo adicionada ao router de prestadores, mas não estava sendo exposta corretamente no nível principal.
 
 ## Soluções Implementadas
 
-### 1. Backend - Adicionar Rota do Mapa
-**Arquivo:** `backend/src/api/v1/routes/prestadores.routes.ts`
+### 1. Backend - Corrigir Estrutura de Rotas
+**Arquivo:** `backend/src/api/v1/routes/index.ts`
 
 ```typescript
 // Rotas públicas
-router.get('/public', controller.listPublic);
-router.get('/mapa', controller.mapa); // ✅ NOVA ROTA PÚBLICA
+v1Router.use('/prestadores/public', prestadoresRouter);
+v1Router.get('/prestadores/mapa', prestadorController.mapa); // ✅ ROTA PÚBLICA DIRETA
+
+// Rotas protegidas
+v1Router.use('/prestadores', authenticateToken, prestadoresRouter);
 ```
 
 ### 2. Frontend - Melhorar Tratamento de Erros
@@ -26,11 +29,11 @@ router.get('/mapa', controller.mapa); // ✅ NOVA ROTA PÚBLICA
 - Tratamento para diferentes tipos de erro (404, 500, network)
 
 ### 3. Script de Teste
-**Arquivo:** `backend/test-mapa-endpoint.js`
+**Arquivo:** `backend/test-mapa-endpoint-simple.js`
 
 Para testar se o endpoint está funcionando:
 ```bash
-node test-mapa-endpoint.js
+node test-mapa-endpoint-simple.js
 ```
 
 ## Como Aplicar as Correções
@@ -48,7 +51,7 @@ Se o backend estiver em produção, faça o deploy das alterações.
 Execute o script de teste para verificar se o endpoint está funcionando:
 ```bash
 cd backend
-node test-mapa-endpoint.js
+node test-mapa-endpoint-simple.js
 ```
 
 ## Verificação
@@ -116,8 +119,25 @@ A API deve retornar um array de objetos com esta estrutura:
 
 ## Status da Correção
 
-- ✅ Rota `/mapa` adicionada ao backend
+- ✅ Rota `/mapa` corrigida no backend
 - ✅ Melhor tratamento de erros no frontend
 - ✅ Script de teste criado
 - ⏳ Aguardando reinicialização do backend
-- ⏳ Aguardando teste em produção 
+- ⏳ Aguardando teste em produção
+
+## Mudanças Técnicas
+
+### Antes (Problemático):
+```typescript
+// Em prestadores.routes.ts
+router.get('/mapa', controller.mapa); // ❌ Não funcionava
+
+// Em index.ts
+v1Router.use('/prestadores/public', prestadoresRouter); // ❌ Mapa não acessível
+```
+
+### Depois (Corrigido):
+```typescript
+// Em index.ts
+v1Router.get('/prestadores/mapa', prestadorController.mapa); // ✅ Rota pública direta
+``` 
