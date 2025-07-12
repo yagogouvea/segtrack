@@ -16,6 +16,11 @@ const prestadorController = new PrestadorController();
 v1Router.use('/prestadores/public', prestadoresRouter);
 v1Router.get('/prestadores/mapa', prestadorController.mapa); // Rota pública específica para o mapa
 
+// Endpoint de teste para verificar se as rotas estão funcionando
+v1Router.get('/test', (req, res) => {
+  res.json({ message: 'API está funcionando!', timestamp: new Date().toISOString() });
+});
+
 // Rotas protegidas
 v1Router.use('/prestadores', authenticateToken, prestadoresRouter);
 v1Router.use('/clientes', authenticateToken, clientesRouter);
