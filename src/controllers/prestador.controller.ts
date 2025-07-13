@@ -86,7 +86,47 @@ export class PrestadorController {
         }
       });
       
-      const prestador = await this.service.update(Number(id), req.body);
+      // Normalizar dados recebidos do frontend
+      const normalizedData = {
+        ...req.body,
+        // Converter arrays de strings para arrays de objetos se necessário
+        funcoes: Array.isArray(req.body.funcoes) 
+          ? req.body.funcoes.map((f: any) => typeof f === 'string' ? { funcao: f } : f)
+          : req.body.funcoes,
+        veiculos: Array.isArray(req.body.veiculos)
+          ? req.body.veiculos.map((v: any) => typeof v === 'string' ? { tipo: v } : v)
+          : req.body.veiculos,
+        regioes: Array.isArray(req.body.regioes)
+          ? req.body.regioes.map((r: any) => typeof r === 'string' ? { regiao: r } : r)
+          : req.body.regioes,
+        // Converter valores numéricos se necessário
+        valor_acionamento: typeof req.body.valor_acionamento === 'string' 
+          ? parseFloat(req.body.valor_acionamento) 
+          : req.body.valor_acionamento,
+        valor_hora_adc: typeof req.body.valor_hora_adc === 'string'
+          ? parseFloat(req.body.valor_hora_adc)
+          : req.body.valor_hora_adc,
+        valor_km_adc: typeof req.body.valor_km_adc === 'string'
+          ? parseFloat(req.body.valor_km_adc)
+          : req.body.valor_km_adc,
+        franquia_km: typeof req.body.franquia_km === 'string'
+          ? parseFloat(req.body.franquia_km)
+          : req.body.franquia_km,
+        aprovado: typeof req.body.aprovado === 'string'
+          ? req.body.aprovado === 'true'
+          : req.body.aprovado
+      };
+      
+      console.log('📝 Dados normalizados:', {
+        nome: normalizedData.nome,
+        funcoes: normalizedData.funcoes?.length,
+        veiculos: normalizedData.veiculos?.length,
+        regioes: normalizedData.regioes?.length,
+        valor_acionamento: normalizedData.valor_acionamento,
+        aprovado: normalizedData.aprovado
+      });
+      
+      const prestador = await this.service.update(Number(id), normalizedData);
       
       if (!prestador) {
         console.log('❌ Prestador não encontrado após atualização');
@@ -102,16 +142,16 @@ export class PrestadorController {
       res.json(prestador);
     } catch (error: unknown) {
       console.error('❌ Erro detalhado ao atualizar prestador:', {
-        message: error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error),
-        stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
-        name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
         code: (error as any)?.code
       });
       
       let errorMessage = 'Erro ao atualizar prestador';
       let statusCode = 500;
       
-      const errorMsg = error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
       
       if (errorMsg.includes('não encontrado')) {
         statusCode = 404;

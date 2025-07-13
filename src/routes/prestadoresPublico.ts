@@ -55,57 +55,95 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
   const {
     nome, cpf, cod_nome, telefone, email,
     tipo_pix, chave_pix, cep, endereco, bairro, cidade, estado,
-    funcoes, regioes, tipo_veiculo,
+    funcoes, regioes, tipo_veiculo, veiculos,
     modelo_antena // <-- novo campo
   } = req.body;
 
+  // Normalizar dados recebidos do frontend
+  const normalizedData = {
+    nome,
+    cpf,
+    cod_nome,
+    telefone,
+    email,
+    tipo_pix,
+    chave_pix,
+    cep,
+    endereco,
+    bairro,
+    cidade,
+    estado,
+    modelo_antena,
+    // Normalizar funções (aceitar tanto strings quanto objetos)
+    funcoes: Array.isArray(funcoes) 
+      ? funcoes.map((f: any) => typeof f === 'string' ? f : f.funcao || f.nome || String(f))
+      : [],
+    // Normalizar regiões (aceitar tanto strings quanto objetos)
+    regioes: Array.isArray(regioes)
+      ? regioes.map((r: any) => typeof r === 'string' ? r : r.regiao || r.nome || String(r))
+      : [],
+    // Normalizar veículos (aceitar tanto tipo_veiculo quanto veiculos)
+    tipo_veiculo: Array.isArray(tipo_veiculo) 
+      ? tipo_veiculo.map((t: any) => typeof t === 'string' ? t : t.tipo || t.nome || String(t))
+      : Array.isArray(veiculos)
+      ? veiculos.map((v: any) => typeof v === 'string' ? v : v.tipo || v.nome || String(v))
+      : []
+  };
+
+  console.log('📝 Dados normalizados:', {
+    nome: normalizedData.nome,
+    funcoes: normalizedData.funcoes,
+    regioes: normalizedData.regioes,
+    tipo_veiculo: normalizedData.tipo_veiculo
+  });
+
   // Validação de campos obrigatórios
   const camposObrigatorios = {
-    nome: !!nome,
-    cpf: !!cpf,
-    cod_nome: !!cod_nome,
-    telefone: !!telefone,
-    email: !!email,
-    tipo_pix: !!tipo_pix,
-    chave_pix: !!chave_pix,
-    cep: !!cep,
-    funcoes: Array.isArray(funcoes) && funcoes.length > 0,
-    regioes: Array.isArray(regioes) && regioes.length > 0,
-    tipo_veiculo: Array.isArray(tipo_veiculo) && tipo_veiculo.length > 0
+    nome: !!normalizedData.nome,
+    cpf: !!normalizedData.cpf,
+    cod_nome: !!normalizedData.cod_nome,
+    telefone: !!normalizedData.telefone,
+    email: !!normalizedData.email,
+    tipo_pix: !!normalizedData.tipo_pix,
+    chave_pix: !!normalizedData.chave_pix,
+    cep: !!normalizedData.cep,
+    funcoes: Array.isArray(normalizedData.funcoes) && normalizedData.funcoes.length > 0,
+    regioes: Array.isArray(normalizedData.regioes) && normalizedData.regioes.length > 0,
+    tipo_veiculo: Array.isArray(normalizedData.tipo_veiculo) && normalizedData.tipo_veiculo.length > 0
   };
 
   console.log('🔍 Verificação dos campos obrigatórios:', camposObrigatorios);
   console.log('🔍 Valores dos campos:', {
-    nome: nome,
-    cpf: cpf,
-    cod_nome: cod_nome,
-    telefone: telefone,
-    email: email,
-    tipo_pix: tipo_pix,
-    chave_pix: chave_pix,
-    cep: cep,
-    funcoes: funcoes,
-    regioes: regioes,
-    tipo_veiculo: tipo_veiculo
+    nome: normalizedData.nome,
+    cpf: normalizedData.cpf,
+    cod_nome: normalizedData.cod_nome,
+    telefone: normalizedData.telefone,
+    email: normalizedData.email,
+    tipo_pix: normalizedData.tipo_pix,
+    chave_pix: normalizedData.chave_pix,
+    cep: normalizedData.cep,
+    funcoes: normalizedData.funcoes,
+    regioes: normalizedData.regioes,
+    tipo_veiculo: normalizedData.tipo_veiculo
   });
 
   if (
-    !nome || !cpf || !cod_nome || !telefone || !email ||
-    !tipo_pix || !chave_pix || !cep ||
-    !funcoes?.length || !regioes?.length || !tipo_veiculo?.length
+    !normalizedData.nome || !normalizedData.cpf || !normalizedData.cod_nome || !normalizedData.telefone || !normalizedData.email ||
+    !normalizedData.tipo_pix || !normalizedData.chave_pix || !normalizedData.cep ||
+    !normalizedData.funcoes?.length || !normalizedData.regioes?.length || !normalizedData.tipo_veiculo?.length
   ) {
     console.log('❌ Campos obrigatórios faltando:', {
-      temNome: !!nome,
-      temCPF: !!cpf,
-      temCodNome: !!cod_nome,
-      temTelefone: !!telefone,
-      temEmail: !!email,
-      temTipoPix: !!tipo_pix,
-      temChavePix: !!chave_pix,
-      temCEP: !!cep,
-      temFuncoes: !!funcoes?.length,
-      temRegioes: !!regioes?.length,
-      temTipoVeiculo: !!tipo_veiculo?.length
+      temNome: !!normalizedData.nome,
+      temCPF: !!normalizedData.cpf,
+      temCodNome: !!normalizedData.cod_nome,
+      temTelefone: !!normalizedData.telefone,
+      temEmail: !!normalizedData.email,
+      temTipoPix: !!normalizedData.tipo_pix,
+      temChavePix: !!normalizedData.chave_pix,
+      temCEP: !!normalizedData.cep,
+      temFuncoes: !!normalizedData.funcoes?.length,
+      temRegioes: !!normalizedData.regioes?.length,
+      temTipoVeiculo: !!normalizedData.tipo_veiculo?.length
     });
     res.status(400).json({ 
       error: 'Campos obrigatórios ausentes.',
@@ -130,36 +168,36 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
   }
 
   // Validação específica para arrays
-  if (!Array.isArray(funcoes) || funcoes.length === 0) {
-    console.log('❌ Funções inválidas:', funcoes);
+  if (!Array.isArray(normalizedData.funcoes) || normalizedData.funcoes.length === 0) {
+    console.log('❌ Funções inválidas:', normalizedData.funcoes);
     res.status(400).json({ 
       error: 'Funções devem ser um array não vazio.',
-      received: funcoes
+      received: normalizedData.funcoes
     });
     return;
   }
 
-  if (!Array.isArray(regioes) || regioes.length === 0) {
-    console.log('❌ Regiões inválidas:', regioes);
+  if (!Array.isArray(normalizedData.regioes) || normalizedData.regioes.length === 0) {
+    console.log('❌ Regiões inválidas:', normalizedData.regioes);
     res.status(400).json({ 
       error: 'Regiões devem ser um array não vazio.',
-      received: regioes
+      received: normalizedData.regioes
     });
     return;
   }
 
-  if (!Array.isArray(tipo_veiculo) || tipo_veiculo.length === 0) {
-    console.log('❌ Tipos de veículo inválidos:', tipo_veiculo);
+  if (!Array.isArray(normalizedData.tipo_veiculo) || normalizedData.tipo_veiculo.length === 0) {
+    console.log('❌ Tipos de veículo inválidos:', normalizedData.tipo_veiculo);
     res.status(400).json({ 
       error: 'Tipos de veículo devem ser um array não vazio.',
-      received: tipo_veiculo
+      received: normalizedData.tipo_veiculo
     });
     return;
   }
 
   // Validação dos valores das funções
   const funcoesValidas = ['Pronta resposta', 'Apoio armado', 'Policial', 'Antenista', 'Drone'];
-  const funcoesInvalidas = funcoes.filter(f => !funcoesValidas.includes(f));
+  const funcoesInvalidas = normalizedData.funcoes.filter(f => !funcoesValidas.includes(f));
   if (funcoesInvalidas.length > 0) {
     console.log('❌ Funções inválidas encontradas:', funcoesInvalidas);
     res.status(400).json({ 
@@ -172,7 +210,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
 
   // Validação dos valores dos tipos de veículo
   const tiposVeiculoValidos = ['Carro', 'Moto'];
-  const tiposVeiculoInvalidos = tipo_veiculo.filter(t => !tiposVeiculoValidos.includes(t));
+  const tiposVeiculoInvalidos = normalizedData.tipo_veiculo.filter(t => !tiposVeiculoValidos.includes(t));
   if (tiposVeiculoInvalidos.length > 0) {
     console.log('❌ Tipos de veículo inválidos encontrados:', tiposVeiculoInvalidos);
     res.status(400).json({ 
@@ -324,7 +362,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
   }
 
   // Validação das regiões
-  const regioesInvalidas = regioes.filter(r => !r || r.trim().length < 2);
+  const regioesInvalidas = normalizedData.regioes.filter(r => !r || r.trim().length < 2);
   if (regioesInvalidas.length > 0) {
     console.log('❌ Regiões inválidas encontradas:', regioesInvalidas);
     res.status(400).json({ 
@@ -335,7 +373,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
   }
 
   // Validação das funções
-  const funcoesVazias = funcoes.filter(f => !f || f.trim().length < 2);
+  const funcoesVazias = normalizedData.funcoes.filter(f => !f || f.trim().length < 2);
   if (funcoesVazias.length > 0) {
     console.log('❌ Funções vazias encontradas:', funcoesVazias);
     res.status(400).json({ 
@@ -346,7 +384,7 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
   }
 
   // Validação dos tipos de veículo
-  const tiposVeiculoVazios = tipo_veiculo.filter(t => !t || t.trim().length < 2);
+  const tiposVeiculoVazios = normalizedData.tipo_veiculo.filter(t => !t || t.trim().length < 2);
   if (tiposVeiculoVazios.length > 0) {
     console.log('❌ Tipos de veículo vazios encontrados:', tiposVeiculoVazios);
     res.status(400).json({ 
@@ -374,10 +412,10 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
     console.log('Criando prestador com os dados:', {
       nome, cpf, cod_nome, telefone, email,
       tipo_pix, chave_pix, cep,
-      qtdFuncoes: funcoes.length,
-      qtdRegioes: regioes.length,
-      qtdVeiculos: tipo_veiculo.length,
-      veiculos: tipo_veiculo.map((tipo: string) => ({ tipo }))
+      qtdFuncoes: normalizedData.funcoes.length,
+      qtdRegioes: normalizedData.regioes.length,
+      qtdVeiculos: normalizedData.tipo_veiculo.length,
+      veiculos: normalizedData.tipo_veiculo.map((tipo: string) => ({ tipo }))
     });
 
     // Obter coordenadas automaticamente
@@ -385,8 +423,8 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
     console.log('📍 Coordenadas obtidas para cadastro público:', coordinates);
 
     // Garantir que tipo_veiculo é um array
-    const veiculosParaCriar = Array.isArray(tipo_veiculo) ? 
-        tipo_veiculo.map((tipo: string) => ({ tipo })) : [];
+    const veiculosParaCriar = Array.isArray(normalizedData.tipo_veiculo) ? 
+        normalizedData.tipo_veiculo.map((tipo: string) => ({ tipo })) : [];
 
     const novoPrestador = await db.prestador.create({
       data: {
@@ -413,10 +451,10 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
         funcoes: {
-          create: funcoes.map((funcao: string) => ({ funcao }))
+          create: normalizedData.funcoes.map((funcao: string) => ({ funcao }))
         },
         regioes: {
-          create: regioes.map((regiao: string) => ({ regiao }))
+          create: normalizedData.regioes.map((regiao: string) => ({ regiao }))
         },
         veiculos: {
           create: veiculosParaCriar
