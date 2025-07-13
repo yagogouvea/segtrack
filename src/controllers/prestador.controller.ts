@@ -77,6 +77,10 @@ export class PrestadorController {
       console.log('📝 Dados recebidos:', {
         id: req.params.id,
         bodyKeys: Object.keys(req.body),
+        valor_acionamento: req.body.valor_acionamento,
+        valor_hora_adc: req.body.valor_hora_adc,
+        valor_km_adc: req.body.valor_km_adc,
+        franquia_km: req.body.franquia_km,
         bodySample: {
           nome: req.body.nome,
           cpf: req.body.cpf,
@@ -119,14 +123,38 @@ export class PrestadorController {
       
       console.log('📝 Dados normalizados:', {
         nome: normalizedData.nome,
+        valor_acionamento: normalizedData.valor_acionamento,
+        valor_hora_adc: normalizedData.valor_hora_adc,
+        valor_km_adc: normalizedData.valor_km_adc,
+        franquia_km: normalizedData.franquia_km,
         funcoes: normalizedData.funcoes?.length,
         veiculos: normalizedData.veiculos?.length,
         regioes: normalizedData.regioes?.length,
-        valor_acionamento: normalizedData.valor_acionamento,
         aprovado: normalizedData.aprovado
       });
+
+      // Tratar valores undefined como null para o banco
+      const dadosParaSalvar = {
+        ...normalizedData,
+        valor_acionamento: normalizedData.valor_acionamento ?? null,
+        valor_hora_adc: normalizedData.valor_hora_adc ?? null,
+        valor_km_adc: normalizedData.valor_km_adc ?? null,
+        franquia_km: normalizedData.franquia_km ?? null
+      };
       
-      const prestador = await this.service.update(Number(id), normalizedData);
+      console.log('📝 Dados para salvar:', {
+        nome: dadosParaSalvar.nome,
+        valor_acionamento: dadosParaSalvar.valor_acionamento,
+        valor_hora_adc: dadosParaSalvar.valor_hora_adc,
+        valor_km_adc: dadosParaSalvar.valor_km_adc,
+        franquia_km: dadosParaSalvar.franquia_km,
+        funcoes: dadosParaSalvar.funcoes?.length,
+        veiculos: dadosParaSalvar.veiculos?.length,
+        regioes: dadosParaSalvar.regioes?.length,
+        aprovado: dadosParaSalvar.aprovado
+      });
+      
+      const prestador = await this.service.update(Number(id), dadosParaSalvar);
       
       if (!prestador) {
         console.log('❌ Prestador não encontrado após atualização');
