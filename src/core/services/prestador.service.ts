@@ -391,8 +391,22 @@ export class PrestadorService {
   async update(id: number, data: PrestadorData) {
     try {
       const db = await ensurePrisma();
+      
+      console.log('🔍 Dados recebidos para atualização:', {
+        id,
+        nome: data.nome,
+        cpf: data.cpf,
+        endereco: data.endereco,
+        cidade: data.cidade,
+        estado: data.estado,
+        funcoes: data.funcoes?.length,
+        veiculos: data.veiculos?.length,
+        regioes: data.regioes?.length
+      });
+      
       // Verificar se o prestador existe
       const prestadorExistente = await this.findById(id);
+      console.log('✅ Prestador existente encontrado:', prestadorExistente?.id);
 
       // Obter coordenadas automaticamente sempre que o endereço for atualizado
       console.log('📍 Atualizando coordenadas para endereço:', data.endereco, data.cidade, data.estado);
@@ -405,6 +419,7 @@ export class PrestadorService {
       }
 
       // Deletar relacionamentos existentes
+      console.log('🗑️ Deletando relacionamentos existentes...');
       await db.$transaction([
         db.funcaoPrestador.deleteMany({
           where: { prestadorId: id }
@@ -416,57 +431,91 @@ export class PrestadorService {
           where: { prestadorId: id }
         })
       ]);
+      console.log('✅ Relacionamentos deletados com sucesso');
+
+      // Preparar dados para atualização
+      const updateData = {
+        nome: data.nome,
+        cpf: data.cpf,
+        cod_nome: data.cod_nome,
+        telefone: data.telefone,
+        email: data.email,
+        tipo_pix: data.tipo_pix,
+        chave_pix: data.chave_pix,
+        cep: data.cep,
+        endereco: data.endereco,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        estado: data.estado,
+        valor_acionamento: data.valor_acionamento,
+        franquia_horas: data.franquia_horas,
+        franquia_km: data.franquia_km,
+        valor_hora_adc: data.valor_hora_adc,
+        valor_km_adc: data.valor_km_adc,
+        aprovado: data.aprovado,
+        modelo_antena: data.modelo_antena,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        funcoes: {
+          create: data.funcoes || []
+        },
+        veiculos: {
+          create: data.veiculos || []
+        },
+        regioes: {
+          create: data.regioes || []
+        }
+      };
+
+      console.log('📝 Dados preparados para atualização:', {
+        id,
+        nome: updateData.nome,
+        latitude: updateData.latitude,
+        longitude: updateData.longitude,
+        funcoesCount: updateData.funcoes.create.length,
+        veiculosCount: updateData.veiculos.create.length,
+        regioesCount: updateData.regioes.create.length
+      });
 
       // Atualizar prestador com novos dados
-      return await db.prestador.update({
+      const resultado = await db.prestador.update({
         where: { id },
-        data: {
-          nome: data.nome,
-          cpf: data.cpf,
-          cod_nome: data.cod_nome,
-          telefone: data.telefone,
-          email: data.email,
-          tipo_pix: data.tipo_pix,
-          chave_pix: data.chave_pix,
-          cep: data.cep,
-          endereco: data.endereco,
-          bairro: data.bairro,
-          cidade: data.cidade,
-          estado: data.estado,
-          valor_acionamento: data.valor_acionamento,
-          franquia_horas: data.franquia_horas,
-          franquia_km: data.franquia_km,
-          valor_hora_adc: data.valor_hora_adc,
-          valor_km_adc: data.valor_km_adc,
-          aprovado: data.aprovado,
-          modelo_antena: data.modelo_antena,
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude,
-          funcoes: {
-            create: data.funcoes
-          },
-          veiculos: {
-            create: data.veiculos
-          },
-          regioes: {
-            create: data.regioes
-          }
-        },
+        data: updateData,
         include: {
           funcoes: true,
           veiculos: true,
           regioes: true
         }
       });
+
+      console.log('✅ Prestador atualizado com sucesso:', {
+        id: resultado.id,
+        nome: resultado.nome,
+        latitude: resultado.latitude,
+        longitude: resultado.longitude
+      });
+
+      return resultado;
     } catch (error) {
+      console.error('❌ Erro detalhado ao atualizar prestador:', {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        meta: error.meta
+      });
+      
       if (error instanceof AppError) throw error;
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           throw new AppError('Já existe um prestador com este CPF ou email');
         }
+        console.error('❌ Erro do Prisma:', {
+          code: error.code,
+          meta: error.meta,
+          message: error.message
+        });
       }
-      console.error('Erro ao atualizar prestador:', error);
-      throw new AppError('Erro ao atualizar prestador');
+      throw new AppError(`Erro ao atualizar prestador: ${error.message}`);
     }
   }
 

@@ -73,17 +73,56 @@ export class PrestadorController {
   update = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+      console.log('🔍 Atualizando prestador ID:', id);
+      console.log('📝 Dados recebidos:', {
+        id: req.params.id,
+        bodyKeys: Object.keys(req.body),
+        bodySample: {
+          nome: req.body.nome,
+          cpf: req.body.cpf,
+          funcoes: req.body.funcoes?.length,
+          veiculos: req.body.veiculos?.length,
+          regioes: req.body.regioes?.length
+        }
+      });
+      
       const prestador = await this.service.update(Number(id), req.body);
       
       if (!prestador) {
+        console.log('❌ Prestador não encontrado após atualização');
         res.status(404).json({ error: 'Prestador não encontrado' });
         return;
       }
       
+      console.log('✅ Prestador atualizado com sucesso:', {
+        id: prestador.id,
+        nome: prestador.nome
+      });
+      
       res.json(prestador);
-    } catch (error) {
-      console.error('Erro ao atualizar prestador:', error);
-      res.status(500).json({ error: 'Erro ao atualizar prestador' });
+    } catch (error: any) {
+      console.error('❌ Erro detalhado ao atualizar prestador:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code
+      });
+      
+      let errorMessage = 'Erro ao atualizar prestador';
+      let statusCode = 500;
+      
+      if (error.message.includes('não encontrado')) {
+        statusCode = 404;
+        errorMessage = error.message;
+      } else if (error.message.includes('CPF')) {
+        statusCode = 400;
+        errorMessage = error.message;
+      }
+      
+      res.status(statusCode).json({ 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   };
 

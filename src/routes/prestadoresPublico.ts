@@ -2,6 +2,40 @@ import express, { Request, Response } from 'express';
 import { ensurePrisma } from '../lib/prisma';
 import { PrestadorPublicoInput } from '../types/prestadorPublico';
 
+// Função para obter coordenadas via geocodificação
+async function getCoordinates(endereco: string, cidade: string, estado: string): Promise<{ latitude: number | null, longitude: number | null }> {
+  try {
+    // Validar se temos os dados mínimos necessários
+    if (!endereco || !cidade || !estado) {
+      console.log('⚠️ Dados de endereço incompletos:', { endereco, cidade, estado });
+      return { latitude: null, longitude: null };
+    }
+
+    const enderecoCompleto = `${endereco}, ${cidade}, ${estado}, Brasil`;
+    console.log('🔍 Geocodificando endereço público:', enderecoCompleto);
+    
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1`;
+    
+    const response = await fetch(url);
+    const data = await response.json() as any[];
+    
+    if (data && data.length > 0) {
+      const result = {
+        latitude: parseFloat(data[0].lat),
+        longitude: parseFloat(data[0].lon)
+      };
+      console.log('✅ Coordenadas encontradas para cadastro público:', result);
+      return result;
+    }
+    
+    console.log('⚠️ Nenhuma coordenada encontrada para:', enderecoCompleto);
+    return { latitude: null, longitude: null };
+  } catch (error) {
+    console.error('❌ Erro ao geocodificar endereço público:', error);
+    return { latitude: null, longitude: null };
+  }
+}
+
 const router = express.Router();
 
 // Rota de teste sem autenticação
@@ -346,6 +380,10 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
       veiculos: tipo_veiculo.map((tipo: string) => ({ tipo }))
     });
 
+    // Obter coordenadas automaticamente
+    const coordinates = await getCoordinates(endereco, cidade, estado);
+    console.log('📍 Coordenadas obtidas para cadastro público:', coordinates);
+
     // Garantir que tipo_veiculo é um array
     const veiculosParaCriar = Array.isArray(tipo_veiculo) ? 
         tipo_veiculo.map((tipo: string) => ({ tipo })) : [];
@@ -372,6 +410,8 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
         franquia_km: 0,
         franquia_horas: '',
         modelo_antena, // <-- novo campo
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
         funcoes: {
           create: funcoes.map((funcao: string) => ({ funcao }))
         },
@@ -418,20 +458,30 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
       select: {
         id: true,
         nome: true,
+        telefone: true,
         cidade: true,
         estado: true,
+        bairro: true,
+        latitude: true,
+        longitude: true,
         funcoes: {
           select: {
             funcao: true
+          }
+        },
+        regioes: {
+          select: {
+            regiao: true
           }
         }
       }
     });
 
-    // Transform the response to include functions in a flattened format
+    // Transform the response to include functions and regions in a flattened format
     const formattedPrestadores = prestadores.map((p: any) => ({
       ...p,
-      funcoes: p.funcoes.map((f: { funcao: string }) => f.funcao)
+      funcoes: p.funcoes.map((f: { funcao: string }) => f.funcao),
+      regioes: p.regioes.map((r: { regiao: string }) => r.regiao)
     }));
 
     res.json(formattedPrestadores);
