@@ -13,9 +13,10 @@ export interface PrestadorPublicoInput {
   bairro?: string;
   cidade?: string;
   estado?: string;
-  funcoes: string[];     // Ex: ['Pronta Resposta', 'Drone']
-  regioes: string[];     // Localidades de atuação
-  tipo_veiculo: string[]; // Ex: ['Carro', 'Moto']
+  funcoes: string[] | { funcao: string }[];     // Ex: ['Pronta Resposta', 'Drone'] ou [{ funcao: 'Pronta Resposta' }]
+  regioes: string[] | { regiao: string }[];     // Localidades de atuação
+  tipo_veiculo?: string[] | { tipo: string }[]; // Ex: ['Carro', 'Moto'] ou [{ tipo: 'Carro' }]
+  veiculos?: string[] | { tipo: string }[];     // Formato alternativo para veículos
   modelo_antena?: string; // Novo campo para antenista
 }
 
