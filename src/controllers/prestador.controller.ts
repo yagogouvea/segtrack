@@ -12,7 +12,7 @@ export class PrestadorController {
     try {
       const prestadores = await this.service.listPublic();
       res.json(prestadores);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao listar prestadores públicos:', error);
       res.status(500).json({ error: 'Erro ao listar prestadores públicos' });
     }
@@ -37,7 +37,7 @@ export class PrestadorController {
       
       const result = await this.service.list(filters, pagination);
       res.json(result);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao listar prestadores:', error);
       res.status(500).json({ error: 'Erro ao listar prestadores' });
     }
@@ -54,7 +54,7 @@ export class PrestadorController {
       }
       
       res.json(prestador);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar prestador:', error);
       res.status(500).json({ error: 'Erro ao buscar prestador' });
     }
@@ -64,7 +64,7 @@ export class PrestadorController {
     try {
       const prestador = await this.service.create(req.body);
       res.status(201).json(prestador);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao criar prestador:', error);
       res.status(500).json({ error: 'Erro ao criar prestador' });
     }
@@ -100,28 +100,30 @@ export class PrestadorController {
       });
       
       res.json(prestador);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Erro detalhado ao atualizar prestador:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        code: error.code
+        message: error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error),
+        stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
+        name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined,
+        code: (error as any)?.code
       });
       
       let errorMessage = 'Erro ao atualizar prestador';
       let statusCode = 500;
       
-      if (error.message.includes('não encontrado')) {
+      const errorMsg = error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error);
+      
+      if (errorMsg.includes('não encontrado')) {
         statusCode = 404;
-        errorMessage = error.message;
-      } else if (error.message.includes('CPF')) {
+        errorMessage = errorMsg;
+      } else if (errorMsg.includes('CPF')) {
         statusCode = 400;
-        errorMessage = error.message;
+        errorMessage = errorMsg;
       }
       
       res.status(statusCode).json({ 
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? errorMsg : undefined
       });
     }
   };
@@ -131,7 +133,7 @@ export class PrestadorController {
       const { id } = req.params;
       await this.service.delete(Number(id));
       res.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao deletar prestador:', error);
       res.status(500).json({ error: 'Erro ao deletar prestador' });
     }
@@ -141,7 +143,7 @@ export class PrestadorController {
     try {
       const prestadores = await this.service.listMapa();
       res.json(prestadores);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao listar prestadores para o mapa:', error);
       res.status(500).json({ error: 'Erro ao listar prestadores para o mapa' });
     }

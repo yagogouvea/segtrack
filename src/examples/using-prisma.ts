@@ -28,7 +28,7 @@ export async function exemploListarUsuarios() {
     });
 
     return users;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Erro ao listar usuários:', error);
     throw error;
   }
@@ -52,9 +52,9 @@ export async function exemploCriarUsuario(data: { email: string; name: string; p
     });
 
     return user;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Exemplo de tratamento específico de erro
-    if (error.code === 'P2002') {
+    if ((error as any)?.code === 'P2002') {
       logger.warn('Tentativa de criar usuário com email duplicado:', data.email);
       throw new Error('Email já está em uso');
     }
@@ -101,7 +101,7 @@ export async function exemploTransacao() {
     });
 
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Erro na transação:', error);
     throw error;
   }
@@ -123,7 +123,7 @@ export async function exemploQueryRaw() {
     `;
 
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Erro na query raw:', error);
     throw error;
   }

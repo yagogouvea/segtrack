@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
     const db = await ensurePrisma();
     const veiculos = await db.veiculo.findMany();
     res.json(veiculos);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao listar veículos:', error);
     res.status(500).json({ error: 'Erro ao listar veículos' });
   }

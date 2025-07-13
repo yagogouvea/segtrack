@@ -43,7 +43,7 @@ const startServer = async () => {
       try {
         await testConnection();
         console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('❌ Falha ao conectar com o banco de dados:', error);
       }
     });
@@ -90,7 +90,7 @@ const startServer = async () => {
 
     return server;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao iniciar o servidor:', error);
     process.exit(1);
   }
@@ -100,7 +100,7 @@ const startServer = async () => {
 process.stdin.resume();
 
 // Iniciar o servidor
-startServer().catch((error) => {
+startServer().catch((error: unknown) => {
   console.error('Erro fatal ao iniciar o servidor:', error);
   process.exit(1);
 }); 

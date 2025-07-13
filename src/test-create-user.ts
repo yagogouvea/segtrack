@@ -76,7 +76,7 @@ async function createTestUser() {
       });
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao criar/atualizar usuário:', error);
   } finally {
     await prisma.$disconnect();

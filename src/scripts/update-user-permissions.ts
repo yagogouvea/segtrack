@@ -58,7 +58,7 @@ async function updateUserPermissions() {
     });
 
     console.log('✅ Permissões atualizadas com sucesso');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao atualizar permissões:', error);
   } finally {
     await prisma.$disconnect();

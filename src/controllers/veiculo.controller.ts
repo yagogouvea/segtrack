@@ -13,7 +13,7 @@ export class VeiculoController {
     try {
       const veiculos = await this.service.list();
       res.json(veiculos);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao listar veículos:', error);
       res.status(500).json({ error: 'Erro ao listar veículos' });
     }
@@ -30,7 +30,7 @@ export class VeiculoController {
       }
       
       res.json(veiculo);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar veículo:', error);
       res.status(500).json({ error: 'Erro ao buscar veículo' });
     }
@@ -40,7 +40,7 @@ export class VeiculoController {
     try {
       const veiculo = await this.service.create(req.body);
       res.status(201).json(veiculo);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao criar veículo:', error);
       res.status(500).json({ error: 'Erro ao criar veículo' });
     }
@@ -57,7 +57,7 @@ export class VeiculoController {
       }
       
       res.json(veiculo);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao atualizar veículo:', error);
       res.status(500).json({ error: 'Erro ao atualizar veículo' });
     }
@@ -68,7 +68,7 @@ export class VeiculoController {
       const { id } = req.params;
       await this.service.delete(Number(id));
       res.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao deletar veículo:', error);
       res.status(500).json({ error: 'Erro ao deletar veículo' });
     }

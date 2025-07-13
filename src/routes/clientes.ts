@@ -72,7 +72,7 @@ router.post('/upload-logo', logoUpload.single('logo'), (req, res) => {
       logoPath: fullUrl,
       filename: filename 
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao fazer upload do logo:', error);
     res.status(500).json({ error: 'Erro ao fazer upload do logo.' });
   }

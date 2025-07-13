@@ -133,7 +133,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     console.log('[auth.middleware] Autenticação concluída com sucesso');
     console.log('[auth.middleware] Usuário final:', req.user);
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[auth.middleware] Erro na autenticação:', error);
     if (error instanceof jwt.JsonWebTokenError) {
       sendResponse.unauthorized(res, 'Token inválido');

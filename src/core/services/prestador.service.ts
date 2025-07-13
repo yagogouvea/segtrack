@@ -64,7 +64,7 @@ async function getCoordinates(endereco: string, cidade: string, estado: string):
     
     console.log('⚠️ Nenhuma coordenada encontrada para:', enderecoCompleto);
     return { latitude: null, longitude: null };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao geocodificar endereço:', error);
     return { latitude: null, longitude: null };
   }
@@ -284,7 +284,7 @@ export class PrestadorService {
         page: pagination.page,
         pageSize: pagination.pageSize
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Erro ao buscar prestadores:', error);
       throw new AppError('Erro ao buscar prestadores');
     }
@@ -301,7 +301,7 @@ export class PrestadorService {
           regioes: true
         }
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar prestadores públicos:', error);
       throw new AppError('Erro ao buscar prestadores públicos');
     }
@@ -324,7 +324,7 @@ export class PrestadorService {
       }
 
       return prestador;
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) throw error;
       console.error('Erro ao buscar prestador:', error);
       throw new AppError('Erro ao buscar prestador');
@@ -377,9 +377,9 @@ export class PrestadorService {
           regioes: true
         }
       });
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
+        if ((error as any)?.code === 'P2002') {
           throw new AppError('Já existe um prestador com este CPF ou email');
         }
       }
@@ -496,26 +496,26 @@ export class PrestadorService {
       });
 
       return resultado;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Erro detalhado ao atualizar prestador:', {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
-        meta: error.meta
+        message: error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error),
+        stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
+        code: (error as any)?.code,
+        meta: (error as any)?.meta
       });
       
       if (error instanceof AppError) throw error;
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
+        if ((error as any)?.code === 'P2002') {
           throw new AppError('Já existe um prestador com este CPF ou email');
         }
         console.error('❌ Erro do Prisma:', {
-          code: error.code,
+          code: (error as any)?.code,
           meta: error.meta,
-          message: error.message
+          message: error instanceof Error ? error.message : String(error)
         });
       }
-      throw new AppError(`Erro ao atualizar prestador: ${error.message}`);
+      throw new AppError(`Erro ao atualizar prestador: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -540,7 +540,7 @@ export class PrestadorService {
           where: { id }
         })
       ]);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) throw error;
       console.error('Erro ao deletar prestador:', error);
       throw new AppError('Erro ao deletar prestador');
@@ -564,7 +564,7 @@ export class PrestadorService {
           regioes: true
         }
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar prestadores por região:', error);
       throw new AppError('Erro ao buscar prestadores por região');
     }
@@ -587,7 +587,7 @@ export class PrestadorService {
           regioes: true
         }
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar prestadores por função:', error);
       throw new AppError('Erro ao buscar prestadores por função');
     }

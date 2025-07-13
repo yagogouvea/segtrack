@@ -30,7 +30,7 @@ async function getCoordinates(endereco: string, cidade: string, estado: string):
     
     console.log('⚠️ Nenhuma coordenada encontrada para:', enderecoCompleto);
     return { latitude: null, longitude: null };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao geocodificar endereço público:', error);
     return { latitude: null, longitude: null };
   }
@@ -440,11 +440,11 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
 
     console.log('Prestador criado com sucesso:', prestadorFormatado);
     res.status(201).json(prestadorFormatado);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao cadastrar prestador público:', error);
     res.status(500).json({ 
       error: 'Erro ao processar o cadastro.',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)
     });
   }
 });
@@ -485,7 +485,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
     }));
 
     res.json(formattedPrestadores);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar prestadores:', error);
     res.status(500).json({ error: 'Erro ao buscar prestadores' });
   }
@@ -524,7 +524,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     };
 
     res.json(formattedPrestador);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar prestador:', error);
     res.status(500).json({ error: 'Erro ao buscar prestador' });
   }

@@ -42,7 +42,7 @@ router.post('/upload', upload.single('arquivo'), async (req: Request, res: Respo
     });
 
     res.status(201).json(relatorio);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao fazer upload do relatório:', error);
     res.status(500).json({ error: 'Erro ao fazer upload do relatório' });
   }
@@ -57,7 +57,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
     });
 
     res.json(relatorios);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao listar relatórios:', error);
     res.status(500).json({ error: 'Erro ao listar relatórios' });
   }
@@ -81,7 +81,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     }
 
     res.json(relatorio);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar relatório:', error);
     res.status(500).json({ error: 'Erro ao buscar relatório' });
   }
@@ -100,7 +100,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     });
 
     res.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao deletar relatório:', error);
     res.status(500).json({ error: 'Erro ao deletar relatório' });
   }

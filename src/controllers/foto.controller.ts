@@ -13,7 +13,7 @@ export class FotoController {
     try {
       const fotos = await this.service.list();
       res.json(fotos);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao listar fotos:', error);
       res.status(500).json({ error: 'Erro ao listar fotos' });
     }
@@ -30,7 +30,7 @@ export class FotoController {
       }
       
       res.json(foto);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar foto:', error);
       res.status(500).json({ error: 'Erro ao buscar foto' });
     }
@@ -41,7 +41,7 @@ export class FotoController {
       const { ocorrenciaId } = req.params;
       const fotos = await this.service.findByOcorrencia(Number(ocorrenciaId));
       res.json(fotos);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar fotos da ocorrência:', error);
       res.status(500).json({ error: 'Erro ao buscar fotos da ocorrência' });
     }
@@ -89,7 +89,7 @@ export class FotoController {
       const fotoAtualizada = await this.service.update(Number(id), updateData);
       console.log('✅ Foto atualizada:', fotoAtualizada);
       res.json(fotoAtualizada);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Erro ao atualizar foto:', error);
       res.status(500).json({ error: 'Erro ao atualizar foto.', detalhes: String(error) });
     }
@@ -111,7 +111,7 @@ export class FotoController {
       });
 
       res.status(201).json(foto);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao fazer upload da foto:', error);
       res.status(500).json({ error: 'Erro ao fazer upload da foto' });
     }
@@ -122,7 +122,7 @@ export class FotoController {
       const { id } = req.params;
       await this.service.delete(Number(id));
       res.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao deletar foto:', error);
       res.status(500).json({ error: 'Erro ao deletar foto' });
     }

@@ -26,9 +26,9 @@ export class OcorrenciaController {
 
       const ocorrencias = await this.service.list(filters);
       return res.json(ocorrencias);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
       }
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -38,9 +38,9 @@ export class OcorrenciaController {
     try {
       const ocorrencia = await this.service.create(req.body);
       return res.status(201).json(ocorrencia);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
       }
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -51,9 +51,9 @@ export class OcorrenciaController {
       const { id } = req.params;
       const ocorrencia = await this.service.findById(Number(id));
       return res.json(ocorrencia);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
       }
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -67,10 +67,10 @@ export class OcorrenciaController {
       
       const ocorrencia = await this.service.update(Number(id), req.body);
       return res.json(ocorrencia);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[OcorrenciaController] Error in update:', error);
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
       }
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -81,9 +81,9 @@ export class OcorrenciaController {
       const { id } = req.params;
       await this.service.delete(Number(id));
       return res.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
       }
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -94,9 +94,9 @@ export class OcorrenciaController {
       const { status } = req.params;
       const ocorrencias = await this.service.findByStatus(status as OcorrenciaStatus);
       return res.json(ocorrencias);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
       }
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -107,9 +107,9 @@ export class OcorrenciaController {
       const { placa } = req.params;
       const ocorrencias = await this.service.findByPlaca(placa);
       return res.json(ocorrencias);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
       }
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -126,9 +126,9 @@ export class OcorrenciaController {
 
       const ocorrencia = await this.service.addFotos(Number(id), urls);
       return res.json(ocorrencia);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        return res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
       }
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }

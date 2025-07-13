@@ -37,7 +37,7 @@ export const deletarOcorrencia = async (req: Request, res: Response): Promise<vo
     });
 
     res.json({ message: 'Ocorrência deletada com sucesso' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao deletar ocorrência:', error);
     res.status(500).json({ 
       error: 'Erro ao deletar ocorrência',

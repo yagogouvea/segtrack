@@ -13,7 +13,7 @@ export class ClienteController {
     try {
       const clientes = await this.service.list();
       res.json(clientes);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao listar clientes:', error);
       res.status(500).json({ error: 'Erro ao listar clientes' });
     }
@@ -35,7 +35,7 @@ export class ClienteController {
       }
       
       res.json(cliente);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar cliente:', error);
       res.status(500).json({ error: 'Erro ao buscar cliente' });
     }
@@ -47,7 +47,7 @@ export class ClienteController {
       const cliente = await this.service.create(req.body);
       console.log('✅ Cliente criado:', cliente);
       res.status(201).json(cliente);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao criar cliente:', error);
       res.status(500).json({ error: 'Erro ao criar cliente' });
     }
@@ -71,7 +71,7 @@ export class ClienteController {
       
       console.log('✅ Cliente atualizado:', cliente);
       res.json(cliente);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao atualizar cliente:', error);
       res.status(500).json({ error: 'Erro ao atualizar cliente' });
     }
@@ -87,7 +87,7 @@ export class ClienteController {
 
       await this.service.delete(id);
       res.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao deletar cliente:', error);
       res.status(500).json({ error: 'Erro ao deletar cliente' });
     }

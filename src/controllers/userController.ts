@@ -59,7 +59,7 @@ export const getUsers = async (_req: Request, res: Response): Promise<void> => {
     });
 
     res.json(users);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar usuários:', error);
     res.status(500).json({ error: 'Erro ao buscar usuários' });
   }
@@ -91,7 +91,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
     }
 
     res.json(user);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar usuário:', error);
     res.status(500).json({ error: 'Erro ao buscar usuário' });
   }
@@ -152,7 +152,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     });
 
     res.status(201).json(user);
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Dados inválidos', details: error.errors });
       return;
@@ -234,7 +234,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     });
 
     res.json(updatedUser);
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Dados inválidos', details: error.errors });
       return;
@@ -263,7 +263,7 @@ export const updateUserPassword = async (req: Request, res: Response): Promise<v
     });
 
     res.json({ message: 'Senha atualizada com sucesso' });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Dados inválidos', details: error.errors });
       return;
@@ -284,7 +284,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     });
 
     res.json({ message: 'Usuário excluído com sucesso' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao excluir usuário:', error);
     res.status(500).json({ error: 'Erro ao excluir usuário' });
   }

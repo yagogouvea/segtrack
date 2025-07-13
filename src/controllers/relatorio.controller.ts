@@ -17,7 +17,7 @@ export class RelatorioController {
         dataFim as string
       );
       res.json(relatorio);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao gerar relatório de ocorrências:', error);
       res.status(500).json({ error: 'Erro ao gerar relatório de ocorrências' });
     }
@@ -31,7 +31,7 @@ export class RelatorioController {
         dataFim as string
       );
       res.json(relatorio);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao gerar relatório de prestadores:', error);
       res.status(500).json({ error: 'Erro ao gerar relatório de prestadores' });
     }
@@ -45,7 +45,7 @@ export class RelatorioController {
         dataFim as string
       );
       res.json(relatorio);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao gerar relatório de clientes:', error);
       res.status(500).json({ error: 'Erro ao gerar relatório de clientes' });
     }
@@ -59,7 +59,7 @@ export class RelatorioController {
         dataFim as string
       );
       res.json(relatorio);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao gerar relatório financeiro:', error);
       res.status(500).json({ error: 'Erro ao gerar relatório financeiro' });
     }

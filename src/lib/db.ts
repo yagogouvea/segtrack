@@ -27,11 +27,11 @@ export function analyzeMySQLError(error: any) {
     'ER_TOO_MANY_USER_CONNECTIONS': 'Muitas conexões de usuário',
   };
 
-  if (error.code && errorCodes[error.code]) {
-    return errorCodes[error.code];
+  if ((error as any)?.code && errorCodes[(error as any)?.code]) {
+    return errorCodes[(error as any)?.code];
   }
 
-  return error.message || 'Erro desconhecido';
+  return error instanceof Error ? error.message : String(error) || 'Erro desconhecido';
 }
 
 // Função para desconectar do banco
@@ -39,7 +39,7 @@ export async function disconnectPrisma() {
   try {
     await prisma.$disconnect();
     console.log('✅ Desconectado do banco de dados com sucesso!');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao desconectar do banco de dados:', error);
   }
 }

@@ -11,7 +11,7 @@ async function fixPermissionsColumn() {
     await db.$executeRaw`ALTER TABLE User MODIFY permissions TEXT NOT NULL`;
     
     console.log('✅ Coluna permissions atualizada com sucesso');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao atualizar coluna permissions:', error);
   } finally {
     await db.$disconnect();

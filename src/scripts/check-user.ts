@@ -21,7 +21,7 @@ async function checkUser() {
       permissions: user.permissions,
       active: user.active
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao buscar usuário:', error);
   } finally {
     await prisma.$disconnect();

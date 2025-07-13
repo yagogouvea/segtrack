@@ -36,7 +36,7 @@ export async function testConnection() {
   try {
     await prisma.$connect();
     console.log("✅ Conectado ao banco de dados com sucesso!");
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ Erro ao conectar com o banco de dados:", error);
     throw error;
   }
@@ -59,11 +59,11 @@ export async function ensurePrisma(): Promise<PrismaClient> {
     await prisma.$queryRaw`SELECT 1`;
     console.log('[Prisma] Conexão com o banco de dados está ativa');
     return prisma;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Prisma] Erro ao verificar conexão:', {
       error,
-      message: error instanceof Error ? error.message : 'Erro desconhecido',
-      stack: error instanceof Error ? error.stack : undefined
+      message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
+      stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined
     });
     throw new Error('Erro de conexão com o banco de dados');
   }
@@ -78,13 +78,13 @@ prisma?.$use(async (params, next) => {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       return await next(params);
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       console.error(`❌ Operação do banco falhou (tentativa ${attempt}/${MAX_RETRIES}):`, {
         operacao: params.action,
         modelo: params.model,
-        erro: error.message,
-        codigo: error.code
+        erro: error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error),
+        codigo: (error as any)?.code
       });
 
       if (attempt < MAX_RETRIES) {

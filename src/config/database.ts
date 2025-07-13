@@ -9,7 +9,7 @@ export async function testConnection(): Promise<boolean> {
     const db = await ensurePrisma();
     await db.$queryRaw`SELECT 1`;
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao testar conexão com o banco:', error);
     return false;
   }

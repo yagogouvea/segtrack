@@ -25,7 +25,7 @@ export async function buscarVeiculoPorPlaca(placa: string) {
       }
     );
     return response.data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao consultar API Brasil:', error);
     return null;
   }

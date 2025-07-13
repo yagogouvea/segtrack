@@ -16,7 +16,7 @@ async function testConnection() {
     const userCount = await prisma.user.count();
     console.log('Número de usuários no banco:', userCount);
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao conectar com o banco:', error);
   } finally {
     await prisma.$disconnect();

@@ -92,7 +92,7 @@ async function fixYagoPermissions() {
       role: updatedUser.role,
       permissions: JSON.parse(updatedUser.permissions as string) as UserPermissions
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao atualizar permissões do Yago:', error);
     throw error;
   } finally {

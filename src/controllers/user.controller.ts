@@ -52,7 +52,7 @@ export class UserController {
       }
 
       res.json(user);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao buscar usuário atual:', error);
       res.status(500).json({ error: 'Erro ao buscar usuário atual' });
     }
@@ -81,7 +81,7 @@ export class UserController {
       });
 
       res.json(user);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao atualizar usuário:', error);
       res.status(500).json({ error: 'Erro ao atualizar usuário' });
     }
@@ -119,7 +119,7 @@ export class UserController {
       });
 
       res.json({ message: 'Senha atualizada com sucesso' });
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao atualizar senha:', error);
       res.status(500).json({ error: 'Erro ao atualizar senha' });
     }
@@ -139,7 +139,7 @@ export class UserController {
       });
 
       res.json(users);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao listar usuários:', error);
       res.status(500).json({ error: 'Erro ao listar usuários' });
     }
@@ -181,9 +181,9 @@ export class UserController {
       });
 
       res.status(201).json(user);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ error: error.message });
+        res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
         return;
       }
       console.error('Erro ao criar usuário:', error);
@@ -213,7 +213,7 @@ export class UserController {
       }
 
       res.json(user);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao buscar usuário:', error);
       res.status(500).json({ error: 'Erro ao buscar usuário' });
     }
@@ -244,9 +244,9 @@ export class UserController {
       });
 
       res.json(user);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ error: error.message });
+        res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
         return;
       }
       console.error('Erro ao atualizar usuário:', error);
@@ -263,7 +263,7 @@ export class UserController {
       });
 
       res.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao deletar usuário:', error);
       res.status(500).json({ error: 'Erro ao deletar usuário' });
     }
@@ -294,7 +294,7 @@ export class UserController {
       }
 
       res.json(user);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao buscar usuário:', error);
       res.status(500).json({ error: 'Erro ao buscar usuário' });
     }
@@ -316,7 +316,7 @@ export class UserController {
       });
 
       res.json(user);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao atualizar usuário:', error);
       res.status(500).json({ error: 'Erro ao atualizar usuário' });
     }
@@ -357,7 +357,7 @@ export class UserController {
       });
 
       res.json(user);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao buscar perfil do usuário:', error);
       res.status(500).json({ error: 'Erro ao buscar perfil do usuário' });
     }
@@ -380,7 +380,7 @@ export class UserController {
       });
 
       res.json(users);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao listar usuários:', error);
       res.status(500).json({ error: 'Erro ao listar usuários' });
     }
@@ -414,9 +414,9 @@ export class UserController {
       // Remove senha do objeto retornado
       const { passwordHash: _, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Erro ao criar usuário:', error);
-      if (error.code === 'P2002') {
+      if ((error as any)?.code === 'P2002') {
         res.status(400).json({ error: 'Email já está em uso' });
       } else {
         res.status(500).json({ error: 'Erro ao criar usuário' });
@@ -455,7 +455,7 @@ export class UserController {
       });
 
       res.json({ message: 'Senha atualizada com sucesso' });
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao resetar senha:', error);
       res.status(500).json({ error: 'Erro ao resetar senha' });
     }
@@ -471,7 +471,7 @@ export class UserController {
       });
 
       res.json({ message: 'Usuário excluído com sucesso' });
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Erro ao excluir usuário:', error);
       res.status(500).json({ error: 'Erro ao excluir usuário' });
     }

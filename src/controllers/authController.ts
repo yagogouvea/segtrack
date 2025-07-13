@@ -124,7 +124,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       console.error('Erro ao buscar usuário:', dbError);
       res.status(500).json({ message: 'Erro ao buscar usuário' });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Erro no login:", error);
     res.status(500).json({ message: 'Erro interno no login' });
   }
@@ -174,7 +174,7 @@ export const seedAdmin = async (_req: Request, res: Response): Promise<void> => 
     });
 
     res.json({ message: 'Usuário admin criado com sucesso', id: user.id });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Erro ao criar admin:", error);
     res.status(500).json({ message: 'Erro ao criar admin', error });
   }

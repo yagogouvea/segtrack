@@ -86,7 +86,7 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     res.status(201).json(fotoCriada);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao salvar foto:', error);
     res.status(500).json({ error: 'Erro ao salvar foto.', detalhes: String(error) });
   }
@@ -121,7 +121,7 @@ router.post('/upload', upload.single('foto'), async (req: Request, res: Response
       ...fotoCriada,
       url: `${req.protocol}://${req.get('host')}${url}` // URL completa
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao fazer upload de foto:', error);
     res.status(500).json({ error: 'Erro ao fazer upload de foto.', detalhes: String(error) });
   }
@@ -162,7 +162,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     });
 
     res.json(fotoAtualizada);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao atualizar foto:', error);
     res.status(500).json({ error: 'Erro ao atualizar foto.', detalhes: String(error) });
   }
@@ -191,7 +191,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
 
     await prisma.foto.delete({ where: { id: Number(id) } });
     res.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao deletar foto:', error);
     res.status(500).json({ error: 'Erro ao deletar foto.', detalhes: String(error) });
   }
@@ -241,7 +241,7 @@ router.get('/por-ocorrencia/:ocorrenciaId', async (req: Request, res: Response):
     });
 
     res.json(fotosProcessadas);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar fotos:', error);
     res.status(500).json({ error: 'Erro ao buscar fotos.', detalhes: String(error) });
   }

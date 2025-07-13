@@ -95,17 +95,17 @@ export class OcorrenciaService {
       });
       
       return ocorrencias;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[OcorrenciaService] Erro ao listar ocorrências:', {
         error,
-        message: error instanceof Error ? error.message : 'Erro desconhecido',
-        stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : undefined,
-        code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined
+        message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
+        stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
+        name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined,
+        code: error instanceof Prisma.PrismaClientKnownRequestError ? (error as any)?.code : undefined
       });
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        throw new AppError(`Erro no banco de dados: ${error.message} (código: ${error.code})`);
+        throw new AppError(`Erro no banco de dados: ${error instanceof Error ? error.message : String(error)} (código: ${(error as any)?.code})`);
       }
       throw new AppError('Erro ao listar ocorrências');
     }
@@ -164,7 +164,7 @@ export class OcorrenciaService {
       });
 
       return ocorrencia;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao criar ocorrência:', error);
       throw new AppError('Erro ao criar ocorrência');
     }
@@ -185,7 +185,7 @@ export class OcorrenciaService {
       }
 
       return ocorrencia;
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) throw error;
       console.error('Erro ao buscar ocorrência:', error);
       throw new AppError('Erro ao buscar ocorrência');
@@ -269,17 +269,17 @@ export class OcorrenciaService {
 
       console.log('[OcorrenciaService] Ocorrência atualizada com sucesso:', ocorrencia.id);
       return ocorrencia;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[OcorrenciaService] Erro ao atualizar ocorrência:', {
         error,
-        message: error instanceof Error ? error.message : 'Erro desconhecido',
-        stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : undefined,
-        code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined
+        message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
+        stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
+        name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined,
+        code: error instanceof Prisma.PrismaClientKnownRequestError ? (error as any)?.code : undefined
       });
       
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        throw new AppError(`Erro no banco de dados: ${error.message} (código: ${error.code})`);
+        throw new AppError(`Erro no banco de dados: ${error instanceof Error ? error.message : String(error)} (código: ${(error as any)?.code})`);
       }
       throw new AppError('Erro ao atualizar ocorrência');
     }
@@ -295,7 +295,7 @@ export class OcorrenciaService {
       await db.ocorrencia.delete({
         where: { id }
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao deletar ocorrência:', error);
       throw new AppError('Erro ao deletar ocorrência');
     }
@@ -313,7 +313,7 @@ export class OcorrenciaService {
           criado_em: 'desc'
         }
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar ocorrências por status:', error);
       throw new AppError('Erro ao buscar ocorrências por status');
     }
@@ -337,7 +337,7 @@ export class OcorrenciaService {
           criado_em: 'desc'
         }
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar ocorrências por placa:', error);
       throw new AppError('Erro ao buscar ocorrências por placa');
     }
@@ -362,7 +362,7 @@ export class OcorrenciaService {
       });
 
       return ocorrencia;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao adicionar fotos:', error);
       throw new AppError('Erro ao adicionar fotos');
     }

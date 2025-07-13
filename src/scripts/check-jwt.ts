@@ -18,8 +18,9 @@ function checkJWT() {
     const decoded = jwt.verify(testToken, process.env.JWT_SECRET);
     console.log('✅ JWT_SECRET está configurado e funcionando!');
     console.log('Token de teste decodificado:', decoded);
-  } catch (error) {
-    console.error('❌ Erro ao testar JWT_SECRET:', error);
+  } catch (error: unknown) {
+    console.error('❌ Erro ao verificar JWT:', error);
+    process.exit(1);
   }
 }
 

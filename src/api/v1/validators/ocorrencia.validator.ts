@@ -62,7 +62,7 @@ export const validateOcorrencia = (req: Request, _res: Response, next: NextFunct
     const validatedData = ocorrenciaSchema.parse(req.body);
     req.body = validatedData;
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       throw new AppError('Dados inválidos', 400, error.errors[0].message);
     }
