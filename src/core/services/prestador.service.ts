@@ -757,20 +757,50 @@ export class PrestadorService {
   }
 
   async listMapa() {
-    const db = await ensurePrisma();
-    return db.prestador.findMany({
-      select: {
-        id: true,
-        nome: true,
-        telefone: true, // Adicionado telefone
-        latitude: true,
-        longitude: true,
-        cidade: true,
-        estado: true,
-        bairro: true,
-        regioes: { select: { regiao: true } },
-        funcoes: { select: { funcao: true } } // Adicionado tipo de apoio
+    try {
+      console.log('🔍 [PrestadorService.listMapa] Iniciando busca de prestadores para o mapa');
+      
+      const db = await ensurePrisma();
+      console.log('✅ [PrestadorService.listMapa] Conexão com banco estabelecida');
+      
+      const prestadores = await db.prestador.findMany({
+        select: {
+          id: true,
+          nome: true,
+          telefone: true,
+          latitude: true,
+          longitude: true,
+          cidade: true,
+          estado: true,
+          bairro: true,
+          regioes: { select: { regiao: true } },
+          funcoes: { select: { funcao: true } }
+        },
+        where: {
+          latitude: { not: null },
+          longitude: { not: null }
+        }
+      });
+      
+      console.log('✅ [PrestadorService.listMapa] Prestadores encontrados:', prestadores.length);
+      if (prestadores.length > 0) {
+        console.log('✅ [PrestadorService.listMapa] Primeiro prestador:', {
+          id: prestadores[0].id,
+          nome: prestadores[0].nome,
+          latitude: prestadores[0].latitude,
+          longitude: prestadores[0].longitude
+        });
       }
-    });
+      
+      return prestadores;
+    } catch (error: unknown) {
+      console.error('❌ [PrestadorService.listMapa] Erro ao buscar prestadores para o mapa:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+        code: (error as any)?.code
+      });
+      throw error;
+    }
   }
 } 

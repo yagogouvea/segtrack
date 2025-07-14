@@ -89,6 +89,7 @@ router.get('/buscar', async (req, res) => {
 // Rotas protegidas
 router.use(authenticateToken);
 router.get('/', controller.list);
+router.get('/mapa', controller.mapa);
 router.get('/:id', controller.getById);
 router.post('/', controller.create);
 router.put('/:id', controller.update);

@@ -17,7 +17,6 @@ v1Router.use('/prestadores/public', prestadoresRouter);
 
 // Rotas protegidas
 v1Router.use('/prestadores', authenticateToken, prestadoresRouter);
-v1Router.get('/prestadores/mapa', authenticateToken, prestadorController.mapa);
 v1Router.use('/clientes', authenticateToken, clientesRouter);
 v1Router.use('/veiculos', authenticateToken, veiculosRouter);
 v1Router.use('/fotos', authenticateToken, fotosRouter);

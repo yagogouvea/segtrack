@@ -1,45 +1,39 @@
+// Script para testar o endpoint do mapa
 const axios = require('axios');
 
-const API_URLS = [
-  'http://localhost:8080/api/prestadores/mapa',
-  'https://api.painelsegtrack.com.br/api/prestadores/mapa'
-];
-
 async function testMapaEndpoint() {
-  console.log('🧪 Testando endpoint /prestadores/mapa...\n');
-
-  for (const url of API_URLS) {
-    try {
-      console.log(`📡 Testando: ${url}`);
-      
-      const response = await axios.get(url, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('✅ Status:', response.status);
-      console.log('✅ Headers:', response.headers);
-      console.log('✅ Data type:', typeof response.data);
-      console.log('✅ Is array:', Array.isArray(response.data));
-      console.log('✅ Data length:', Array.isArray(response.data) ? response.data.length : 'N/A');
-      
-      if (Array.isArray(response.data) && response.data.length > 0) {
-        console.log('✅ Sample data:', response.data[0]);
+  try {
+    console.log('🧪 Testando endpoint /api/v1/prestadores/mapa...');
+    
+    // Primeiro, fazer login para obter um token
+    const loginResponse = await axios.post('http://localhost:8080/api/auth/login', {
+      email: 'admin@segtrack.com.br',
+      password: 'admin123'
+    });
+    
+    const token = loginResponse.data.token;
+    console.log('✅ Login realizado, token obtido');
+    
+    // Testar o endpoint do mapa
+    const mapaResponse = await axios.get('http://localhost:8080/api/v1/prestadores/mapa', {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-      
-      console.log('---\n');
-    } catch (error) {
-      console.log('❌ Erro:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
-      console.log('---\n');
-    }
+    });
+    
+    console.log('✅ Endpoint do mapa funcionou!');
+    console.log('📊 Dados retornados:', {
+      total: Array.isArray(mapaResponse.data) ? mapaResponse.data.length : 'N/A',
+      sample: Array.isArray(mapaResponse.data) && mapaResponse.data.length > 0 ? mapaResponse.data[0] : 'N/A'
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro ao testar endpoint:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
   }
 }
 
-testMapaEndpoint().catch(console.error); 
+testMapaEndpoint(); 

@@ -1,51 +1,60 @@
+// Teste simples para verificar o endpoint do mapa
 const axios = require('axios');
 
 async function testMapaEndpoint() {
-  const urls = [
-    'http://localhost:8080/api/prestadores/mapa',
-    'https://api.painelsegtrack.com.br/api/prestadores/mapa'
-  ];
-  
-  for (const url of urls) {
+  try {
+    console.log('🧪 Testando endpoint /api/v1/prestadores/mapa...');
+    
+    // Testar sem autenticação primeiro
+    console.log('📡 Testando sem autenticação...');
     try {
-      console.log(`\n🧪 Testando endpoint: ${url}`);
-      
-      const response = await axios.get(url, {
-        timeout: 10000,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('✅ Status:', response.status);
-      console.log('✅ Content-Type:', response.headers['content-type']);
-      console.log('✅ Data type:', typeof response.data);
-      console.log('✅ Is array:', Array.isArray(response.data));
-      
-      if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
-        console.log('❌ ERRO: Recebendo HTML em vez de JSON!');
-        console.log('❌ Isso indica que a rota não está registrada corretamente.');
-        console.log('❌ Primeiros 200 caracteres da resposta:', response.data.substring(0, 200));
-      } else if (Array.isArray(response.data)) {
-        console.log('✅ Array length:', response.data.length);
-        if (response.data.length > 0) {
-          console.log('✅ Sample item:', response.data[0]);
-        }
-      } else {
-        console.log('❌ Data is not an array:', response.data);
-      }
-      
+      const response = await axios.get('http://localhost:8080/api/v1/prestadores/mapa');
+      console.log('❌ Erro: Endpoint acessível sem autenticação!');
     } catch (error) {
-      console.log('❌ Erro:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
+      if (error.response?.status === 401) {
+        console.log('✅ Endpoint protegido corretamente (401)');
+      } else {
+        console.log('⚠️ Status inesperado:', error.response?.status);
+      }
+    }
+    
+    // Testar com autenticação
+    console.log('\n📡 Testando com autenticação...');
+    const loginResponse = await axios.post('http://localhost:8080/api/auth/login', {
+      email: 'yago@segtrack',
+      password: 'admin123'
+    });
+    
+    const token = loginResponse.data.token;
+    console.log('✅ Login realizado');
+    
+    const mapaResponse = await axios.get('http://localhost:8080/api/v1/prestadores/mapa', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    console.log('✅ Endpoint funcionou!');
+    console.log('📊 Total de prestadores:', Array.isArray(mapaResponse.data) ? mapaResponse.data.length : 'N/A');
+    
+    if (Array.isArray(mapaResponse.data) && mapaResponse.data.length > 0) {
+      console.log('📋 Primeiro prestador:', {
+        id: mapaResponse.data[0].id,
+        nome: mapaResponse.data[0].nome,
+        latitude: mapaResponse.data[0].latitude,
+        longitude: mapaResponse.data[0].longitude
       });
     }
+    
+  } catch (error) {
+    console.error('❌ Erro detalhado:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers
+    });
   }
 }
 
-console.log('🔍 Testando endpoints do mapa...');
-testMapaEndpoint().catch(console.error); 
+testMapaEndpoint(); 

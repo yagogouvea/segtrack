@@ -210,11 +210,18 @@ export class PrestadorController {
 
   mapa = async (req: Request, res: Response): Promise<void> => {
     try {
+      console.log('🔍 [PrestadorController.mapa] Iniciando listagem de prestadores para o mapa');
       const prestadores = await this.service.listMapa();
+      console.log('✅ [PrestadorController.mapa] Prestadores retornados:', Array.isArray(prestadores) ? prestadores.length : prestadores);
       res.json(prestadores);
     } catch (error: unknown) {
-      console.error('Erro ao listar prestadores para o mapa:', error);
-      res.status(500).json({ error: 'Erro ao listar prestadores para o mapa' });
+      console.error('❌ [PrestadorController.mapa] Erro ao listar prestadores para o mapa:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+        code: (error as any)?.code
+      });
+      res.status(500).json({ error: 'Erro ao listar prestadores para o mapa', details: error instanceof Error ? error.message : String(error) });
     }
   };
 } 
