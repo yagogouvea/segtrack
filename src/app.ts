@@ -12,7 +12,7 @@ import prestadoresPublicoRouter from './routes/prestadoresPublico';
 import clientesRouter from './routes/clientes';
 import userRoutes from './routes/userRoutes';
 import cnpjRouter from './routes/cnpj';
-import prestadorRoutes from '../routes/prestador.js';
+import prestadorRoutes from './routes/prestador.js';
 // import veiculosRouter from './routes/veiculos';
 import fotosRouter from './routes/fotos';
 import v1Router from './api/v1/routes';
