@@ -112,6 +112,8 @@ model Prestador {
   regioes           RegiaoPrestador[]
   veiculos          TipoVeiculoPrestador[]
   modelo_antena     String?
+
+  usuarios UsuarioPrestador[]
 }
 
 model FuncaoPrestador {
@@ -238,4 +240,17 @@ model User {
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model UsuarioPrestador {
+  id             String    @id @default(uuid())
+  prestador_id   Int
+  email          String   @unique
+  senha_hash     String
+  ativo          Boolean  @default(true)
+  primeiro_acesso Boolean @default(true)
+  criado_em      DateTime @default(now())
+  atualizado_em  DateTime @updatedAt
+
+  prestador      Prestador @relation(fields: [prestador_id], references: [id])
 }

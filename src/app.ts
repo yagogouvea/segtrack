@@ -12,6 +12,7 @@ import prestadoresPublicoRouter from './routes/prestadoresPublico';
 import clientesRouter from './routes/clientes';
 import userRoutes from './routes/userRoutes';
 import cnpjRouter from './routes/cnpj';
+import prestadorRoutes from '../routes/prestador.js';
 // import veiculosRouter from './routes/veiculos';
 import fotosRouter from './routes/fotos';
 import v1Router from './api/v1/routes';
@@ -29,11 +30,15 @@ app.set('trust proxy', 1); // Corrigido para produção atrás de proxy reverso
 const allowedOrigins = [
   'https://app.painelsegtrack.com.br',
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:3000',
   'http://localhost:8080',
   'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
   'http://127.0.0.1:3000',
-  'http://127.0.0.1:8080'
+  'http://127.0.0.1:8080',
+  'https://prestador.painelsegtrack.com.br', // front antigo
+  'https://prestadores.painelsegtrack.com.br' // novo domínio
 ];
 app.use(cors({
   origin: allowedOrigins,
@@ -94,6 +99,7 @@ app.use('/api/prestadores-publico', prestadoresPublicoRouter);
 app.use('/api/clientes', clientesRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/cnpj', cnpjRouter);
+app.use('/api/prestador', prestadorRoutes);
 // Removida rota de veículos - não é mais necessária
 // app.use('/api/veiculos', veiculosRouter);
 app.use('/api/fotos', fotosRouter);
