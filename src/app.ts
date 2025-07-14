@@ -15,6 +15,7 @@ import cnpjRouter from './routes/cnpj';
 // import veiculosRouter from './routes/veiculos';
 import fotosRouter from './routes/fotos';
 import v1Router from './api/v1/routes';
+import { authenticateToken } from './infrastructure/middleware/auth.middleware';
 import fs from 'fs';
 
 console.log('Iniciando configuração do Express...');
@@ -88,7 +89,7 @@ app.get('/api/fotos-test', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/ocorrencias', ocorrenciasRouter);
-app.use('/api/prestadores', prestadoresRouter);
+app.use('/api/prestadores', authenticateToken, prestadoresRouter);
 app.use('/api/prestadores-publico', prestadoresPublicoRouter);
 app.use('/api/clientes', clientesRouter);
 app.use('/api/users', userRoutes);
