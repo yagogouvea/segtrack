@@ -38,6 +38,8 @@ function normalizarTexto(texto: string): string {
 
 // Função para normalizar e limpar endereços
 function normalizarEndereco(endereco: string, cidade: string, estado: string, bairro?: string): string[] {
+  console.log('🔧 [normalizarEndereco] Iniciando normalização:', { endereco, cidade, estado, bairro });
+  
   // Limpar endereço
   let enderecoLimpo = endereco
     .replace(/\([^)]*\)/g, '') // Remove parênteses e conteúdo
@@ -48,77 +50,131 @@ function normalizarEndereco(endereco: string, cidade: string, estado: string, ba
   // Normalizar cidade e estado
   const cidadeNormalizada = cidade.trim();
   const estadoNormalizado = estado.trim();
+  const bairroNormalizado = bairro ? bairro.trim() : '';
+
+  console.log('🔧 [normalizarEndereco] Dados normalizados:', { 
+    enderecoLimpo, 
+    cidadeNormalizada, 
+    estadoNormalizado, 
+    bairroNormalizado 
+  });
 
   // Criar variações do endereço
   const variacoes: string[] = [];
 
-  // Variação 1: Endereço completo com bairro
-  if (bairro && bairro.trim()) {
-    variacoes.push(`${enderecoLimpo}, ${bairro.trim()}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`);
+  // Variação 1: Endereço completo com bairro (mais específico)
+  if (bairroNormalizado && bairroNormalizado.length > 2) {
+    const variacao1 = `${enderecoLimpo}, ${bairroNormalizado}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`;
+    variacoes.push(variacao1);
+    console.log('🔧 [normalizarEndereco] Variação 1 (com bairro):', variacao1);
   }
 
   // Variação 2: Endereço sem bairro
-  variacoes.push(`${enderecoLimpo}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`);
+  const variacao2 = `${enderecoLimpo}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`;
+  variacoes.push(variacao2);
+  console.log('🔧 [normalizarEndereco] Variação 2 (sem bairro):', variacao2);
 
-  // Variação 3: Apenas cidade e estado (fallback)
-  variacoes.push(`${cidadeNormalizada}, ${estadoNormalizado}, Brasil`);
-
-  // Variação 4: Endereço simplificado (remove números e detalhes)
+  // Variação 3: Endereço simplificado (remove números e detalhes)
   const enderecoSimplificado = enderecoLimpo
     .replace(/\d+/g, '') // Remove números
-    .replace(/[A-Za-z]+(?:\s+[A-Za-z]+)*/, (match) => match.trim()) // Pega apenas palavras
+    .replace(/[^\w\s]/g, '') // Remove caracteres especiais
+    .replace(/\s+/g, ' ') // Remove espaços múltiplos
     .trim();
   
-  if (enderecoSimplificado && enderecoSimplificado !== enderecoLimpo) {
-    variacoes.push(`${enderecoSimplificado}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`);
+  if (enderecoSimplificado && enderecoSimplificado.length > 3 && enderecoSimplificado !== enderecoLimpo) {
+    const variacao3 = `${enderecoSimplificado}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`;
+    variacoes.push(variacao3);
+    console.log('🔧 [normalizarEndereco] Variação 3 (simplificado):', variacao3);
   }
 
+  // Variação 4: Apenas cidade e estado (fallback mais genérico)
+  const variacao4 = `${cidadeNormalizada}, ${estadoNormalizado}, Brasil`;
+  variacoes.push(variacao4);
+  console.log('🔧 [normalizarEndereco] Variação 4 (apenas cidade/estado):', variacao4);
+
+  // Variação 5: Endereço com CEP (se disponível)
+  if (enderecoLimpo.match(/\d{5}-?\d{3}/)) {
+    const variacao5 = `${enderecoLimpo}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`;
+    variacoes.push(variacao5);
+    console.log('🔧 [normalizarEndereco] Variação 5 (com CEP):', variacao5);
+  }
+
+  // Variação 6: Apenas bairro + cidade + estado (se bairro existir)
+  if (bairroNormalizado && bairroNormalizado.length > 2) {
+    const variacao6 = `${bairroNormalizado}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`;
+    variacoes.push(variacao6);
+    console.log('🔧 [normalizarEndereco] Variação 6 (apenas bairro):', variacao6);
+  }
+
+  console.log('🔧 [normalizarEndereco] Total de variações criadas:', variacoes.length);
   return variacoes;
 }
 
 // Função para obter coordenadas via geocodificação
 async function getCoordinates(endereco: string, cidade: string, estado: string, bairro?: string): Promise<{ latitude: number | null, longitude: number | null }> {
   try {
+    console.log('🔍 [getCoordinates] Iniciando geocodificação:', { endereco, cidade, estado, bairro });
+    
     // Validar se temos os dados mínimos necessários
     if (!endereco || !cidade || !estado) {
-      console.log('⚠️ Dados de endereço incompletos:', { endereco, cidade, estado });
+      console.log('⚠️ [getCoordinates] Dados de endereço incompletos:', { endereco, cidade, estado });
       return { latitude: null, longitude: null };
     }
 
     // Normalizar e criar variações do endereço
     const variacoes = normalizarEndereco(endereco, cidade, estado, bairro);
     
-    console.log('🔍 Tentando geocodificar com variações:', variacoes);
+    console.log('🔍 [getCoordinates] Tentando geocodificar com variações:', variacoes);
 
     // Tentar cada variação até encontrar coordenadas
     for (let i = 0; i < variacoes.length; i++) {
       const enderecoCompleto = variacoes[i];
-      console.log(`📍 Tentativa ${i + 1}: ${enderecoCompleto}`);
+      console.log(`📍 [getCoordinates] Tentativa ${i + 1}: ${enderecoCompleto}`);
       
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1`;
-      
-      const response = await fetch(url);
-      const data = await response.json() as any[];
-      
-      if (data && data.length > 0) {
-        const result = {
-          latitude: parseFloat(data[0].lat),
-          longitude: parseFloat(data[0].lon)
-        };
-        console.log(`✅ Coordenadas encontradas na tentativa ${i + 1}:`, result);
-        return result;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1&countrycodes=br`;
+        
+        console.log(`🌐 [getCoordinates] Fazendo requisição para: ${url}`);
+        
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'SegTrack-App/1.0'
+          }
+        });
+        
+        if (!response.ok) {
+          console.log(`⚠️ [getCoordinates] Resposta não OK: ${response.status} ${response.statusText}`);
+          continue;
+        }
+        
+        const data = await response.json() as any[];
+        console.log(`📋 [getCoordinates] Resposta da API:`, data);
+        
+        if (data && data.length > 0) {
+          const result = {
+            latitude: parseFloat(data[0].lat),
+            longitude: parseFloat(data[0].lon)
+          };
+          console.log(`✅ [getCoordinates] Coordenadas encontradas na tentativa ${i + 1}:`, result);
+          return result;
+        } else {
+          console.log(`⚠️ [getCoordinates] Nenhum resultado encontrado para: ${enderecoCompleto}`);
+        }
+      } catch (fetchError) {
+        console.error(`❌ [getCoordinates] Erro na tentativa ${i + 1}:`, fetchError);
       }
       
       // Aguardar um pouco entre tentativas para não sobrecarregar a API
       if (i < variacoes.length - 1) {
+        console.log(`⏳ [getCoordinates] Aguardando 1 segundo antes da próxima tentativa...`);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
     
-    console.log('⚠️ Nenhuma coordenada encontrada para nenhuma variação do endereço');
+    console.log('⚠️ [getCoordinates] Nenhuma coordenada encontrada para nenhuma variação do endereço');
     return { latitude: null, longitude: null };
   } catch (error: unknown) {
-    console.error('❌ Erro ao geocodificar endereço:', error);
+    console.error('❌ [getCoordinates] Erro ao geocodificar endereço:', error);
     return { latitude: null, longitude: null };
   }
 }
@@ -410,57 +466,87 @@ export class PrestadorService {
 
   async create(data: PrestadorData) {
     try {
+      console.log('🔧 [PrestadorService.create] Iniciando criação de prestador:', {
+        nome: data.nome,
+        endereco: data.endereco,
+        cidade: data.cidade,
+        estado: data.estado,
+        bairro: data.bairro
+      });
+
       const db = await ensurePrisma();
       
       // Obter coordenadas automaticamente
-      const coordinates = await getCoordinates(data.endereco, data.cidade, data.estado);
+      console.log('📍 [PrestadorService.create] Chamando getCoordinates...');
+      const coordinates = await getCoordinates(data.endereco, data.cidade, data.estado, data.bairro);
+      console.log('📍 [PrestadorService.create] Coordenadas obtidas:', coordinates);
       
-      return await db.prestador.create({
-        data: {
-          nome: data.nome,
-          cpf: data.cpf,
-          cod_nome: data.cod_nome,
-          telefone: data.telefone,
-          email: data.email,
-          tipo_pix: data.tipo_pix,
-          chave_pix: data.chave_pix,
-          cep: data.cep,
-          endereco: data.endereco,
-          bairro: data.bairro,
-          cidade: data.cidade,
-          estado: data.estado,
-          valor_acionamento: data.valor_acionamento,
-          franquia_horas: data.franquia_horas,
-          franquia_km: data.franquia_km,
-          valor_hora_adc: data.valor_hora_adc,
-          valor_km_adc: data.valor_km_adc,
-          aprovado: data.aprovado,
-          modelo_antena: data.modelo_antena,
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude,
-          funcoes: {
-            create: data.funcoes
-          },
-          veiculos: {
-            create: data.veiculos
-          },
-          regioes: {
-            create: data.regioes
-          }
+      const prestadorData = {
+        nome: data.nome,
+        cpf: data.cpf,
+        cod_nome: data.cod_nome,
+        telefone: data.telefone,
+        email: data.email,
+        tipo_pix: data.tipo_pix,
+        chave_pix: data.chave_pix,
+        cep: data.cep,
+        endereco: data.endereco,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        estado: data.estado,
+        valor_acionamento: data.valor_acionamento,
+        franquia_horas: data.franquia_horas,
+        franquia_km: data.franquia_km,
+        valor_hora_adc: data.valor_hora_adc,
+        valor_km_adc: data.valor_km_adc,
+        aprovado: data.aprovado,
+        modelo_antena: data.modelo_antena,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        funcoes: {
+          create: data.funcoes
         },
+        veiculos: {
+          create: data.veiculos
+        },
+        regioes: {
+          create: data.regioes
+        }
+      };
+
+      console.log('💾 [PrestadorService.create] Salvando prestador com dados:', {
+        nome: prestadorData.nome,
+        latitude: prestadorData.latitude,
+        longitude: prestadorData.longitude,
+        funcoesCount: prestadorData.funcoes.create.length,
+        veiculosCount: prestadorData.veiculos.create.length,
+        regioesCount: prestadorData.regioes.create.length
+      });
+
+      const result = await db.prestador.create({
+        data: prestadorData,
         include: {
           funcoes: true,
           veiculos: true,
           regioes: true
         }
       });
+
+      console.log('✅ [PrestadorService.create] Prestador criado com sucesso:', {
+        id: result.id,
+        nome: result.nome,
+        latitude: result.latitude,
+        longitude: result.longitude
+      });
+
+      return result;
     } catch (error: unknown) {
+      console.error('❌ [PrestadorService.create] Erro ao criar prestador:', error);
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if ((error as any)?.code === 'P2002') {
           throw new AppError('Já existe um prestador com este CPF ou email');
         }
       }
-      console.error('Erro ao criar prestador:', error);
       throw new AppError('Erro ao criar prestador');
     }
   }

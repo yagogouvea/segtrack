@@ -5,33 +5,82 @@ import { PrestadorPublicoInput } from '../types/prestadorPublico';
 // Função para obter coordenadas via geocodificação
 async function getCoordinates(endereco: string, cidade: string, estado: string): Promise<{ latitude: number | null, longitude: number | null }> {
   try {
+    console.log('🔍 [getCoordinates-Publico] Iniciando geocodificação:', { endereco, cidade, estado });
+    
     // Validar se temos os dados mínimos necessários
     if (!endereco || !cidade || !estado) {
-      console.log('⚠️ Dados de endereço incompletos:', { endereco, cidade, estado });
+      console.log('⚠️ [getCoordinates-Publico] Dados de endereço incompletos:', { endereco, cidade, estado });
       return { latitude: null, longitude: null };
     }
 
-    const enderecoCompleto = `${endereco}, ${cidade}, ${estado}, Brasil`;
-    console.log('🔍 Geocodificando endereço público:', enderecoCompleto);
-    
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1`;
-    
-    const response = await fetch(url);
-    const data = await response.json() as any[];
-    
-    if (data && data.length > 0) {
-      const result = {
-        latitude: parseFloat(data[0].lat),
-        longitude: parseFloat(data[0].lon)
-      };
-      console.log('✅ Coordenadas encontradas para cadastro público:', result);
-      return result;
+    // Normalizar endereço
+    const enderecoLimpo = endereco
+      .replace(/\([^)]*\)/g, '') // Remove parênteses e conteúdo
+      .replace(/TESTE.*$/i, '') // Remove "TESTE" e tudo depois
+      .replace(/\s+/g, ' ') // Remove espaços múltiplos
+      .trim();
+
+    const cidadeNormalizada = cidade.trim();
+    const estadoNormalizado = estado.trim();
+
+    // Criar variações do endereço
+    const variacoes = [
+      `${enderecoLimpo}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`,
+      `${cidadeNormalizada}, ${estadoNormalizado}, Brasil`,
+      `${enderecoLimpo.replace(/\d+/g, '').trim()}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`
+    ];
+
+    console.log('🔍 [getCoordinates-Publico] Tentando geocodificar com variações:', variacoes);
+
+    // Tentar cada variação até encontrar coordenadas
+    for (let i = 0; i < variacoes.length; i++) {
+      const enderecoCompleto = variacoes[i];
+      console.log(`📍 [getCoordinates-Publico] Tentativa ${i + 1}: ${enderecoCompleto}`);
+      
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1&countrycodes=br`;
+        
+        console.log(`🌐 [getCoordinates-Publico] Fazendo requisição para: ${url}`);
+        
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'SegTrack-App/1.0'
+          }
+        });
+        
+        if (!response.ok) {
+          console.log(`⚠️ [getCoordinates-Publico] Resposta não OK: ${response.status} ${response.statusText}`);
+          continue;
+        }
+        
+        const data = await response.json() as any[];
+        console.log(`📋 [getCoordinates-Publico] Resposta da API:`, data);
+        
+        if (data && data.length > 0) {
+          const result = {
+            latitude: parseFloat(data[0].lat),
+            longitude: parseFloat(data[0].lon)
+          };
+          console.log(`✅ [getCoordinates-Publico] Coordenadas encontradas na tentativa ${i + 1}:`, result);
+          return result;
+        } else {
+          console.log(`⚠️ [getCoordinates-Publico] Nenhum resultado encontrado para: ${enderecoCompleto}`);
+        }
+      } catch (fetchError) {
+        console.error(`❌ [getCoordinates-Publico] Erro na tentativa ${i + 1}:`, fetchError);
+      }
+      
+      // Aguardar um pouco entre tentativas para não sobrecarregar a API
+      if (i < variacoes.length - 1) {
+        console.log(`⏳ [getCoordinates-Publico] Aguardando 1 segundo antes da próxima tentativa...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
     
-    console.log('⚠️ Nenhuma coordenada encontrada para:', enderecoCompleto);
+    console.log('⚠️ [getCoordinates-Publico] Nenhuma coordenada encontrada para nenhuma variação do endereço');
     return { latitude: null, longitude: null };
   } catch (error: unknown) {
-    console.error('❌ Erro ao geocodificar endereço público:', error);
+    console.error('❌ [getCoordinates-Publico] Erro ao geocodificar endereço:', error);
     return { latitude: null, longitude: null };
   }
 }
@@ -419,52 +468,71 @@ router.post('/', async (req: Request<{}, {}, PrestadorPublicoInput>, res: Respon
     });
 
     // Obter coordenadas automaticamente
+    console.log('📍 [Cadastro Público] Chamando getCoordinates...');
     const coordinates = await getCoordinates(endereco, cidade, estado);
-    console.log('📍 Coordenadas obtidas para cadastro público:', coordinates);
+    console.log('📍 [Cadastro Público] Coordenadas obtidas:', coordinates);
 
     // Garantir que tipo_veiculo é um array
     const veiculosParaCriar = Array.isArray(normalizedData.tipo_veiculo) ? 
         normalizedData.tipo_veiculo.map((tipo: string) => ({ tipo })) : [];
 
-    const novoPrestador = await db.prestador.create({
-      data: {
-        nome,
-        cpf: cpf.replace(/\D/g, ''),
-        cod_nome,
-        telefone,
-        email,
-        tipo_pix,
-        chave_pix,
-        cep,
-        endereco,
-        bairro,
-        cidade,
-        estado,
-        origem: 'cadastro_publico',
-        aprovado: false,
-        valor_acionamento: 0,
-        valor_hora_adc: 0,
-        valor_km_adc: 0,
-        franquia_km: 0,
-        franquia_horas: '',
-        modelo_antena, // <-- novo campo
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        funcoes: {
-          create: normalizedData.funcoes.map((funcao: string) => ({ funcao }))
-        },
-        regioes: {
-          create: normalizedData.regioes.map((regiao: string) => ({ regiao }))
-        },
-        veiculos: {
-          create: veiculosParaCriar
-        }
+    const prestadorData = {
+      nome,
+      cpf: cpf.replace(/\D/g, ''),
+      cod_nome,
+      telefone,
+      email,
+      tipo_pix,
+      chave_pix,
+      cep,
+      endereco,
+      bairro,
+      cidade,
+      estado,
+      origem: 'cadastro_publico',
+      aprovado: false,
+      valor_acionamento: 0,
+      valor_hora_adc: 0,
+      valor_km_adc: 0,
+      franquia_km: 0,
+      franquia_horas: '',
+      modelo_antena, // <-- novo campo
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      funcoes: {
+        create: normalizedData.funcoes.map((funcao: string) => ({ funcao }))
       },
+      regioes: {
+        create: normalizedData.regioes.map((regiao: string) => ({ regiao }))
+      },
+      veiculos: {
+        create: veiculosParaCriar
+      }
+    };
+
+    console.log('💾 [Cadastro Público] Salvando prestador com dados:', {
+      nome: prestadorData.nome,
+      latitude: prestadorData.latitude,
+      longitude: prestadorData.longitude,
+      funcoesCount: prestadorData.funcoes.create.length,
+      regioesCount: prestadorData.regioes.create.length,
+      veiculosCount: prestadorData.veiculos.create.length
+    });
+
+    const novoPrestador = await db.prestador.create({
+      data: prestadorData,
       include: {
         funcoes: true,
         regioes: true,
         veiculos: true
       }
+    });
+
+    console.log('✅ [Cadastro Público] Prestador criado com sucesso:', {
+      id: novoPrestador.id,
+      nome: novoPrestador.nome,
+      latitude: novoPrestador.latitude,
+      longitude: novoPrestador.longitude
     });
 
     // Formatar a resposta para incluir tipo_veiculo
