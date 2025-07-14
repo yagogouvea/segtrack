@@ -20,7 +20,7 @@ export class PrestadorController {
 
   list = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { nome, cod_nome, regioes, funcoes, local, page = 1, pageSize = 20 } = req.query;
+      const { nome, cod_nome, regioes, funcoes, local, sem_valores, page = 1, pageSize = 20 } = req.query;
       
       const filters = {
         nome: nome ? String(nome) : undefined,
@@ -28,6 +28,7 @@ export class PrestadorController {
         regioes: regioes ? String(regioes).split(',') : undefined,
         funcoes: funcoes ? String(funcoes).split(',') : undefined,
         local: local ? String(local) : undefined,
+        sem_valores: sem_valores === 'true',
       };
       
       const pagination = {

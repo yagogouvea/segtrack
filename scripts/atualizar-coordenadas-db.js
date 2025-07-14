@@ -1,7 +1,47 @@
 const { PrismaClient } = require('@prisma/client');
 
+// Função para normalizar e limpar endereços
+function normalizarEndereco(endereco, cidade, estado, bairro) {
+  // Limpar endereço
+  let enderecoLimpo = endereco
+    .replace(/\([^)]*\)/g, '') // Remove parênteses e conteúdo
+    .replace(/TESTE.*$/i, '') // Remove "TESTE" e tudo depois
+    .replace(/\s+/g, ' ') // Remove espaços múltiplos
+    .trim();
+
+  // Normalizar cidade e estado
+  const cidadeNormalizada = cidade.trim();
+  const estadoNormalizado = estado.trim();
+
+  // Criar variações do endereço
+  const variacoes = [];
+
+  // Variação 1: Endereço completo com bairro
+  if (bairro && bairro.trim()) {
+    variacoes.push(`${enderecoLimpo}, ${bairro.trim()}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`);
+  }
+
+  // Variação 2: Endereço sem bairro
+  variacoes.push(`${enderecoLimpo}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`);
+
+  // Variação 3: Apenas cidade e estado (fallback)
+  variacoes.push(`${cidadeNormalizada}, ${estadoNormalizado}, Brasil`);
+
+  // Variação 4: Endereço simplificado (remove números e detalhes)
+  const enderecoSimplificado = enderecoLimpo
+    .replace(/\d+/g, '') // Remove números
+    .replace(/[A-Za-z]+(?:\s+[A-Za-z]+)*/, (match) => match.trim()) // Pega apenas palavras
+    .trim();
+  
+  if (enderecoSimplificado && enderecoSimplificado !== enderecoLimpo) {
+    variacoes.push(`${enderecoSimplificado}, ${cidadeNormalizada}, ${estadoNormalizado}, Brasil`);
+  }
+
+  return variacoes;
+}
+
 // Função para obter coordenadas via geocodificação
-async function getCoordinates(endereco, cidade, estado) {
+async function getCoordinates(endereco, cidade, estado, bairro) {
   try {
     // Validar se temos os dados mínimos necessários
     if (!endereco || !cidade || !estado) {
@@ -9,24 +49,37 @@ async function getCoordinates(endereco, cidade, estado) {
       return { latitude: null, longitude: null };
     }
 
-    const enderecoCompleto = `${endereco}, ${cidade}, ${estado}, Brasil`;
-    console.log('🔍 Geocodificando endereço:', enderecoCompleto);
+    // Normalizar e criar variações do endereço
+    const variacoes = normalizarEndereco(endereco, cidade, estado, bairro);
     
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1`;
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data && data.length > 0) {
-      const result = {
-        latitude: parseFloat(data[0].lat),
-        longitude: parseFloat(data[0].lon)
-      };
-      console.log('✅ Coordenadas encontradas:', result);
-      return result;
+    console.log('🔍 Tentando geocodificar com variações:', variacoes);
+
+    // Tentar cada variação até encontrar coordenadas
+    for (let i = 0; i < variacoes.length; i++) {
+      const enderecoCompleto = variacoes[i];
+      console.log(`📍 Tentativa ${i + 1}: ${enderecoCompleto}`);
+      
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const result = {
+          latitude: parseFloat(data[0].lat),
+          longitude: parseFloat(data[0].lon)
+        };
+        console.log(`✅ Coordenadas encontradas na tentativa ${i + 1}:`, result);
+        return result;
+      }
+      
+      // Aguardar um pouco entre tentativas para não sobrecarregar a API
+      if (i < variacoes.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
     
-    console.log('⚠️ Nenhuma coordenada encontrada para:', enderecoCompleto);
+    console.log('⚠️ Nenhuma coordenada encontrada para nenhuma variação do endereço');
     return { latitude: null, longitude: null };
   } catch (error) {
     console.error('❌ Erro ao geocodificar endereço:', error);
@@ -60,6 +113,7 @@ async function atualizarCoordenadasPrestadores() {
         endereco: true,
         cidade: true,
         estado: true,
+        bairro: true,
         latitude: true,
         longitude: true
       }
@@ -93,7 +147,8 @@ async function atualizarCoordenadasPrestadores() {
       const coordinates = await getCoordinates(
         prestador.endereco,
         prestador.cidade,
-        prestador.estado
+        prestador.estado,
+        prestador.bairro
       );
 
       if (coordinates.latitude && coordinates.longitude) {
