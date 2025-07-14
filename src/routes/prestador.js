@@ -28,7 +28,8 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ erro: "Email e senha são obrigatórios." });
   }
 
-  const db = await require('../src/lib/prisma').ensurePrisma();
+  // Corrigido: caminho correto para o prisma
+  const db = await require('../lib/prisma').ensurePrisma();
   const usuario = await db.usuarioPrestador.findFirst({
     where: { email, ativo: true }
   });
