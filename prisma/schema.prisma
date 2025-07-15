@@ -52,6 +52,26 @@ model Cliente {
   camposAdicionais CampoAdicionalCliente[]
   contratos        Contrato[]
   nome_fantasia    String? @db.VarChar(255)
+  
+  // Relação com a nova tabela de autenticação
+  auth             ClienteAuth?
+}
+
+// Nova tabela para autenticação de clientes
+model ClienteAuth {
+  id                Int      @id @default(autoincrement())
+  cliente_id        Int      @unique // Relação 1:1 com Cliente
+  cnpj_normalizado  String   @unique // CNPJ apenas com números
+  senha_hash        String   // Hash da senha
+  ativo             Boolean  @default(true)
+  criado_em         DateTime @default(now())
+  atualizado_em     DateTime @updatedAt
+  
+  // Relação com Cliente
+  cliente           Cliente  @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+  
+  @@index([cnpj_normalizado])
+  @@index([ativo])
 }
 
 model CampoAdicionalCliente {

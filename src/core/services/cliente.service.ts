@@ -19,6 +19,11 @@ interface ClienteData {
   }>;
 }
 
+// Função para normalizar CNPJ (remover pontos, traços e barras)
+const normalizarCNPJ = (cnpj: string): string => {
+  return cnpj.replace(/[.\-\/]/g, '');
+};
+
 export class ClienteService {
   constructor(private prisma: PrismaClient) {}
 
@@ -43,10 +48,13 @@ export class ClienteService {
   }
 
   async create(data: ClienteData & { contratos?: any[] }) {
+    // Normalizar CNPJ antes de salvar
+    const cnpjNormalizado = normalizarCNPJ(data.cnpj);
+    
     return this.prisma.cliente.create({
       data: {
         nome: data.nome,
-        cnpj: data.cnpj,
+        cnpj: cnpjNormalizado, // Salvar CNPJ normalizado
         contato: data.contato,
         telefone: data.telefone,
         email: data.email,
@@ -81,26 +89,33 @@ export class ClienteService {
       await this.prisma.campoAdicionalCliente.deleteMany({ where: { clienteId: id } });
     }
 
+    // Preparar dados para atualização
+    const updateData: any = {
+      nome: data.nome,
+      contato: data.contato,
+      telefone: data.telefone,
+      email: data.email,
+      endereco: data.endereco,
+      bairro: data.bairro,
+      cidade: data.cidade,
+      estado: data.estado,
+      cep: data.cep,
+      nome_fantasia: data.nome_fantasia,
+      logo: data.logo,
+      camposAdicionais: data.camposAdicionais ? { create: data.camposAdicionais } : undefined,
+      contratos: data.contratos && data.contratos.length > 0
+        ? { create: data.contratos }
+        : undefined
+    };
+
+    // Normalizar CNPJ se fornecido
+    if (data.cnpj) {
+      updateData.cnpj = normalizarCNPJ(data.cnpj);
+    }
+
     return this.prisma.cliente.update({
       where: { id },
-      data: {
-        nome: data.nome,
-        cnpj: data.cnpj,
-        contato: data.contato,
-        telefone: data.telefone,
-        email: data.email,
-        endereco: data.endereco,
-        bairro: data.bairro,
-        cidade: data.cidade,
-        estado: data.estado,
-        cep: data.cep,
-        nome_fantasia: data.nome_fantasia,
-        logo: data.logo,
-        camposAdicionais: data.camposAdicionais ? { create: data.camposAdicionais } : undefined,
-        contratos: data.contratos && data.contratos.length > 0
-          ? { create: data.contratos }
-          : undefined
-      },
+      data: updateData,
       include: {
         camposAdicionais: true,
         contratos: true
