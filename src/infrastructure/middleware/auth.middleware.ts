@@ -5,9 +5,14 @@ import { sendResponse } from '../../utils/response';
 import { jsonUtils } from '../../utils/json';
 
 interface JwtPayload {
-  id: string;
-  role: string;
-  permissions: string[];
+  sub: string;
+  nome?: string;
+  email?: string;
+  role?: string;
+  permissions?: string[];
+  razaoSocial?: string;
+  cnpj?: string;
+  tipo?: string;
 }
 
 // Definição local do tipo UserRole para evitar erro de importação
@@ -37,109 +42,67 @@ type Permission = `${PermissionAction}:${ResourceType}`;
 declare global {
   namespace Express {
     interface Request {
-      user?: AuthUser;
+      user?: JwtPayload;
+      cliente?: JwtPayload;
     }
   }
 }
 
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({ message: 'Token de acesso necessário' });
+    return;
+  }
+
+  if (!process.env.JWT_SECRET) {
+    console.error('JWT_SECRET não está definido no ambiente');
+    res.status(500).json({ message: 'Erro de configuração do servidor' });
+    return;
+  }
+
   try {
-    console.log('[auth.middleware] Iniciando autenticação...');
-    console.log('[auth.middleware] URL:', req.url);
-    console.log('[auth.middleware] Method:', req.method);
-    console.log('[auth.middleware] Headers:', req.headers);
-    console.log('[auth.middleware] Authorization header:', req.headers.authorization);
-    console.log('[auth.middleware] JWT_SECRET:', process.env.JWT_SECRET ? 'PRESENTE' : 'AUSENTE');
-    
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      console.log('[auth.middleware] Token não fornecido');
-      sendResponse.unauthorized(res, 'Token não fornecido');
-      return;
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-      console.log('[auth.middleware] Token inválido (formato)');
-      sendResponse.unauthorized(res, 'Token inválido');
-      return;
-    }
-
-    console.log('[auth.middleware] Verificando token JWT...');
-    console.log('[auth.middleware] Token recebido:', token.substring(0, 20) + '...');
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as JwtPayload & { sub?: string };
-    console.log('[auth.middleware] Token decodificado:', decoded);
-
-    // Extrair userId do token (sub ou id)
-    const userId = decoded.sub || decoded.id;
-    if (!userId) {
-      console.error('[auth.middleware] Token JWT malformado ou sem id/sub:', decoded);
-      sendResponse.unauthorized(res, 'Token JWT malformado ou sem id/sub');
-      return;
-    }
-
-    console.log('[auth.middleware] Buscando usuário no banco:', userId);
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        permissions: true,
-        active: true
-      }
-    });
-
-    if (!user) {
-      console.log('[auth.middleware] Usuário não encontrado:', userId);
-      sendResponse.unauthorized(res, 'Usuário não encontrado');
-      return;
-    }
-
-    if (!user.active) {
-      console.log('[auth.middleware] Usuário inativo:', userId);
-      sendResponse.unauthorized(res, 'Usuário inativo');
-      return;
-    }
-
-    console.log('[auth.middleware] Usuário encontrado:', user);
-
-    // Garantir que permissions seja sempre um array de strings
-    let parsedPermissions: string[] = [];
-    try {
-      if (Array.isArray(user.permissions)) {
-        parsedPermissions = user.permissions.filter((p): p is string => typeof p === 'string');
-      } else if (typeof user.permissions === 'string') {
-        const arr = JSON.parse(user.permissions);
-        if (Array.isArray(arr)) {
-          parsedPermissions = arr.filter((p): p is string => typeof p === 'string');
-        }
-      }
-    } catch (e) {
-      console.error('[auth.middleware] Erro ao parsear permissions:', user.permissions, e);
-      parsedPermissions = [];
-    }
-
-    req.user = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      permissions: parsedPermissions,
-    };
-
-    console.log('[auth.middleware] Autenticação concluída com sucesso');
-    console.log('[auth.middleware] Usuário final:', req.user);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
+    req.user = decoded;
     next();
-  } catch (error: unknown) {
-    console.error('[auth.middleware] Erro na autenticação:', error);
-    if (error instanceof jwt.JsonWebTokenError) {
-      sendResponse.unauthorized(res, 'Token inválido');
+  } catch (error) {
+    console.error('Erro na verificação do token:', error);
+    res.status(403).json({ message: 'Token inválido' });
+  }
+};
+
+// Middleware específico para autenticação de clientes
+export const authenticateCliente = (req: Request, res: Response, next: NextFunction): void => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({ message: 'Token de acesso necessário' });
+    return;
+  }
+
+  if (!process.env.JWT_SECRET) {
+    console.error('JWT_SECRET não está definido no ambiente');
+    res.status(500).json({ message: 'Erro de configuração do servidor' });
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
+    
+    // Verificar se é um token de cliente
+    if (decoded.tipo !== 'cliente') {
+      res.status(403).json({ message: 'Acesso negado. Token de cliente necessário.' });
       return;
     }
-    sendResponse.error(res, error);
+
+    req.cliente = decoded;
+    next();
+  } catch (error) {
+    console.error('Erro na verificação do token de cliente:', error);
+    res.status(403).json({ message: 'Token inválido' });
   }
 };
 

@@ -16,6 +16,7 @@ import prestadorRoutes from './routes/prestador.js';
 // import veiculosRouter from './routes/veiculos';
 import fotosRouter from './routes/fotos';
 import v1Router from './api/v1/routes';
+import protectedRoutes from './routes/protectedRoutes';
 import { authenticateToken } from './infrastructure/middleware/auth.middleware';
 import fs from 'fs';
 
@@ -63,6 +64,14 @@ app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), {
   }
 }));
 
+// Servir arquivos estáticos do build do React
+app.use(express.static(path.join(__dirname, '../../cliente-segtrack/build')));
+
+// Todas as rotas que não começam com /api devem servir o index.html do React
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../../cliente-segtrack/build', 'index.html'));
+});
+
 // Middleware de log para todas as requisições
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
@@ -106,6 +115,9 @@ app.use('/api/fotos', fotosRouter);
 
 // Adicionar rotas da API v1
 app.use('/api/v1', v1Router);
+
+// Adicionar rotas protegidas para clientes
+app.use('/api/protected', protectedRoutes);
 
 // Rota básica para /api
 app.get('/api', (req, res) => {
@@ -151,8 +163,8 @@ app.get('/api/debug/list-uploads', (req, res) => {
   });
 });
 
-// Middleware fallback 404
-app.use((req, res) => {
+// Middleware fallback 404 (apenas para rotas de API)
+app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });
 });
 

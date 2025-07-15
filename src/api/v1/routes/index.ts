@@ -8,6 +8,7 @@ import veiculosRouter from './veiculos.routes';
 import fotosRouter from './fotos.routes';
 import relatoriosRouter from './relatorios.routes';
 import userRouter from './user.routes';
+import monitoramentoRouter from './monitoramento.routes';
 
 const v1Router = Router();
 const prestadorController = new PrestadorController();
@@ -22,5 +23,6 @@ v1Router.use('/veiculos', authenticateToken, veiculosRouter);
 v1Router.use('/fotos', authenticateToken, fotosRouter);
 v1Router.use('/relatorios', authenticateToken, relatoriosRouter);
 v1Router.use('/users', authenticateToken, userRouter);
+v1Router.use('/monitoramento', authenticateToken, monitoramentoRouter);
 
 export default v1Router; 

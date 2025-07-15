@@ -199,6 +199,7 @@ model Ocorrencia {
   planta_origem       String?
   cidade_destino      String?
   km_acl              String?
+  hashRastreamento    String?   @unique
   fotos               Foto[]
 
   @@index([placa1])
