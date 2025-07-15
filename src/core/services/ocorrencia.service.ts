@@ -16,11 +16,16 @@ export class OcorrenciaService {
     try {
       console.log('[OcorrenciaService] Iniciando listagem com filtros:', filters);
       
+      console.log('[OcorrenciaService] Chamando ensurePrisma...');
       const db = await ensurePrisma();
+      console.log('[OcorrenciaService] ensurePrisma retornou:', !!db);
+      
       if (!db) {
         console.error('[OcorrenciaService] Erro: Instância do Prisma não disponível');
         throw new AppError('Erro de conexão com o banco de dados');
       }
+
+      console.log('[OcorrenciaService] Prisma disponível, construindo query...');
 
       const where: Prisma.OcorrenciaWhereInput = {};
 
@@ -73,6 +78,7 @@ export class OcorrenciaService {
 
       console.log('[OcorrenciaService] Query where:', where);
 
+      console.log('[OcorrenciaService] Executando query no banco...');
       const ocorrencias = await db.ocorrencia.findMany({
         where,
         include: {

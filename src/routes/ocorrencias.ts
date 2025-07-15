@@ -22,8 +22,76 @@ router.get('/test-auth', (req, res) => {
   res.json({ message: 'Rota de teste com auth funcionando!', user: req.user });
 });
 
+// Rota de teste para listagem sem permissões
+router.get('/test-list', (req, res) => {
+  console.log('[ocorrencias] Rota de teste de listagem acessada');
+  console.log('[ocorrencias] User:', req.user);
+  console.log('[ocorrencias] Headers:', req.headers);
+  
+  // Simular retorno de ocorrências vazias para teste
+  res.json([]);
+});
+
+// Rota de teste para verificar conexão com banco
+router.get('/test-db', async (req, res) => {
+  try {
+    console.log('[ocorrencias] Testando conexão com banco...');
+    console.log('[ocorrencias] DATABASE_URL:', process.env.DATABASE_URL ? 'DEFINIDA' : 'NÃO DEFINIDA');
+    
+    const { ensurePrisma } = await import('@/lib/prisma');
+    const db = await ensurePrisma();
+    
+    console.log('[ocorrencias] Prisma disponível:', !!db);
+    
+    // Testar query simples
+    const result = await db.$queryRaw`SELECT 1 as test`;
+    console.log('[ocorrencias] Query de teste:', result);
+    
+    res.json({ 
+      message: 'Conexão com banco OK',
+      databaseUrl: process.env.DATABASE_URL ? 'DEFINIDA' : 'NÃO DEFINIDA',
+      prismaAvailable: !!db,
+      testQuery: result
+    });
+  } catch (error) {
+    console.error('[ocorrencias] Erro no teste de banco:', error);
+    res.status(500).json({ 
+      error: 'Erro na conexão com banco',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Rota para verificar configurações do ambiente
+router.get('/test-env', (req, res) => {
+  console.log('[ocorrencias] Verificando configurações do ambiente...');
+  
+  const envVars = {
+    NODE_ENV: process.env.NODE_ENV,
+    DATABASE_URL: process.env.DATABASE_URL ? 'DEFINIDA' : 'NÃO DEFINIDA',
+    JWT_SECRET: process.env.JWT_SECRET ? 'DEFINIDA' : 'NÃO DEFINIDA',
+    PORT: process.env.PORT,
+    HOST: process.env.HOST
+  };
+  
+  console.log('[ocorrencias] Variáveis de ambiente:', envVars);
+  
+  res.json({
+    message: 'Configurações do ambiente',
+    environment: envVars,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Listagem e busca
-router.get('/', (req, res) => controller.list(req, res));
+router.get('/', (req, res) => {
+  console.log('[ocorrencias] GET / - Iniciando listagem');
+  console.log('[ocorrencias] User:', req.user);
+  console.log('[ocorrencias] Headers:', req.headers);
+  
+  // Chamar o controller
+  controller.list(req, res);
+});
 router.get('/:id', (req, res) => controller.findById(req, res));
 
 // Criação e atualização
