@@ -9,7 +9,7 @@ const router = Router();
 router.post('/posicao', authenticateToken, async (req, res) => {
   try {
     const { prestadorId, ocorrenciaId, latitude, longitude, timestamp } = req.body;
-    const userId = req.user?.id;
+    const userId = req.user?.sub; // Usando sub em vez de id
 
     // Validar dados obrigatórios
     if (!prestadorId || !ocorrenciaId || !latitude || !longitude || !timestamp) {

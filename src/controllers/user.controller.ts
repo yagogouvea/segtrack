@@ -35,7 +35,7 @@ export class UserController {
       }
 
       const user = await prisma.user.findUnique({
-        where: { id: req.user.id },
+        where: { id: req.user.sub }, // Usando sub em vez de id
         select: {
           id: true,
           name: true,
@@ -68,7 +68,7 @@ export class UserController {
       const { name, email } = req.body;
 
       const user = await prisma.user.update({
-        where: { id: req.user.id },
+        where: { id: req.user.sub }, // Usando sub em vez de id
         data: { name, email },
         select: {
           id: true,
@@ -97,7 +97,7 @@ export class UserController {
       const { currentPassword, newPassword } = req.body;
 
       const user = await prisma.user.findUnique({
-        where: { id: req.user.id }
+        where: { id: req.user.sub } // Usando sub em vez de id
       });
 
       if (!user) {
@@ -114,7 +114,7 @@ export class UserController {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       await prisma.user.update({
-        where: { id: req.user.id },
+        where: { id: req.user.sub }, // Usando sub em vez de id
         data: { passwordHash: hashedPassword }
       });
 
@@ -324,7 +324,7 @@ export class UserController {
 
   async getUserProfile(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.sub;
       if (!userId) {
         res.status(401).json({ error: 'Usuário não autenticado' });
         return;

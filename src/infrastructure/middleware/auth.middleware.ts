@@ -6,6 +6,7 @@ import { jsonUtils } from '../../utils/json';
 
 interface JwtPayload {
   sub: string;
+  id?: string; // Adicionando id para compatibilidade
   nome?: string;
   email?: string;
   role?: string;
