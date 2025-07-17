@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { requirePermission } from '../infrastructure/middleware/auth.middleware';
-import { authenticateCliente } from '../infrastructure/middleware/auth.middleware';
+import { requirePermission, authenticateToken, authenticateCliente } from '../infrastructure/middleware/auth.middleware';
 import { ensurePrisma } from '../lib/prisma';
+// @ts-ignore
+import { remove as removeDiacritics } from 'diacritics';
 
 const router = Router();
 
@@ -60,39 +61,249 @@ router.get('/cliente/perfil', async (req, res) => {
 // Rota para obter ocorrências do cliente
 router.get('/cliente/ocorrencias', async (req, res) => {
   try {
+    console.log('🔍 Iniciando busca de ocorrências do cliente...');
+    
     const cliente = req.cliente;
     if (!cliente) {
+      console.log('❌ Cliente não autenticado');
       return res.status(401).json({ message: 'Cliente não autenticado' });
     }
 
+    console.log('👤 Cliente autenticado:', {
+      id: cliente.sub,
+      razaoSocial: cliente.razaoSocial,
+      cnpj: cliente.cnpj
+    });
+
     const db = await ensurePrisma();
+    if (!db) {
+      console.error('❌ Erro: Instância do Prisma não disponível');
+      return res.status(500).json({ message: 'Erro de conexão com o banco de dados' });
+    }
+
+    // Normalizar nome do cliente autenticado
+    const nomeCliente = removeDiacritics(cliente.razaoSocial || '').toLowerCase().replace(/\s+/g, '');
+    console.log('📝 Nome do cliente normalizado:', nomeCliente);
+
+    // Buscar todas as ocorrências
+    console.log('🔍 Buscando ocorrências no banco de dados...');
     const ocorrencias = await db.ocorrencia.findMany({
-      where: { cliente: cliente.razaoSocial },
       orderBy: { criado_em: 'desc' },
       select: {
         id: true,
         placa1: true,
         placa2: true,
         placa3: true,
+        cliente: true, // Incluir o campo cliente para debug
         tipo: true,
         status: true,
         criado_em: true,
         inicio: true,
+        chegada: true,
         termino: true,
         prestador: true,
+        operador: true,
         cidade: true,
-        estado: true
+        estado: true,
+        km: true,
+        despesas: true,
+        descricao: true,
+        resultado: true,
+        hashRastreamento: true,
+        despesas_detalhadas: true,
+        passagem_servico: true,
+        fotos: {
+          select: {
+            id: true,
+            url: true,
+            legenda: true
+          }
+        }
       }
     });
+
+    console.log(`📊 Total de ocorrências encontradas: ${ocorrencias.length}`);
+
+    // Filtrar por nome com comparação mais flexível
+    console.log('🔍 Filtrando ocorrências por cliente...');
+    const ocorrenciasCliente = ocorrencias.filter((o: any) => {
+      const nomeOcorrencia = removeDiacritics(o.cliente || '').toLowerCase().replace(/\s+/g, '');
+      
+      // Comparação mais flexível: verificar se o nome do cliente contém o nome autenticado
+      // ou se o nome autenticado contém o nome do cliente
+      const match = nomeOcorrencia.includes(nomeCliente) || nomeCliente.includes(nomeOcorrencia);
+      
+      if (!match) {
+        console.log(`❌ Não corresponde: "${nomeOcorrencia}" não contém "${nomeCliente}" e vice-versa`);
+      } else {
+        console.log(`✅ Corresponde: "${nomeOcorrencia}" <-> "${nomeCliente}"`);
+      }
+      
+      return match;
+    });
+
+    console.log(`✅ Ocorrências filtradas para o cliente: ${ocorrenciasCliente.length}`);
+
+    // Log das primeiras ocorrências para debug
+    if (ocorrenciasCliente.length > 0) {
+      console.log('📋 Primeiras ocorrências do cliente:', ocorrenciasCliente.slice(0, 3).map((o: any) => ({
+        id: o.id,
+        placa: o.placa1,
+        cliente: o.cliente,
+        status: o.status,
+        criado_em: o.criado_em
+      })));
+    }
 
     res.json({
       message: 'Lista de ocorrências do cliente',
       cliente: cliente.razaoSocial,
-      ocorrencias: ocorrencias
+      totalOcorrencias: ocorrencias.length,
+      ocorrenciasFiltradas: ocorrenciasCliente.length,
+      ocorrencias: ocorrenciasCliente
     });
   } catch (error) {
-    console.error('Erro ao obter ocorrências do cliente:', error);
-    res.status(500).json({ message: 'Erro interno do servidor' });
+    console.error('❌ Erro ao obter ocorrências do cliente:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      cliente: req.cliente
+    });
+    res.status(500).json({ 
+      message: 'Erro interno do servidor',
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    });
+  }
+});
+
+// Rota para obter rastreamentos do cliente
+router.get('/cliente/rastreamentos', async (req, res) => {
+  try {
+    console.log('🔍 Iniciando busca de rastreamentos do cliente...');
+    const cliente = req.cliente;
+    if (!cliente) {
+      console.log('❌ Cliente não autenticado');
+      return res.status(401).json({ message: 'Cliente não autenticado' });
+    }
+
+    console.log('👤 Cliente autenticado:', {
+      id: cliente.sub,
+      razaoSocial: cliente.razaoSocial,
+      cnpj: cliente.cnpj
+    });
+
+    const db = await ensurePrisma();
+    if (!db) {
+      console.error('❌ Erro: Instância do Prisma não disponível');
+      return res.status(500).json({ message: 'Erro de conexão com o banco de dados' });
+    }
+
+    // Normalizar nome do cliente autenticado
+    const nomeCliente = removeDiacritics(cliente.razaoSocial || '').toLowerCase().replace(/\s+/g, '');
+    console.log('📝 Nome do cliente normalizado:', nomeCliente);
+
+    // Buscar ocorrências do cliente
+    const ocorrencias = await db.ocorrencia.findMany({
+      where: {
+        cliente: {
+          contains: cliente.razaoSocial || cliente.cnpj || '',
+          mode: 'insensitive'
+        }
+      },
+      select: {
+        id: true,
+        placa1: true,
+        prestador: true,
+        status: true,
+        criado_em: true
+      }
+    });
+
+    console.log(`📊 Ocorrências do cliente encontradas: ${ocorrencias.length}`);
+
+    // Buscar rastreamentos ativos para as ocorrências do cliente
+    const rastreamentos = [];
+    for (const ocorrencia of ocorrencias) {
+      if (ocorrencia.prestador) {
+        // Buscar prestador pelo nome
+        const prestador = await db.prestador.findFirst({
+          where: {
+            nome: {
+              contains: ocorrencia.prestador,
+              mode: 'insensitive'
+            }
+          },
+          select: {
+            id: true,
+            nome: true,
+            telefone: true
+          }
+        });
+
+        if (prestador) {
+          // Buscar última posição do prestador
+          const ultimaPosicao = await db.rastreamentoPrestador.findFirst({
+            where: {
+              prestador_id: prestador.id,
+              ocorrencia_id: ocorrencia.id
+            },
+            orderBy: {
+              timestamp: 'desc'
+            }
+          });
+
+          if (ultimaPosicao) {
+            rastreamentos.push({
+              id: ultimaPosicao.id,
+              ocorrencia_id: ocorrencia.id,
+              prestador_id: prestador.id,
+              prestador_nome: prestador.nome,
+              prestador_telefone: prestador.telefone,
+              ocorrencia_placa: ocorrencia.placa1,
+              ocorrencia_tipo: 'Recuperação',
+              ocorrencia_status: ocorrencia.status,
+              ultima_posicao: {
+                id: ultimaPosicao.id,
+                prestador_id: ultimaPosicao.prestador_id,
+                ocorrencia_id: ultimaPosicao.ocorrencia_id,
+                latitude: ultimaPosicao.latitude,
+                longitude: ultimaPosicao.longitude,
+                velocidade: ultimaPosicao.velocidade,
+                direcao: ultimaPosicao.direcao,
+                altitude: ultimaPosicao.altitude,
+                precisao: ultimaPosicao.precisao,
+                bateria: ultimaPosicao.bateria,
+                sinal_gps: ultimaPosicao.sinal_gps,
+                observacoes: ultimaPosicao.observacoes,
+                timestamp: ultimaPosicao.timestamp,
+                status: ultimaPosicao.status
+              },
+              status: 'ativo',
+              criado_em: ultimaPosicao.timestamp,
+              atualizado_em: ultimaPosicao.timestamp
+            });
+          }
+        }
+      }
+    }
+
+    console.log(`✅ Rastreamentos encontrados: ${rastreamentos.length}`);
+
+    res.json({
+      message: 'Lista de rastreamentos do cliente',
+      cliente: cliente.razaoSocial,
+      rastreamentos: rastreamentos,
+      total: rastreamentos.length
+    });
+  } catch (error) {
+    console.error('❌ Erro ao obter rastreamentos do cliente:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      cliente: req.cliente
+    });
+    res.status(500).json({ 
+      message: 'Erro interno do servidor',
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    });
   }
 });
 
@@ -127,5 +338,7 @@ router.get('/cliente/relatorios', async (req, res) => {
     res.status(500).json({ message: 'Erro interno do servidor' });
   }
 });
+
+
 
 export default router; 

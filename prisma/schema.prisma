@@ -134,6 +134,7 @@ model Prestador {
   modelo_antena     String?
 
   usuarios UsuarioPrestador[]
+  rastreamentos     RastreamentoPrestador[]
 }
 
 model FuncaoPrestador {
@@ -221,6 +222,7 @@ model Ocorrencia {
   km_acl              String?
   hashRastreamento    String?   @unique
   fotos               Foto[]
+  rastreamentos       RastreamentoPrestador[]
 
   @@index([placa1])
   @@index([status])
@@ -274,4 +276,30 @@ model UsuarioPrestador {
   atualizado_em  DateTime @updatedAt
 
   prestador      Prestador @relation(fields: [prestador_id], references: [id])
+}
+
+model RastreamentoPrestador {
+  id                Int      @id @default(autoincrement())
+  prestador_id      Int
+  ocorrencia_id     Int?
+  latitude          Float
+  longitude         Float
+  velocidade        Float?   // em km/h
+  direcao          Float?   // em graus (0-360)
+  altitude          Float?   // em metros
+  precisao          Float?   // em metros
+  bateria           Int?     // porcentagem (0-100)
+  sinal_gps         Int?     // força do sinal GPS (0-100)
+  timestamp         DateTime @default(now())
+  status            String   @default("ativo") // ativo, inativo, offline
+  observacoes       String?  @db.Text
+  
+  // Relacionamentos
+  prestador         Prestador @relation(fields: [prestador_id], references: [id])
+  ocorrencia        Ocorrencia? @relation(fields: [ocorrencia_id], references: [id])
+
+  @@index([prestador_id])
+  @@index([ocorrencia_id])
+  @@index([timestamp])
+  @@index([status])
 }

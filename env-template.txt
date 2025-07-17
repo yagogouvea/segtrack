@@ -1,0 +1,20 @@
+# 🔗 CONFIGURAÇÃO DO BANCO DE DADOS
+# Copie este arquivo para .env e configure com suas credenciais
+
+# Para Railway (copie a URL do Railway Dashboard)
+DATABASE_URL="postgresql://usuario:senha@tramway.proxy.rlwy.net:15957/segtrack"
+
+# Para desenvolvimento local
+# DATABASE_URL="postgresql://usuario:senha@localhost:5432/segtrack"
+
+# 🔐 CONFIGURAÇÕES JWT
+JWT_SECRET="segtrack-jwt-secret-2024-super-seguro-xyz123"
+
+# ⚙️ CONFIGURAÇÕES DO SERVIDOR
+NODE_ENV="development"
+UPLOAD_DIR="./uploads"
+MAX_FILE_SIZE=10485760
+LOG_LEVEL="info"
+
+# 🌐 CONFIGURAÇÕES CORS (opcional)
+CORS_ORIGIN="http://localhost:3000,http://localhost:3001" 

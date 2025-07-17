@@ -92,14 +92,73 @@ router.get('/', (req, res) => {
   // Chamar o controller
   controller.list(req, res);
 });
-router.get('/:id', (req, res) => controller.findById(req, res));
 
-// Criação e atualização
-router.post('/', requirePermission('create:ocorrencia'), validateCreateOcorrencia, (req: any, res: any) => controller.create(req, res));
-router.put('/:id', requirePermission('update:ocorrencia'), (req, res) => controller.update(req, res));
-router.delete('/:id', requirePermission('delete:ocorrencia'), (req, res) => controller.delete(req, res));
+// Rota específica para buscar ocorrências por prestador (DEVE VIR ANTES de /:id)
+router.get('/prestador/:prestadorId', authenticateToken, async (req, res) => {
+  try {
+    const { prestadorId } = req.params;
+    console.log(`[ocorrencias] Buscando ocorrências para prestador: ${prestadorId}`);
+    console.log(`[ocorrencias] Usuário autenticado:`, req.user);
+    
+    const { ensurePrisma } = await import('../lib/prisma');
+    const db = await ensurePrisma();
+    
+    if (!db) {
+      console.error('[ocorrencias] Erro: Instância do Prisma não disponível');
+      return res.status(500).json({ error: 'Erro de conexão com o banco de dados' });
+    }
 
-// Rotas específicas
+    // Buscar prestador primeiro para validar
+    const prestador = await db.prestador.findFirst({
+      where: { 
+        OR: [
+          { id: Number(prestadorId) },
+          { nome: prestadorId }
+        ]
+      }
+    });
+
+    if (!prestador) {
+      console.log(`[ocorrencias] Prestador não encontrado: ${prestadorId}`);
+      return res.status(404).json({ error: 'Prestador não encontrado' });
+    }
+
+    console.log(`[ocorrencias] Prestador encontrado: ${prestador.nome} (ID: ${prestador.id})`);
+
+    // Buscar ocorrências vinculadas ao prestador
+    const ocorrencias = await db.ocorrencia.findMany({
+      where: {
+        prestador: prestador.nome,
+        status: {
+          in: ['em_andamento', 'aguardando']
+        }
+      },
+      include: {
+        fotos: true
+      },
+      orderBy: {
+        criado_em: 'desc'
+      }
+    });
+
+    console.log(`[ocorrencias] Ocorrências encontradas: ${ocorrencias.length}`);
+
+    res.json({
+      prestador: {
+        id: prestador.id,
+        nome: prestador.nome,
+        email: prestador.email
+      },
+      ocorrencias: ocorrencias,
+      total: ocorrencias.length
+    });
+  } catch (error) {
+    console.error('[ocorrencias] Erro ao buscar ocorrências do prestador:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rotas específicas (DEVEM VIR ANTES de /:id)
 router.get('/status/:status', (req, res) => controller.findByStatus(req, res));
 router.get('/placa/:placa', (req, res) => controller.findByPlaca(req, res));
 
@@ -108,5 +167,13 @@ router.get('/:id/resultado', (req, res) => controller.findResultado(req, res));
 
 // Upload de fotos
 router.post('/:id/fotos', requirePermission('upload:foto'), upload.array('fotos'), (req, res) => controller.addFotos(req, res));
+
+// Rota genérica para buscar por ID (DEVE VIR DEPOIS das rotas específicas)
+router.get('/:id', (req, res) => controller.findById(req, res));
+
+// Criação e atualização
+router.post('/', requirePermission('create:ocorrencia'), validateCreateOcorrencia, (req: any, res: any) => controller.create(req, res));
+router.put('/:id', requirePermission('update:ocorrencia'), (req, res) => controller.update(req, res));
+router.delete('/:id', requirePermission('delete:ocorrencia'), (req, res) => controller.delete(req, res));
 
 export default router;

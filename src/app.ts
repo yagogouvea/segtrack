@@ -17,6 +17,8 @@ import prestadorRoutes from './routes/prestador.js';
 import fotosRouter from './routes/fotos';
 import v1Router from './api/v1/routes';
 import protectedRoutes from './routes/protectedRoutes';
+import prestadorProtectedRoutes from './routes/prestadorProtectedRoutes';
+import rastreamentoRoutes from './routes/rastreamentoRoutes';
 import { authenticateToken } from './infrastructure/middleware/auth.middleware';
 import fs from 'fs';
 
@@ -34,10 +36,12 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:8080',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
   'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
   'http://127.0.0.1:8080',
   'https://prestador.painelsegtrack.com.br', // front antigo
   'https://prestadores.painelsegtrack.com.br' // novo domínio
@@ -117,8 +121,24 @@ app.use('/api/fotos', fotosRouter);
 // Adicionar rotas da API v1
 app.use('/api/v1', v1Router);
 
+
+
 // Adicionar rotas protegidas para clientes
 app.use('/api/protected', protectedRoutes);
+
+// Adicionar rotas protegidas para prestadores
+app.use('/api/protected-prestador', prestadorProtectedRoutes);
+
+// Adicionar rotas de rastreamento
+app.use('/api/rastreamento', rastreamentoRoutes);
+
+// Rota de teste temporária para debug (movida para antes do router)
+app.get('/api/protected-prestador/test', (req, res) => {
+  console.log('[app] Rota de teste protegida-prestador acessada');
+  res.json({ message: 'Rota protegida-prestador funcionando!', timestamp: new Date().toISOString() });
+});
+
+
 
 // Rota básica para /api
 app.get('/api', (req, res) => {

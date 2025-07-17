@@ -6,10 +6,7 @@ import { ensurePrisma } from '../../../lib/prisma';
 const router = Router();
 const controller = new PrestadorController();
 
-// Rotas públicas
-router.get('/public', controller.listPublic);
-
-// 🔹 ROTA - Listar prestadores para popup de seleção (nome e codinome)
+// 🔹 ROTA - Listar prestadores para popup de seleção (nome e codinome) - PÚBLICA
 router.get('/popup', async (_req, res) => {
   try {
     const db = await ensurePrisma();
@@ -17,18 +14,39 @@ router.get('/popup', async (_req, res) => {
       select: {
         id: true,
         nome: true,
-        cod_nome: true
+        cod_nome: true,
+        telefone: true,
+        cidade: true,
+        estado: true,
+        funcoes: {
+          select: {
+            funcao: true
+          }
+        },
+        regioes: {
+          select: {
+            regiao: true
+          }
+        }
       },
       orderBy: { nome: 'asc' }
     });
-    res.json(prestadores);
+
+    // Transformar funções e regiões para arrays simples
+    const prestadoresFormatados = prestadores.map((p: any) => ({
+      ...p,
+      funcoes: p.funcoes.map((f: any) => f.funcao),
+      regioes: p.regioes.map((r: any) => r.regiao)
+    }));
+
+    res.json(prestadoresFormatados);
   } catch (err) {
     console.error('❌ Erro ao buscar prestadores para popup:', err);
     res.status(500).json({ erro: 'Erro ao buscar prestadores' });
   }
 });
 
-// ✅ ROTA - Buscar prestador por nome (usado no popup de passagem de serviço)
+// ✅ ROTA - Buscar prestador por nome (usado no popup de passagem de serviço) - PÚBLICA
 router.get('/buscar-por-nome/:nome', async (req, res) => {
   const { nome } = req.params;
 
@@ -57,7 +75,7 @@ router.get('/buscar-por-nome/:nome', async (req, res) => {
   }
 });
 
-// ✅ ROTA - Buscar prestadores por termo de busca (usado no autocomplete)
+// ✅ ROTA - Buscar prestadores por termo de busca (usado no autocomplete) - PÚBLICA
 router.get('/buscar', async (req, res) => {
   const { q } = req.query;
 
@@ -86,8 +104,13 @@ router.get('/buscar', async (req, res) => {
   }
 });
 
-// Rotas protegidas
+// Rotas públicas
+router.get('/public', controller.listPublic);
+
+// Middleware de autenticação para rotas protegidas
 router.use(authenticateToken);
+
+// Rotas protegidas
 router.get('/', controller.list);
 router.get('/mapa', controller.mapa);
 router.get('/:id', controller.getById);

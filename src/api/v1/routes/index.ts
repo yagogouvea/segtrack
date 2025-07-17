@@ -9,15 +9,16 @@ import fotosRouter from './fotos.routes';
 import relatoriosRouter from './relatorios.routes';
 import userRouter from './user.routes';
 import monitoramentoRouter from './monitoramento.routes';
+import ocorrenciasRouter from './ocorrencias.routes';
 
 const v1Router = Router();
 const prestadorController = new PrestadorController();
 
-// Rotas públicas
-v1Router.use('/prestadores/public', prestadoresRouter);
+// Rotas públicas (sem autenticação)
+v1Router.use('/prestadores', prestadoresRouter); // Rotas públicas e protegidas estão no próprio router
+v1Router.use('/ocorrencias', ocorrenciasRouter); // Rotas públicas e protegidas estão no próprio router
 
-// Rotas protegidas
-v1Router.use('/prestadores', authenticateToken, prestadoresRouter);
+// Rotas protegidas (com autenticação)
 v1Router.use('/clientes', authenticateToken, clientesRouter);
 v1Router.use('/veiculos', authenticateToken, veiculosRouter);
 v1Router.use('/fotos', authenticateToken, fotosRouter);
