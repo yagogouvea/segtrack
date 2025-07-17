@@ -44,7 +44,9 @@ const allowedOrigins = [
   'http://127.0.0.1:3001',
   'http://127.0.0.1:8080',
   'https://prestador.painelsegtrack.com.br', // front antigo
-  'https://prestadores.painelsegtrack.com.br' // novo domínio
+  'https://prestadores.painelsegtrack.com.br', // novo domínio
+  'https://painel-prestador.painelsegtrack.com.br', // domínio específico do painel
+  'https://prestador.painelsegtrack.com.br' // domínio alternativo
 ];
 app.use(cors({
   origin: allowedOrigins,
@@ -108,6 +110,102 @@ app.get('/api/fotos-test', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/ocorrencias', ocorrenciasRouter);
+
+// Rota pública para resumo de prestadores (usado no formulário de ocorrências)
+app.get('/api/prestadores/resumo', async (req, res) => {
+  try {
+    const { ensurePrisma } = await import('./lib/prisma');
+    const db = await ensurePrisma();
+    if (!db) {
+      return res.status(500).json({ error: 'Erro de conexão com o banco de dados' });
+    }
+
+    const prestadores = await db.prestador.findMany({
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        telefone: true
+      },
+      where: {
+        aprovado: true // Apenas prestadores aprovados
+      },
+      orderBy: {
+        nome: 'asc'
+      }
+    });
+
+    res.json(prestadores);
+  } catch (error) {
+    console.error('Erro ao buscar prestadores resumo:', error);
+    res.status(500).json({ error: 'Erro ao buscar prestadores' });
+  }
+});
+
+// Rota pública para buscar ocorrências de prestadores (similar à rota de clientes)
+app.get('/api/prestador/ocorrencias/:prestadorId', async (req, res) => {
+  try {
+    const { prestadorId } = req.params;
+    console.log(`[app] Buscando ocorrências para prestador: ${prestadorId}`);
+    
+    const { ensurePrisma } = await import('./lib/prisma');
+    const db = await ensurePrisma();
+    
+    if (!db) {
+      console.error('[app] Erro: Instância do Prisma não disponível');
+      return res.status(500).json({ error: 'Erro de conexão com o banco de dados' });
+    }
+
+    // Buscar prestador primeiro para validar
+    const prestador = await db.prestador.findFirst({
+      where: { 
+        OR: [
+          { id: Number(prestadorId) },
+          { nome: prestadorId }
+        ]
+      }
+    });
+
+    if (!prestador) {
+      console.log(`[app] Prestador não encontrado: ${prestadorId}`);
+      return res.status(404).json({ error: 'Prestador não encontrado' });
+    }
+
+    console.log(`[app] Prestador encontrado: ${prestador.nome} (ID: ${prestador.id})`);
+
+    // Buscar ocorrências vinculadas ao prestador
+    const ocorrencias = await db.ocorrencia.findMany({
+      where: {
+        prestador: prestador.nome,
+        status: {
+          in: ['em_andamento', 'aguardando']
+        }
+      },
+      include: {
+        fotos: true
+      },
+      orderBy: {
+        criado_em: 'desc'
+      }
+    });
+
+    console.log(`[app] Ocorrências encontradas: ${ocorrencias.length}`);
+
+    res.json({
+      prestador: {
+        id: prestador.id,
+        nome: prestador.nome,
+        email: prestador.email
+      },
+      ocorrencias: ocorrencias,
+      total: ocorrencias.length
+    });
+  } catch (error) {
+    console.error('[app] Erro ao buscar ocorrências do prestador:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 app.use('/api/prestadores', authenticateToken, prestadoresRouter);
 app.use('/api/prestadores-publico', prestadoresPublicoRouter);
 app.use('/api/clientes', clientesRouter);
