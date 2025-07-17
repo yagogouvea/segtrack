@@ -773,6 +773,7 @@ export class PrestadorService {
           cidade: true,
           estado: true,
           bairro: true,
+          modelo_antena: true, // ✅ Adicionado campo modelo_antena
           regioes: { select: { regiao: true } },
           funcoes: { select: { funcao: true } }
         },
@@ -788,7 +789,8 @@ export class PrestadorService {
           id: prestadores[0].id,
           nome: prestadores[0].nome,
           latitude: prestadores[0].latitude,
-          longitude: prestadores[0].longitude
+          longitude: prestadores[0].longitude,
+          modelo_antena: prestadores[0].modelo_antena
         });
       }
       

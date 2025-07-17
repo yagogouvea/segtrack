@@ -339,6 +339,75 @@ router.get('/cliente/relatorios', async (req, res) => {
   }
 });
 
+// Rota para obter prestadores para o mapa (acessível por clientes)
+router.get('/cliente/prestadores/mapa', async (req, res) => {
+  try {
+    console.log('🔍 [ProtectedRoutes] Cliente solicitando prestadores para o mapa');
+    
+    const cliente = req.cliente;
+    if (!cliente) {
+      console.log('❌ Cliente não autenticado');
+      return res.status(401).json({ message: 'Cliente não autenticado' });
+    }
+
+    console.log('👤 Cliente autenticado:', {
+      id: cliente.sub,
+      razaoSocial: cliente.razaoSocial,
+      cnpj: cliente.cnpj
+    });
+
+    const db = await ensurePrisma();
+    if (!db) {
+      console.error('❌ Erro: Instância do Prisma não disponível');
+      return res.status(500).json({ message: 'Erro de conexão com o banco de dados' });
+    }
+
+    // Buscar prestadores com coordenadas (mesmo método do endpoint público)
+    const prestadores = await db.prestador.findMany({
+      select: {
+        id: true,
+        nome: true,
+        telefone: true,
+        latitude: true,
+        longitude: true,
+        cidade: true,
+        estado: true,
+        bairro: true,
+        modelo_antena: true,
+        regioes: { select: { regiao: true } },
+        funcoes: { select: { funcao: true } }
+      },
+      where: {
+        latitude: { not: null },
+        longitude: { not: null }
+      }
+    });
+
+    console.log('✅ [ProtectedRoutes] Prestadores encontrados para cliente:', prestadores.length);
+    
+    if (prestadores.length > 0) {
+      console.log('✅ [ProtectedRoutes] Primeiro prestador:', {
+        id: prestadores[0].id,
+        nome: prestadores[0].nome,
+        latitude: prestadores[0].latitude,
+        longitude: prestadores[0].longitude
+      });
+    }
+
+    res.json(prestadores);
+  } catch (error: unknown) {
+    console.error('❌ [ProtectedRoutes] Erro ao buscar prestadores para cliente:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+      code: (error as any)?.code
+    });
+    res.status(500).json({ 
+      error: 'Erro ao buscar prestadores para o mapa', 
+      details: error instanceof Error ? error.message : String(error) 
+    });
+  }
+});
 
 
 export default router; 
