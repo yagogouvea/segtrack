@@ -9,8 +9,8 @@ const envSchema = z.object({
   PORT: z.string().transform(Number).default('8080'),
   DATABASE_URL: z.string(),
   JWT_SECRET: z.string(),
-  BASE_URL: z.string(),
-  FRONTEND_URL: z.string(),
+  BASE_URL: z.string().optional(),
+  FRONTEND_URL: z.string().optional(),
 });
 
 const _env = envSchema.safeParse(process.env);

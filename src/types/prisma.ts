@@ -1,5 +1,3 @@
-import { Prisma } from '@prisma/client';
-
 export type OcorrenciaStatus = 'em_andamento' | 'concluida' | 'cancelada' | 'aguardando';
 
 export type CreateOcorrenciaDTO = {
@@ -10,7 +8,8 @@ export type CreateOcorrenciaDTO = {
   placa2?: string;
   placa3?: string;
   operador?: string;
-  despesas_detalhadas?: Prisma.JsonValue;
+  operacao?: string;
+  despesas_detalhadas?: any;
   fotos?: {
     url: string;
     legenda?: string;

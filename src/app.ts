@@ -71,21 +71,21 @@ app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), {
   }
 }));
 
-// Servir arquivos estáticos do build do React
-app.use(express.static(path.join(__dirname, '../../cliente-segtrack/build')));
-
-// Todas as rotas que não começam com /api devem servir o index.html do React
-app.get(/^\/(?!api).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../../cliente-segtrack/build', 'index.html'));
-});
-
-// Middleware de log para todas as requisições
+// Middleware de log para todas as requisições (ANTES das rotas do frontend)
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
   console.log(`🔍 Headers:`, req.headers);
   console.log(`🔍 Query:`, req.query);
   console.log(`🔍 Params:`, req.params);
   next();
+});
+
+// Servir arquivos estáticos do build do React
+app.use(express.static(path.join(__dirname, '../../cliente-segtrack/build')));
+
+// Todas as rotas que não começam com /api devem servir o index.html do React
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../../cliente-segtrack/build', 'index.html'));
 });
 
 console.log('Configurando rotas básicas...');

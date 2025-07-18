@@ -112,6 +112,7 @@ router.get('/cliente/ocorrencias', async (req, res) => {
         hashRastreamento: true,
         despesas_detalhadas: true,
         passagem_servico: true,
+        os: true, // Adicionar campo OS
         fotos: {
           select: {
             id: true,
@@ -164,6 +165,121 @@ router.get('/cliente/ocorrencias', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erro ao obter ocorrências do cliente:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      cliente: req.cliente
+    });
+    res.status(500).json({ 
+      message: 'Erro interno do servidor',
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    });
+  }
+});
+
+// Rota para obter estatísticas do cliente
+router.get('/cliente/estatisticas', async (req, res) => {
+  try {
+    console.log('🔍 Iniciando busca de estatísticas do cliente...');
+    
+    const cliente = req.cliente;
+    if (!cliente) {
+      console.log('❌ Cliente não autenticado');
+      return res.status(401).json({ message: 'Cliente não autenticado' });
+    }
+
+    console.log('👤 Cliente autenticado:', {
+      id: cliente.sub,
+      razaoSocial: cliente.razaoSocial,
+      cnpj: cliente.cnpj
+    });
+
+    const db = await ensurePrisma();
+    if (!db) {
+      console.error('❌ Erro: Instância do Prisma não disponível');
+      return res.status(500).json({ message: 'Erro de conexão com o banco de dados' });
+    }
+
+    // Normalizar nome do cliente autenticado
+    const nomeCliente = removeDiacritics(cliente.razaoSocial || '').toLowerCase().replace(/\s+/g, '');
+    console.log('📝 Nome do cliente normalizado:', nomeCliente);
+
+    // Buscar todas as ocorrências
+    console.log('🔍 Buscando ocorrências no banco de dados...');
+    const ocorrencias = await db.ocorrencia.findMany({
+      orderBy: { criado_em: 'desc' },
+      select: {
+        id: true,
+        cliente: true,
+        tipo: true,
+        status: true,
+        resultado: true,
+        criado_em: true,
+        hashRastreamento: true
+      }
+    });
+
+    console.log(`📊 Total de ocorrências encontradas: ${ocorrencias.length}`);
+
+    // Filtrar por nome com comparação mais flexível
+    console.log('🔍 Filtrando ocorrências por cliente...');
+    const ocorrenciasCliente = ocorrencias.filter((o: any) => {
+      const nomeOcorrencia = removeDiacritics(o.cliente || '').toLowerCase().replace(/\s+/g, '');
+      
+      // Comparação mais flexível: verificar se o nome do cliente contém o nome autenticado
+      // ou se o nome autenticado contém o nome do cliente
+      const match = nomeOcorrencia.includes(nomeCliente) || nomeCliente.includes(nomeOcorrencia);
+      
+      return match;
+    });
+
+    console.log(`✅ Ocorrências filtradas para o cliente: ${ocorrenciasCliente.length}`);
+
+    // Calcular estatísticas
+    const totalOcorrencias = ocorrenciasCliente.length;
+    const emAndamento = ocorrenciasCliente.filter((o: any) => o.status === 'em_andamento').length;
+    const recuperadas = ocorrenciasCliente.filter((o: any) => 
+      o.resultado === 'Recuperado' || o.resultado === 'RECUPERADO'
+    ).length;
+    const naoRecuperadas = ocorrenciasCliente.filter((o: any) => 
+      o.resultado === 'Não Recuperado' || o.resultado === 'NAO_RECUPERADO'
+    ).length;
+    const canceladas = ocorrenciasCliente.filter((o: any) => 
+      o.status === 'cancelada' || o.resultado === 'Cancelado' || o.resultado === 'CANCELADO'
+    ).length;
+    const rastreamentosAtivos = ocorrenciasCliente.filter((o: any) => 
+      o.status === 'em_andamento' && o.hashRastreamento
+    ).length;
+    const relatoriosGerados = recuperadas + naoRecuperadas + canceladas;
+
+    // Estatísticas específicas para ITURAN
+    const furtoRoubo = ocorrenciasCliente.filter((o: any) => 
+      o.tipo === 'furto' || o.tipo === 'roubo' || o.tipo === 'Furto' || o.tipo === 'Roubo'
+    ).length;
+    const apropriacao = ocorrenciasCliente.filter((o: any) => 
+      o.tipo === 'apropriação' || o.tipo === 'apropriacao' || o.tipo === 'Apropriação'
+    ).length;
+
+    const estatisticas = {
+      totalOcorrencias,
+      emAndamento,
+      recuperadas,
+      naoRecuperadas,
+      canceladas,
+      rastreamentosAtivos,
+      relatoriosGerados,
+      furtoRoubo,
+      apropriacao
+    };
+
+    console.log('✅ Estatísticas calculadas:', estatisticas);
+
+    res.json({
+      message: 'Estatísticas do cliente',
+      cliente: cliente.razaoSocial,
+      estatisticas
+    });
+  } catch (error) {
+    console.error('❌ Erro ao obter estatísticas do cliente:', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       cliente: req.cliente

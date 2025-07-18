@@ -251,3 +251,89 @@ export const cadastrarClienteComAuth = async (req: Request, res: Response): Prom
     res.status(500).json({ message: 'Erro interno no cadastro' });
   }
 }; 
+
+export const alterarSenhaCliente = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Verificar se o usuário está autenticado
+    if (!req.cliente || req.cliente.tipo !== 'cliente') {
+      res.status(401).json({ message: 'Acesso negado. Apenas clientes podem alterar senha.' });
+      return;
+    }
+
+    const { senhaAtual, novaSenha } = req.body;
+
+    if (!senhaAtual || !novaSenha) {
+      res.status(400).json({ message: 'Senha atual e nova senha são obrigatórias' });
+      return;
+    }
+
+    if (novaSenha.length < 6) {
+      res.status(400).json({ message: 'Nova senha deve ter pelo menos 6 caracteres' });
+      return;
+    }
+
+    const db = await ensurePrisma();
+    
+    // Buscar o cliente autenticado
+    const clienteId = parseInt(req.cliente.sub);
+    const clienteAuth = await db.clienteAuth.findUnique({
+      where: { cliente_id: clienteId },
+      include: {
+        cliente: {
+          select: {
+            id: true,
+            nome: true,
+            nome_fantasia: true,
+            cnpj: true
+          }
+        }
+      }
+    });
+
+    if (!clienteAuth) {
+      res.status(404).json({ message: 'Cliente não encontrado' });
+      return;
+    }
+
+    // Verificar se a conta está ativa
+    if (!clienteAuth.ativo) {
+      res.status(403).json({ message: 'Conta de cliente desativada' });
+      return;
+    }
+
+    // Verificar senha atual
+    const senhaAtualValida = await bcrypt.compare(senhaAtual, clienteAuth.senha_hash);
+    
+    if (!senhaAtualValida) {
+      res.status(400).json({ message: 'Senha atual incorreta' });
+      return;
+    }
+
+    // Gerar hash da nova senha
+    const novaSenhaHash = await bcrypt.hash(novaSenha, 10);
+
+    // Atualizar a senha no banco
+    await db.clienteAuth.update({
+      where: { cliente_id: clienteId },
+      data: {
+        senha_hash: novaSenhaHash,
+        atualizado_em: new Date()
+      }
+    });
+
+    console.log(`Senha alterada com sucesso para cliente ${clienteAuth.cliente.nome_fantasia || clienteAuth.cliente.nome}`);
+
+    res.json({ 
+      message: 'Senha alterada com sucesso',
+      cliente: {
+        id: clienteAuth.cliente.id,
+        nome: clienteAuth.cliente.nome_fantasia || clienteAuth.cliente.nome,
+        cnpj: clienteAuth.cliente.cnpj
+      }
+    });
+
+  } catch (error: unknown) {
+    console.error('Erro ao alterar senha do cliente:', error);
+    res.status(500).json({ message: 'Erro interno ao alterar senha' });
+  }
+}; 
