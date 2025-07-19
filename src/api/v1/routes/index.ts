@@ -21,7 +21,8 @@ v1Router.use('/ocorrencias', ocorrenciasRouter); // Rotas públicas e protegidas
 // Rotas protegidas (com autenticação)
 v1Router.use('/clientes', authenticateToken, clientesRouter);
 v1Router.use('/veiculos', authenticateToken, veiculosRouter);
-v1Router.use('/fotos', authenticateToken, fotosRouter);
+// v1Router.use('/fotos', authenticateToken, fotosRouter); // TEMPORARIAMENTE COMENTADO PARA TESTE
+v1Router.use('/fotos', fotosRouter); // SEM AUTENTICAÇÃO TEMPORARIAMENTE
 v1Router.use('/relatorios', authenticateToken, relatoriosRouter);
 v1Router.use('/users', authenticateToken, userRouter);
 v1Router.use('/monitoramento', authenticateToken, monitoramentoRouter);

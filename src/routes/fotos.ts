@@ -46,7 +46,13 @@ const upload = multer({
 const router = express.Router();
 
 // Add authentication middleware to all photo routes
-router.use(authenticateToken);
+// router.use(authenticateToken); // TEMPORARIAMENTE COMENTADO PARA TESTE
+
+// Rota de teste sem autenticação
+router.get('/test', (req, res) => {
+  console.log('[fotos] Rota de teste acessada');
+  res.json({ message: 'Rota de fotos funcionando!' });
+});
 
 // 🔹 Upload de novas fotos
 router.post('/', async (req: Request, res: Response) => {
