@@ -340,40 +340,24 @@ router.get('/cliente/rastreamentos', async (req, res) => {
     // Buscar rastreamentos ativos para as ocorrências do cliente
     const rastreamentos = [];
     for (const ocorrencia of ocorrencias) {
-      // Preferir buscar pelo prestador_id se existir na ocorrência
-      let prestadorId = ocorrencia.prestador_id;
-      let prestador = null;
-      if (prestadorId) {
-        prestador = await db.prestador.findUnique({
-          where: { id: prestadorId },
+      // Buscar última posição do rastreamento para a ocorrência
+      const ultimaPosicao = await db.rastreamentoPrestador.findFirst({
+        where: {
+          ocorrencia_id: ocorrencia.id
+        },
+        orderBy: {
+          timestamp: 'desc'
+        }
+      });
+
+      if (ultimaPosicao) {
+        // Buscar prestador pelo id do rastreamento
+        const prestador = await db.prestador.findUnique({
+          where: { id: ultimaPosicao.prestador_id },
           select: { id: true, nome: true, telefone: true }
         });
-      } else if (ocorrencia.prestador) {
-        // Fallback: buscar pelo nome
-        prestador = await db.prestador.findFirst({
-          where: {
-            nome: {
-              contains: ocorrencia.prestador,
-              mode: 'insensitive'
-            }
-          },
-          select: { id: true, nome: true, telefone: true }
-        });
-      }
 
-      if (prestador) {
-        // Buscar última posição do prestador
-        const ultimaPosicao = await db.rastreamentoPrestador.findFirst({
-          where: {
-            prestador_id: prestador.id,
-            ocorrencia_id: ocorrencia.id
-          },
-          orderBy: {
-            timestamp: 'desc'
-          }
-        });
-
-        if (ultimaPosicao) {
+        if (prestador) {
           rastreamentos.push({
             id: ultimaPosicao.id,
             ocorrencia_id: ocorrencia.id,
