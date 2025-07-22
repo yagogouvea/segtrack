@@ -330,7 +330,8 @@ router.get('/cliente/rastreamentos', async (req, res) => {
         placa1: true,
         prestador: true,
         status: true,
-        criado_em: true
+        criado_em: true,
+        prestador_id: true // Adicionar o campo prestador_id
       }
     });
 
@@ -339,65 +340,69 @@ router.get('/cliente/rastreamentos', async (req, res) => {
     // Buscar rastreamentos ativos para as ocorrências do cliente
     const rastreamentos = [];
     for (const ocorrencia of ocorrencias) {
-      if (ocorrencia.prestador) {
-        // Buscar prestador pelo nome
-        const prestador = await db.prestador.findFirst({
+      // Preferir buscar pelo prestador_id se existir na ocorrência
+      let prestadorId = ocorrencia.prestador_id;
+      let prestador = null;
+      if (prestadorId) {
+        prestador = await db.prestador.findUnique({
+          where: { id: prestadorId },
+          select: { id: true, nome: true, telefone: true }
+        });
+      } else if (ocorrencia.prestador) {
+        // Fallback: buscar pelo nome
+        prestador = await db.prestador.findFirst({
           where: {
             nome: {
               contains: ocorrencia.prestador,
               mode: 'insensitive'
             }
           },
-          select: {
-            id: true,
-            nome: true,
-            telefone: true
+          select: { id: true, nome: true, telefone: true }
+        });
+      }
+
+      if (prestador) {
+        // Buscar última posição do prestador
+        const ultimaPosicao = await db.rastreamentoPrestador.findFirst({
+          where: {
+            prestador_id: prestador.id,
+            ocorrencia_id: ocorrencia.id
+          },
+          orderBy: {
+            timestamp: 'desc'
           }
         });
 
-        if (prestador) {
-          // Buscar última posição do prestador
-          const ultimaPosicao = await db.rastreamentoPrestador.findFirst({
-            where: {
-              prestador_id: prestador.id,
-              ocorrencia_id: ocorrencia.id
-            },
-            orderBy: {
-              timestamp: 'desc'
-            }
-          });
-
-          if (ultimaPosicao) {
-            rastreamentos.push({
+        if (ultimaPosicao) {
+          rastreamentos.push({
+            id: ultimaPosicao.id,
+            ocorrencia_id: ocorrencia.id,
+            prestador_id: prestador.id,
+            prestador_nome: prestador.nome,
+            prestador_telefone: prestador.telefone,
+            ocorrencia_placa: ocorrencia.placa1,
+            ocorrencia_tipo: 'Recuperação',
+            ocorrencia_status: ocorrencia.status,
+            ultima_posicao: {
               id: ultimaPosicao.id,
-              ocorrencia_id: ocorrencia.id,
-              prestador_id: prestador.id,
-              prestador_nome: prestador.nome,
-              prestador_telefone: prestador.telefone,
-              ocorrencia_placa: ocorrencia.placa1,
-              ocorrencia_tipo: 'Recuperação',
-              ocorrencia_status: ocorrencia.status,
-              ultima_posicao: {
-                id: ultimaPosicao.id,
-                prestador_id: ultimaPosicao.prestador_id,
-                ocorrencia_id: ultimaPosicao.ocorrencia_id,
-                latitude: ultimaPosicao.latitude,
-                longitude: ultimaPosicao.longitude,
-                velocidade: ultimaPosicao.velocidade,
-                direcao: ultimaPosicao.direcao,
-                altitude: ultimaPosicao.altitude,
-                precisao: ultimaPosicao.precisao,
-                bateria: ultimaPosicao.bateria,
-                sinal_gps: ultimaPosicao.sinal_gps,
-                observacoes: ultimaPosicao.observacoes,
-                timestamp: ultimaPosicao.timestamp,
-                status: ultimaPosicao.status
-              },
-              status: 'ativo',
-              criado_em: ultimaPosicao.timestamp,
-              atualizado_em: ultimaPosicao.timestamp
-            });
-          }
+              prestador_id: ultimaPosicao.prestador_id,
+              ocorrencia_id: ultimaPosicao.ocorrencia_id,
+              latitude: ultimaPosicao.latitude,
+              longitude: ultimaPosicao.longitude,
+              velocidade: ultimaPosicao.velocidade,
+              direcao: ultimaPosicao.direcao,
+              altitude: ultimaPosicao.altitude,
+              precisao: ultimaPosicao.precisao,
+              bateria: ultimaPosicao.bateria,
+              sinal_gps: ultimaPosicao.sinal_gps,
+              observacoes: ultimaPosicao.observacoes,
+              timestamp: ultimaPosicao.timestamp,
+              status: ultimaPosicao.status
+            },
+            status: 'ativo',
+            criado_em: ultimaPosicao.timestamp,
+            atualizado_em: ultimaPosicao.timestamp
+          });
         }
       }
     }
