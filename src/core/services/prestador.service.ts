@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { AppError } from '../../errors/AppError';
 import { ensurePrisma } from '../../lib/prisma';
+import bcrypt from 'bcrypt';
 
 interface PrestadorData {
   nome: string;
@@ -532,6 +533,26 @@ export class PrestadorService {
         }
       });
 
+      // Sincronizar usuarioPrestador
+      if (result.email && result.cpf) {
+        const usuarioExistente = await db.usuarioPrestador.findFirst({
+          where: { prestador_id: result.id }
+        });
+        if (!usuarioExistente) {
+          const senha_hash = await bcrypt.hash(result.cpf.replace(/\D/g, ''), 10);
+          await db.usuarioPrestador.create({
+            data: {
+              prestador_id: result.id,
+              email: result.email,
+              senha_hash,
+              ativo: true,
+              primeiro_acesso: true
+            }
+          });
+          console.log(`✅ UsuarioPrestador criado automaticamente para o prestador ${result.nome} (${result.email})`);
+        }
+      }
+
       console.log('✅ [PrestadorService.create] Prestador criado com sucesso:', {
         id: result.id,
         nome: result.nome,
@@ -650,6 +671,15 @@ export class PrestadorService {
           regioes: true
         }
       });
+
+      // Sincronizar usuarioPrestador (atualizar email)
+      if (resultado.email) {
+        await db.usuarioPrestador.updateMany({
+          where: { prestador_id: resultado.id },
+          data: { email: resultado.email }
+        });
+        console.log(`✅ UsuarioPrestador sincronizado (email atualizado) para o prestador ${resultado.nome} (${resultado.email})`);
+      }
 
       console.log('✅ Prestador atualizado com sucesso:', {
         id: resultado.id,
