@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y openssl
 
 # Install app dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copie TODO o código, incluindo prisma, src, etc.
 COPY . .
