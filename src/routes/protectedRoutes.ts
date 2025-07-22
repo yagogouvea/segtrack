@@ -331,7 +331,10 @@ router.get('/cliente/rastreamentos', async (req, res) => {
         prestador: true,
         status: true,
         criado_em: true,
-        prestador_id: true // Adicionar o campo prestador_id
+        endereco: true,
+        bairro: true,
+        cidade: true,
+        estado: true
       }
     });
 
