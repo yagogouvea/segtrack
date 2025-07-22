@@ -404,3 +404,88 @@ export const seedAdmin = async (_req: Request, res: Response): Promise<void> => 
     res.status(500).json({ message: 'Erro ao criar admin', error });
   }
 };
+
+// Função para login de prestadores
+export const loginPrestador = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, senha } = req.body;
+
+    if (!email || !senha) {
+      res.status(400).json({ message: 'Email e senha são obrigatórios' });
+      return;
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET não está definido no ambiente');
+      res.status(500).json({ message: 'Erro de configuração do servidor' });
+      return;
+    }
+
+    console.log('Tentativa de login de prestador para:', email);
+
+    try {
+      const db = await ensurePrisma();
+      
+      // Buscar usuário prestador
+      const usuarioPrestador = await db.usuarioPrestador.findFirst({
+        where: { email },
+        include: {
+          prestador: true
+        }
+      });
+
+      if (!usuarioPrestador) {
+        console.log('Prestador não encontrado:', email);
+        res.status(401).json({ message: 'Prestador não encontrado' });
+        return;
+      }
+
+      // Verificar se o usuário está ativo
+      if (!usuarioPrestador.ativo) {
+        console.log('Prestador inativo:', email);
+        res.status(401).json({ message: 'Usuário não encontrado ou inativo.' });
+        return;
+      }
+
+      // NOVA VERIFICAÇÃO: Usar senha_hash e bcrypt
+      const bcrypt = require('bcryptjs');
+      const senhaCorreta = await bcrypt.compare(senha, usuarioPrestador.senha_hash);
+      if (!senhaCorreta) {
+        console.log('Senha incorreta para prestador:', email);
+        res.status(401).json({ message: 'Senha inválida.' });
+        return;
+      }
+
+      // Gerar token JWT para prestador
+      const token = jwt.sign(
+        {
+          sub: usuarioPrestador.id,
+          nome: usuarioPrestador.prestador.nome,
+          email: usuarioPrestador.email,
+          tipo: 'prestador',
+          prestador_id: usuarioPrestador.prestador_id
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '12h' }
+      );
+
+      console.log('Login de prestador bem-sucedido:', email);
+
+      res.json({ 
+        token,
+        prestador: {
+          id: usuarioPrestador.prestador_id,
+          nome: usuarioPrestador.prestador.nome,
+          email: usuarioPrestador.email,
+          telefone: usuarioPrestador.prestador.telefone
+        }
+      });
+    } catch (dbError) {
+      console.error('Erro ao buscar prestador:', dbError);
+      res.status(500).json({ message: 'Erro ao buscar prestador' });
+    }
+  } catch (error: unknown) {
+    console.error("Erro no login de prestador:", error);
+    res.status(500).json({ message: 'Erro interno no login' });
+  }
+};

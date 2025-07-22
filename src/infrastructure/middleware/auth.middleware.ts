@@ -14,6 +14,7 @@ interface JwtPayload {
   razaoSocial?: string;
   cnpj?: string;
   tipo?: string;
+  prestador_id?: number;
 }
 
 // Definição local do tipo UserRole para evitar erro de importação
@@ -66,6 +67,12 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
+    
+    // Garantir que o id seja mapeado do sub para compatibilidade
+    if (decoded.sub && !decoded.id) {
+      decoded.id = decoded.sub;
+    }
+    
     req.user = decoded;
     next();
   } catch (error) {
@@ -92,6 +99,11 @@ export const authenticateCliente = (req: Request, res: Response, next: NextFunct
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
+    
+    // Garantir que o id seja mapeado do sub para compatibilidade
+    if (decoded.sub && !decoded.id) {
+      decoded.id = decoded.sub;
+    }
     
     // Verificar se é um token de cliente
     if (decoded.tipo !== 'cliente') {
