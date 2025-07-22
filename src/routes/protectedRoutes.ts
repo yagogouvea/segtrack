@@ -353,12 +353,22 @@ router.get('/cliente/rastreamentos', async (req, res) => {
         }
       });
 
+      console.log('[DEBUG] Ocorrência:', ocorrencia.id, '| Última posição encontrada:', ultimaPosicao ? {
+        id: ultimaPosicao.id,
+        prestador_id: ultimaPosicao.prestador_id,
+        latitude: ultimaPosicao.latitude,
+        longitude: ultimaPosicao.longitude,
+        timestamp: ultimaPosicao.timestamp
+      } : 'NENHUMA');
+
       if (ultimaPosicao) {
         // Buscar prestador pelo id do rastreamento
         const prestador = await db.prestador.findUnique({
           where: { id: ultimaPosicao.prestador_id },
           select: { id: true, nome: true, telefone: true }
         });
+
+        console.log('[DEBUG] Prestador encontrado para última posição:', prestador ? prestador.id : 'NENHUM');
 
         if (prestador) {
           rastreamentos.push({
