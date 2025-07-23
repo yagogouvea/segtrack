@@ -30,21 +30,21 @@ class OcorrenciaController {
         catch (error) {
             console.error('[OcorrenciaController] Erro ao listar ocorrências:', {
                 error,
-                message: error instanceof Error ? error.message : 'Erro desconhecido',
-                stack: error instanceof Error ? error.stack : undefined,
-                name: error instanceof Error ? error.name : undefined
+                message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
+                stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
+                name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined
             });
             if (error instanceof AppError_1.AppError) {
                 return res.status(error.statusCode).json({
-                    error: error.message,
-                    code: error.code,
-                    details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                    error: error instanceof Error ? error.message : String(error),
+                    code: error === null || error === void 0 ? void 0 : error.code,
+                    details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.stack : undefined : undefined
                 });
             }
             return res.status(500).json({
                 error: 'Erro interno do servidor',
                 details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
-                message: error instanceof Error ? error.message : 'Erro desconhecido'
+                message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido'
             });
         }
     }
@@ -58,7 +58,7 @@ class OcorrenciaController {
         catch (error) {
             console.error('❌ Erro no controller de ocorrência:', error);
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -71,7 +71,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -101,12 +101,12 @@ class OcorrenciaController {
         catch (error) {
             console.error('[OcorrenciaController] Erro ao atualizar ocorrência:', {
                 error,
-                message: error instanceof Error ? error.message : 'Erro desconhecido',
-                stack: error instanceof Error ? error.stack : undefined,
-                name: error instanceof Error ? error.name : undefined
+                message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
+                stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
+                name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined
             });
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -119,7 +119,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -132,7 +132,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -145,7 +145,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -165,7 +165,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -184,7 +184,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }

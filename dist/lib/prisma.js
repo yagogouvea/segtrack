@@ -58,8 +58,8 @@ async function ensurePrisma() {
     catch (error) {
         console.error('[Prisma] Erro ao verificar conexão:', {
             error,
-            message: error instanceof Error ? error.message : 'Erro desconhecido',
-            stack: error instanceof Error ? error.stack : undefined
+            message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
+            stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined
         });
         throw new Error('Erro de conexão com o banco de dados');
     }
@@ -78,8 +78,8 @@ prisma === null || prisma === void 0 ? void 0 : prisma.$use(async (params, next)
             console.error(`❌ Operação do banco falhou (tentativa ${attempt}/${MAX_RETRIES}):`, {
                 operacao: params.action,
                 modelo: params.model,
-                erro: error.message,
-                codigo: error.code
+                erro: error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error),
+                codigo: error === null || error === void 0 ? void 0 : error.code
             });
             if (attempt < MAX_RETRIES) {
                 const delay = BASE_DELAY * Math.pow(2, attempt - 1);

@@ -168,23 +168,14 @@ router.get('/rastreamento/:ocorrenciaId', authenticateToken, async (req, res) =>
   }
 });
 
-// Rota para obter ocorrências do prestador autenticado
+// Endpoint para buscar ocorrências do prestador autenticado
 router.get('/prestador/ocorrencias', authenticateToken, async (req, res) => {
   try {
-    console.log('🔍 Iniciando busca de ocorrências do prestador...');
-    
     const user = req.user;
     if (!user) {
       console.log('❌ Prestador não autenticado');
       return res.status(401).json({ message: 'Prestador não autenticado' });
     }
-
-    console.log('👤 Prestador autenticado:', {
-      id: user.id, // Usar user.id em vez de user.id
-      nome: user.nome,
-      email: user.email,
-      tipo: user.tipo
-    });
 
     if (user.tipo !== 'prestador') {
       console.log('❌ Usuário não é prestador');
@@ -220,14 +211,20 @@ router.get('/prestador/ocorrencias', authenticateToken, async (req, res) => {
 
     console.log(`✅ Prestador encontrado: ${prestador.nome} (ID: ${prestador.id})`);
 
-    // Buscar ocorrências vinculadas ao prestador usando busca flexível
-    // Primeiro, tentar busca exata pelo nome
+    // Buscar ocorrências vinculadas ao prestador usando verificação rigorosa
+    // Só retornar ocorrências onde o campo 'prestador' corresponde EXATAMENTE ao nome do prestador logado
     let ocorrencias = await db.ocorrencia.findMany({
       where: {
-        prestador: prestador.nome,
-        status: {
-          in: ['em_andamento', 'aguardando']
-        }
+        AND: [
+          {
+            prestador: prestador.nome // Busca exata pelo nome do prestador
+          },
+          {
+            status: {
+              in: ['em_andamento', 'aguardando']
+            }
+          }
+        ]
       },
       include: {
         fotos: true
@@ -237,68 +234,17 @@ router.get('/prestador/ocorrencias', authenticateToken, async (req, res) => {
       }
     });
 
-    // Se não encontrar ocorrências com nome exato, tentar busca por similaridade
-    if (ocorrencias.length === 0) {
-      console.log(`🔍 Nenhuma ocorrência encontrada com nome exato "${prestador.nome}", tentando busca por similaridade...`);
-      
-      // Buscar ocorrências que contenham o nome do prestador
-      ocorrencias = await db.ocorrencia.findMany({
-        where: {
-          AND: [
-            {
-              OR: [
-                { prestador: { contains: prestador.nome } },
-                { prestador: { contains: prestador.nome.split(' ')[0] } }, // Primeiro nome
-                { prestador: { contains: prestador.nome.split(' ').slice(-1)[0] } } // Último nome
-              ]
-            },
-            {
-              status: {
-                in: ['em_andamento', 'aguardando']
-              }
-            }
-          ]
-        },
-        include: {
-          fotos: true
-        },
-        orderBy: {
-          criado_em: 'desc'
-        }
-      });
-    }
+    console.log(`✅ Ocorrências encontradas para o prestador "${prestador.nome}": ${ocorrencias.length}`);
 
-    // Se ainda não encontrar, buscar por todas as ocorrências ativas para debug
-    if (ocorrencias.length === 0) {
-      console.log(`🔍 Nenhuma ocorrência encontrada com busca flexível, buscando todas as ocorrências ativas para debug...`);
-      
-      const todasOcorrencias = await db.ocorrencia.findMany({
-        where: {
-          status: {
-            in: ['em_andamento', 'aguardando']
-          }
-        },
-        select: {
-          id: true,
-          prestador: true,
-          status: true,
-          tipo: true,
-          criado_em: true
-        },
-        orderBy: {
-          criado_em: 'desc'
-        }
+    // Log detalhado das ocorrências encontradas para debug
+    if (ocorrencias.length > 0) {
+      console.log('📋 Ocorrências vinculadas ao prestador:');
+      ocorrencias.forEach(oc => {
+        console.log(`   - ID: ${oc.id}, Status: ${oc.status}, Prestador: "${oc.prestador}"`);
       });
-      
-      console.log(`📋 Ocorrências ativas no sistema:`, todasOcorrencias.map((o: any) => ({
-        id: o.id,
-        prestador: o.prestador,
-        status: o.status,
-        tipo: o.tipo
-      })));
+    } else {
+      console.log(`⚠️ Nenhuma ocorrência encontrada para o prestador "${prestador.nome}"`);
     }
-
-    console.log(`✅ Ocorrências encontradas para o prestador: ${ocorrencias.length}`);
 
     res.json({
       message: 'Lista de ocorrências do prestador',
@@ -394,13 +340,22 @@ router.get('/prestador/ocorrencias-finalizadas', authenticateToken, async (req, 
       return res.status(404).json({ message: 'Prestador não encontrado' });
     }
 
-    // Buscar ocorrências finalizadas
+    console.log(`✅ Buscando ocorrências finalizadas para o prestador: ${prestador.nome} (ID: ${prestador.id})`);
+
+    // Buscar ocorrências finalizadas usando verificação rigorosa
+    // Só retornar ocorrências onde o campo 'prestador' corresponde EXATAMENTE ao nome do prestador logado
     const ocorrencias = await db.ocorrencia.findMany({
       where: {
-        prestador: prestador.nome,
-        status: {
-          in: ['concluida', 'cancelada']
-        }
+        AND: [
+          {
+            prestador: prestador.nome // Busca exata pelo nome do prestador
+          },
+          {
+            status: {
+              in: ['concluida', 'cancelada']
+            }
+          }
+        ]
       },
       orderBy: {
         termino: 'desc'
@@ -454,6 +409,18 @@ router.get('/prestador/ocorrencias-finalizadas', authenticateToken, async (req, 
         hashRastreamento: true
       }
     });
+
+    console.log(`✅ Ocorrências finalizadas encontradas para o prestador "${prestador.nome}": ${ocorrencias.length}`);
+
+    // Log detalhado das ocorrências encontradas para debug
+    if (ocorrencias.length > 0) {
+      console.log('📋 Ocorrências finalizadas vinculadas ao prestador:');
+      ocorrencias.forEach(oc => {
+        console.log(`   - ID: ${oc.id}, Status: ${oc.status}, Prestador: "${oc.prestador}"`);
+      });
+    } else {
+      console.log(`⚠️ Nenhuma ocorrência finalizada encontrada para o prestador "${prestador.nome}"`);
+    }
 
     // Adicionar os valores do prestador em cada ocorrência
     const ocorrenciasComValores = ocorrencias.map(oc => ({

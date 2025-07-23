@@ -28,10 +28,10 @@ function analyzeMySQLError(error) {
         'ER_SERVER_SHUTDOWN': 'Servidor está desligando',
         'ER_TOO_MANY_USER_CONNECTIONS': 'Muitas conexões de usuário',
     };
-    if (error.code && errorCodes[error.code]) {
-        return errorCodes[error.code];
+    if ((error === null || error === void 0 ? void 0 : error.code) && errorCodes[error === null || error === void 0 ? void 0 : error.code]) {
+        return errorCodes[error === null || error === void 0 ? void 0 : error.code];
     }
-    return error.message || 'Erro desconhecido';
+    return error instanceof Error ? error.message : String(error) || 'Erro desconhecido';
 }
 // Função para desconectar do banco
 async function disconnectPrisma() {

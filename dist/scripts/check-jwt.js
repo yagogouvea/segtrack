@@ -17,7 +17,8 @@ function checkJWT() {
         console.log('Token de teste decodificado:', decoded);
     }
     catch (error) {
-        console.error('❌ Erro ao testar JWT_SECRET:', error);
+        console.error('❌ Erro ao verificar JWT:', error);
+        process.exit(1);
     }
 }
 checkJWT();

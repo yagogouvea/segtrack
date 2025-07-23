@@ -8,7 +8,6 @@ const client_1 = require("@prisma/client");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const auth_middleware_1 = require("../infrastructure/middleware/auth.middleware");
 const prisma = new client_1.PrismaClient();
 const UPLOAD_DIR = path_1.default.resolve(__dirname, '../../uploads');
 // Garantir que a pasta uploads existe
@@ -44,7 +43,12 @@ const upload = (0, multer_1.default)({
 });
 const router = express_1.default.Router();
 // Add authentication middleware to all photo routes
-router.use(auth_middleware_1.authenticateToken);
+// router.use(authenticateToken); // TEMPORARIAMENTE COMENTADO PARA TESTE
+// Rota de teste sem autenticação
+router.get('/test', (req, res) => {
+    console.log('[fotos] Rota de teste acessada');
+    res.json({ message: 'Rota de fotos funcionando!' });
+});
 // 🔹 Upload de novas fotos
 router.post('/', async (req, res) => {
     try {

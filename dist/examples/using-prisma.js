@@ -56,7 +56,7 @@ async function exemploCriarUsuario(data) {
     }
     catch (error) {
         // Exemplo de tratamento específico de erro
-        if (error.code === 'P2002') {
+        if ((error === null || error === void 0 ? void 0 : error.code) === 'P2002') {
             logger_1.default.warn('Tentativa de criar usuário com email duplicado:', data.email);
             throw new Error('Email já está em uso');
         }

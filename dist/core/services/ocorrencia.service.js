@@ -19,11 +19,14 @@ class OcorrenciaService {
     async list(filters = {}) {
         try {
             console.log('[OcorrenciaService] Iniciando listagem com filtros:', filters);
+            console.log('[OcorrenciaService] Chamando ensurePrisma...');
             const db = await (0, prisma_1.ensurePrisma)();
+            console.log('[OcorrenciaService] ensurePrisma retornou:', !!db);
             if (!db) {
                 console.error('[OcorrenciaService] Erro: Instância do Prisma não disponível');
                 throw new AppError_1.AppError('Erro de conexão com o banco de dados');
             }
+            console.log('[OcorrenciaService] Prisma disponível, construindo query...');
             const where = {};
             if (filters.id) {
                 where.id = filters.id;
@@ -67,6 +70,7 @@ class OcorrenciaService {
                 }
             }
             console.log('[OcorrenciaService] Query where:', where);
+            console.log('[OcorrenciaService] Executando query no banco...');
             const ocorrencias = await db.ocorrencia.findMany({
                 where,
                 include: {
@@ -77,18 +81,26 @@ class OcorrenciaService {
                 }
             });
             console.log('[OcorrenciaService] Ocorrências encontradas:', ocorrencias.length);
+            // Log para verificar as despesas_detalhadas de cada ocorrência
+            ocorrencias.forEach((oc, index) => {
+                console.log(`[OcorrenciaService] Ocorrência ${index + 1} (ID: ${oc.id}):`, {
+                    despesas_detalhadas: oc.despesas_detalhadas,
+                    tipo_despesas_detalhadas: typeof oc.despesas_detalhadas,
+                    despesas: oc.despesas
+                });
+            });
             return ocorrencias;
         }
         catch (error) {
             console.error('[OcorrenciaService] Erro ao listar ocorrências:', {
                 error,
-                message: error instanceof Error ? error.message : 'Erro desconhecido',
-                stack: error instanceof Error ? error.stack : undefined,
-                name: error instanceof Error ? error.name : undefined,
-                code: error instanceof client_1.Prisma.PrismaClientKnownRequestError ? error.code : undefined
+                message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
+                stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
+                name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined,
+                code: error instanceof client_1.Prisma.PrismaClientKnownRequestError ? error === null || error === void 0 ? void 0 : error.code : undefined
             });
             if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-                throw new AppError_1.AppError(`Erro no banco de dados: ${error.message} (código: ${error.code})`);
+                throw new AppError_1.AppError(`Erro no banco de dados: ${error instanceof Error ? error.message : String(error)} (código: ${error === null || error === void 0 ? void 0 : error.code})`);
             }
             throw new AppError_1.AppError('Erro ao listar ocorrências');
         }
@@ -193,9 +205,29 @@ class OcorrenciaService {
                         legenda: foto.legenda || ''
                     }))
                 } : undefined });
-            // Só sobrescreve despesas_detalhadas se vier no payload
+            // Preservar despesas_detalhadas existentes se não fornecidas no payload
             if (despesas_detalhadas !== undefined) {
                 updateData.despesas_detalhadas = despesas_detalhadas;
+                console.log('[OcorrenciaService] Usando despesas_detalhadas do payload:', despesas_detalhadas);
+            }
+            else {
+                // Se despesas_detalhadas não foi fornecida, buscar a ocorrência atual para preservar as existentes
+                const ocorrenciaAtual = await db.ocorrencia.findUnique({
+                    where: { id },
+                    select: { despesas_detalhadas: true }
+                });
+                console.log('[OcorrenciaService] Buscando ocorrência atual para preservar despesas:', {
+                    id,
+                    despesas_detalhadas_atual: ocorrenciaAtual === null || ocorrenciaAtual === void 0 ? void 0 : ocorrenciaAtual.despesas_detalhadas,
+                    tipo_despesas_detalhadas: typeof (ocorrenciaAtual === null || ocorrenciaAtual === void 0 ? void 0 : ocorrenciaAtual.despesas_detalhadas)
+                });
+                if (ocorrenciaAtual && ocorrenciaAtual.despesas_detalhadas) {
+                    console.log('[OcorrenciaService] Preservando despesas_detalhadas existentes:', ocorrenciaAtual.despesas_detalhadas);
+                    updateData.despesas_detalhadas = ocorrenciaAtual.despesas_detalhadas;
+                }
+                else {
+                    console.log('[OcorrenciaService] Nenhuma despesa_detalhada encontrada para preservar');
+                }
             }
             const ocorrencia = await db.ocorrencia.update({
                 where: { id },
@@ -210,13 +242,13 @@ class OcorrenciaService {
         catch (error) {
             console.error('[OcorrenciaService] Erro ao atualizar ocorrência:', {
                 error,
-                message: error instanceof Error ? error.message : 'Erro desconhecido',
-                stack: error instanceof Error ? error.stack : undefined,
-                name: error instanceof Error ? error.name : undefined,
-                code: error instanceof client_1.Prisma.PrismaClientKnownRequestError ? error.code : undefined
+                message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
+                stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
+                name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined,
+                code: error instanceof client_1.Prisma.PrismaClientKnownRequestError ? error === null || error === void 0 ? void 0 : error.code : undefined
             });
             if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-                throw new AppError_1.AppError(`Erro no banco de dados: ${error.message} (código: ${error.code})`);
+                throw new AppError_1.AppError(`Erro no banco de dados: ${error instanceof Error ? error.message : String(error)} (código: ${error === null || error === void 0 ? void 0 : error.code})`);
             }
             throw new AppError_1.AppError('Erro ao atualizar ocorrência');
         }

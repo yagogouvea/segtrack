@@ -7,7 +7,7 @@ const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
 const router = express_1.default.Router();
 router.get('/:cnpj', async (req, res) => {
-    var _a, _b;
+    var _a, _b, _c, _d, _e;
     const { cnpj } = req.params;
     // Limpar CNPJ (remover caracteres não numéricos)
     const cnpjLimpo = cnpj.replace(/\D/g, '');
@@ -31,6 +31,7 @@ router.get('/:cnpj', async (req, res) => {
         const dados = response.data;
         console.log('✅ Dados recebidos da BrasilAPI:', dados);
         if (!(dados === null || dados === void 0 ? void 0 : dados.razao_social)) {
+            console.log('⚠️ CNPJ não encontrado na BrasilAPI');
             return res.status(404).json({ error: 'CNPJ não encontrado' });
         }
         // Formatar endereço completo
@@ -72,17 +73,33 @@ router.get('/:cnpj', async (req, res) => {
         return res.json(formattedResponse);
     }
     catch (err) {
-        console.error('❌ Erro ao consultar CNPJ:', err);
-        if (((_a = err.response) === null || _a === void 0 ? void 0 : _a.status) === 404) {
+        console.error('❌ Erro ao consultar CNPJ:', {
+            message: err.message,
+            code: err.code,
+            status: (_a = err.response) === null || _a === void 0 ? void 0 : _a.status,
+            statusText: (_b = err.response) === null || _b === void 0 ? void 0 : _b.statusText,
+            data: (_c = err.response) === null || _c === void 0 ? void 0 : _c.data
+        });
+        if (((_d = err.response) === null || _d === void 0 ? void 0 : _d.status) === 404) {
             return res.status(404).json({ error: 'CNPJ não encontrado' });
         }
-        if (((_b = err.response) === null || _b === void 0 ? void 0 : _b.status) === 429) {
+        if (((_e = err.response) === null || _e === void 0 ? void 0 : _e.status) === 429) {
             return res.status(429).json({ error: 'Muitas consultas. Aguarde alguns segundos.' });
         }
         if (err.code === 'ECONNABORTED') {
             return res.status(408).json({ error: 'Timeout na consulta. Tente novamente.' });
         }
-        return res.status(500).json({ error: 'Erro ao consultar CNPJ' });
+        // Log detalhado do erro
+        console.error('❌ Detalhes do erro:', {
+            name: err.name,
+            message: err.message,
+            stack: err.stack,
+            config: err.config
+        });
+        return res.status(500).json({
+            error: 'Erro ao consultar CNPJ',
+            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 });
 exports.default = router;

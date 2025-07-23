@@ -13,8 +13,8 @@ const envSchema = zod_1.z.object({
     PORT: zod_1.z.string().transform(Number).default('8080'),
     DATABASE_URL: zod_1.z.string(),
     JWT_SECRET: zod_1.z.string(),
-    BASE_URL: zod_1.z.string(),
-    FRONTEND_URL: zod_1.z.string(),
+    BASE_URL: zod_1.z.string().optional(),
+    FRONTEND_URL: zod_1.z.string().optional(),
 });
 const _env = envSchema.safeParse(process.env);
 if (!_env.success) {

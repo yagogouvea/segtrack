@@ -118,4 +118,124 @@ router.post('/', controller.create);
 router.put('/:id', controller.update);
 router.delete('/:id', controller.delete);
 
+// Endpoint para gerar usuário e senha para prestador
+router.post('/:id/gerar-usuario', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await ensurePrisma();
+    
+    if (!db) {
+      return res.status(500).json({ error: 'Erro de conexão com o banco de dados' });
+    }
+
+    // Buscar o prestador
+    const prestador = await db.prestador.findUnique({
+      where: { id: Number(id) }
+    });
+
+    if (!prestador) {
+      return res.status(404).json({ error: 'Prestador não encontrado' });
+    }
+
+    // Verificar se já existe usuário para este prestador
+    const usuarioExistente = await db.usuarioPrestador.findFirst({
+      where: { prestador_id: Number(id) }
+    });
+
+    if (usuarioExistente) {
+      return res.status(400).json({ 
+        error: 'Usuário já existe para este prestador',
+        usuario: {
+          email: usuarioExistente.email,
+          ativo: usuarioExistente.ativo
+        }
+      });
+    }
+
+    // Verificar se o prestador tem email e CPF
+    if (!prestador.email || !prestador.cpf) {
+      return res.status(400).json({ 
+        error: 'Prestador deve ter email e CPF para gerar usuário' 
+      });
+    }
+
+    // Gerar senha hash usando o CPF como senha
+    const bcrypt = require('bcrypt');
+    const cpfLimpo = prestador.cpf.replace(/\D/g, '');
+    const senha_hash = await bcrypt.hash(cpfLimpo, 10);
+
+    // Criar usuário prestador
+    const novoUsuario = await db.usuarioPrestador.create({
+      data: {
+        prestador_id: Number(id),
+        email: prestador.email,
+        senha_hash,
+        ativo: true,
+        primeiro_acesso: true
+      }
+    });
+
+    console.log(`✅ Usuário criado para prestador ${prestador.nome} (${prestador.email})`);
+
+    res.json({
+      message: 'Usuário criado com sucesso',
+      usuario: {
+        id: novoUsuario.id,
+        email: novoUsuario.email,
+        ativo: novoUsuario.ativo,
+        primeiro_acesso: novoUsuario.primeiro_acesso
+      },
+      credenciais: {
+        email: prestador.email,
+        senha: cpfLimpo // CPF como senha
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar usuário para prestador:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Endpoint para verificar se prestador tem usuário
+router.get('/:id/verificar-usuario', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await ensurePrisma();
+    
+    if (!db) {
+      return res.status(500).json({ error: 'Erro de conexão com o banco de dados' });
+    }
+
+    // Buscar o prestador
+    const prestador = await db.prestador.findUnique({
+      where: { id: Number(id) }
+    });
+
+    if (!prestador) {
+      return res.status(404).json({ error: 'Prestador não encontrado' });
+    }
+
+    // Verificar se existe usuário para este prestador
+    const usuario = await db.usuarioPrestador.findFirst({
+      where: { prestador_id: Number(id) }
+    });
+
+    res.json({
+      prestador_id: Number(id),
+      tem_usuario: !!usuario,
+      pode_gerar: !usuario && prestador.email && prestador.cpf,
+      usuario: usuario ? {
+        email: usuario.email,
+        ativo: usuario.ativo,
+        primeiro_acesso: usuario.primeiro_acesso
+      } : null
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao verificar usuário do prestador:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 export default router; 

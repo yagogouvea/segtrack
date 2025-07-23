@@ -30,7 +30,7 @@ class UserController {
                 return;
             }
             const user = await prisma_1.prisma.user.findUnique({
-                where: { id: req.user.id },
+                where: { id: req.user.sub }, // Usando sub em vez de id
                 select: {
                     id: true,
                     name: true,
@@ -59,7 +59,7 @@ class UserController {
             }
             const { name, email } = req.body;
             const user = await prisma_1.prisma.user.update({
-                where: { id: req.user.id },
+                where: { id: req.user.sub }, // Usando sub em vez de id
                 data: { name, email },
                 select: {
                     id: true,
@@ -85,7 +85,7 @@ class UserController {
             }
             const { currentPassword, newPassword } = req.body;
             const user = await prisma_1.prisma.user.findUnique({
-                where: { id: req.user.id }
+                where: { id: req.user.sub } // Usando sub em vez de id
             });
             if (!user) {
                 res.status(404).json({ error: 'Usuário não encontrado' });
@@ -98,7 +98,7 @@ class UserController {
             }
             const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
             await prisma_1.prisma.user.update({
-                where: { id: req.user.id },
+                where: { id: req.user.sub }, // Usando sub em vez de id
                 data: { passwordHash: hashedPassword }
             });
             res.json({ message: 'Senha atualizada com sucesso' });
@@ -162,7 +162,7 @@ class UserController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                res.status(error.statusCode).json({ error: error.message });
+                res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
                 return;
             }
             console.error('Erro ao criar usuário:', error);
@@ -220,7 +220,7 @@ class UserController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                res.status(error.statusCode).json({ error: error.message });
+                res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
                 return;
             }
             console.error('Erro ao atualizar usuário:', error);
@@ -287,7 +287,7 @@ class UserController {
     async getUserProfile(req, res) {
         var _a;
         try {
-            const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+            const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.sub;
             if (!userId) {
                 res.status(401).json({ error: 'Usuário não autenticado' });
                 return;
@@ -371,7 +371,7 @@ class UserController {
         }
         catch (error) {
             logger_1.default.error('Erro ao criar usuário:', error);
-            if (error.code === 'P2002') {
+            if ((error === null || error === void 0 ? void 0 : error.code) === 'P2002') {
                 res.status(400).json({ error: 'Email já está em uso' });
             }
             else {

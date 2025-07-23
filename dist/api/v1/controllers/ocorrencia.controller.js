@@ -22,7 +22,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -34,7 +34,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -47,7 +47,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -63,7 +63,7 @@ class OcorrenciaController {
         catch (error) {
             console.error('[OcorrenciaController] Error in update:', error);
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -76,7 +76,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -89,7 +89,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -102,7 +102,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
@@ -119,7 +119,7 @@ class OcorrenciaController {
         }
         catch (error) {
             if (error instanceof AppError_1.AppError) {
-                return res.status(error.statusCode).json({ error: error.message });
+                return res.status(error.statusCode).json({ error: error instanceof Error ? error.message : String(error) });
             }
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
