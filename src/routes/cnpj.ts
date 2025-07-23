@@ -61,6 +61,7 @@ router.get('/:cnpj', async (req: Request, res: Response) => {
     console.log('✅ Dados recebidos da BrasilAPI:', dados);
 
     if (!dados?.razao_social) {
+      console.log('⚠️ CNPJ não encontrado na BrasilAPI');
       return res.status(404).json({ error: 'CNPJ não encontrado' });
     }
 
@@ -105,7 +106,13 @@ router.get('/:cnpj', async (req: Request, res: Response) => {
     return res.json(formattedResponse);
 
   } catch (err: any) {
-    console.error('❌ Erro ao consultar CNPJ:', err);
+    console.error('❌ Erro ao consultar CNPJ:', {
+      message: err.message,
+      code: err.code,
+      status: err.response?.status,
+      statusText: err.response?.statusText,
+      data: err.response?.data
+    });
     
     if (err.response?.status === 404) {
       return res.status(404).json({ error: 'CNPJ não encontrado' });
@@ -119,7 +126,18 @@ router.get('/:cnpj', async (req: Request, res: Response) => {
       return res.status(408).json({ error: 'Timeout na consulta. Tente novamente.' });
     }
     
-    return res.status(500).json({ error: 'Erro ao consultar CNPJ' });
+    // Log detalhado do erro
+    console.error('❌ Detalhes do erro:', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      config: err.config
+    });
+    
+    return res.status(500).json({ 
+      error: 'Erro ao consultar CNPJ',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
