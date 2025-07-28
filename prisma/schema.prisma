@@ -222,6 +222,7 @@ model Ocorrencia {
   cidade_destino      String?
   km_acl              String?
   operacao            String?   // Campo para operação do cliente Opentech
+  conta               String?   // Campo para conta do cliente BRK
   hashRastreamento    String?   @unique
   fotos               Foto[]
   rastreamentos       RastreamentoPrestador[]

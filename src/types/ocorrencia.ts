@@ -49,6 +49,9 @@ export interface Ocorrencia {
   atualizado_em: Date;
   data_acionamento?: Date | null;
   fotos?: Foto[];
+  // ✅ NOVOS CAMPOS DO CLIENTE
+  cliente_logo?: string | null;
+  cliente_nome_fantasia?: string | null;
 }
 
 export interface OcorrenciaFormatada extends Omit<Ocorrencia, 'inicio' | 'chegada' | 'termino' | 'encerrada_em'> {

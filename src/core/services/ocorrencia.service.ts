@@ -126,14 +126,43 @@ export class OcorrenciaService {
       
       console.log('[OcorrenciaService] Dados financeiros dos prestadores:', prestadoresComDados);
       
-      // Criar mapa para busca rápida
+      // ✅ ADICIONAR LOGOS DOS CLIENTES
+      console.log('[OcorrenciaService] Adicionando logos dos clientes...');
+      
+      // Buscar todos os clientes únicos das ocorrências
+      const clientesNomes = [...new Set(ocorrencias.map(oc => oc.cliente).filter((c): c is string => Boolean(c)))];
+      console.log('[OcorrenciaService] Clientes únicos encontrados:', clientesNomes);
+      
+      // Buscar dados dos clientes incluindo logos
+      const clientesComDados = await db.cliente.findMany({
+        where: {
+          nome: {
+            in: clientesNomes
+          }
+        },
+        select: {
+          nome: true,
+          logo: true,
+          nome_fantasia: true
+        }
+      });
+      
+      console.log('[OcorrenciaService] Dados dos clientes:', clientesComDados);
+      
+      // Criar mapa para busca rápida de prestadores
       const prestadoresMap = new Map(
         prestadoresComDados.map(p => [p.nome, p])
       );
       
-      // Adicionar dados financeiros às ocorrências
-      const ocorrenciasComDadosFinanceiros = ocorrencias.map(oc => {
+      // Criar mapa para busca rápida de clientes
+      const clientesMap = new Map(
+        clientesComDados.map(c => [c.nome, c])
+      );
+      
+      // Adicionar dados financeiros e logos às ocorrências
+      const ocorrenciasComDadosCompletos = ocorrencias.map(oc => {
         const prestador = prestadoresMap.get(oc.prestador || '');
+        const cliente = clientesMap.get(oc.cliente || '');
         
         return {
           ...oc,
@@ -142,13 +171,16 @@ export class OcorrenciaService {
           valor_hora_adc: prestador?.valor_hora_adc || null,
           valor_km_adc: prestador?.valor_km_adc || null,
           franquia_horas: prestador?.franquia_horas || null,
-          franquia_km: prestador?.franquia_km || null
+          franquia_km: prestador?.franquia_km || null,
+          // Adicionar dados do cliente incluindo logo
+          cliente_logo: cliente?.logo || null,
+          cliente_nome_fantasia: cliente?.nome_fantasia || null
         };
       });
       
-      console.log('[OcorrenciaService] Ocorrências com dados financeiros:', ocorrenciasComDadosFinanceiros.length);
+      console.log('[OcorrenciaService] Ocorrências com dados completos:', ocorrenciasComDadosCompletos.length);
       
-      return ocorrenciasComDadosFinanceiros;
+      return ocorrenciasComDadosCompletos;
     } catch (error) {
       console.error('[OcorrenciaService] Erro na listagem:', error);
       throw new AppError('Erro ao listar ocorrências');
