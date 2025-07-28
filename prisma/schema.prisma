@@ -135,6 +135,7 @@ model Prestador {
 
   usuarios UsuarioPrestador[]
   rastreamentos     RastreamentoPrestador[]
+  pagamentos_customizados PagamentosPrestadores[]
 }
 
 model FuncaoPrestador {
@@ -224,6 +225,7 @@ model Ocorrencia {
   hashRastreamento    String?   @unique
   fotos               Foto[]
   rastreamentos       RastreamentoPrestador[]
+  pagamentos_customizados PagamentosPrestadores[]
 
   @@index([placa1])
   @@index([status])
@@ -264,6 +266,9 @@ model User {
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  
+  // Relação com pagamentos customizados
+  pagamentos_customizados PagamentosPrestadores[]
 }
 
 model UsuarioPrestador {
@@ -303,4 +308,31 @@ model RastreamentoPrestador {
   @@index([ocorrencia_id])
   @@index([timestamp])
   @@index([status])
+}
+
+// Nova tabela para pagamentos customizados de prestadores
+model PagamentosPrestadores {
+  id                Int      @id @default(autoincrement())
+  ocorrencia_id     Int      // ID da ocorrência
+  prestador_id      Int      // ID do prestador
+  valor_acionamento Decimal? @db.Decimal(10, 2)  // Valor customizado de acionamento
+  valor_hora_adc    Decimal? @db.Decimal(10, 2)  // Valor customizado hora adicional
+  valor_km_adc      Decimal? @db.Decimal(10, 2)  // Valor customizado km adicional
+  valor_total       Decimal? @db.Decimal(10, 2)  // Valor total customizado
+  franquia_horas    String?  // Franquia customizada (ex: "03:00")
+  franquia_km       Int?     // Franquia customizada em km
+  observacoes       String?  @db.Text // Observações sobre o pagamento customizado
+  criado_em         DateTime @default(now())
+  atualizado_em     DateTime @updatedAt
+  criado_por        String?  // ID do usuário que criou o pagamento customizado
+  
+  // Relações
+  ocorrencia        Ocorrencia @relation(fields: [ocorrencia_id], references: [id], onDelete: Cascade)
+  prestador         Prestador  @relation(fields: [prestador_id], references: [id], onDelete: Cascade)
+  usuario           User?      @relation(fields: [criado_por], references: [id])
+
+  @@unique([ocorrencia_id, prestador_id]) // Um pagamento customizado por ocorrência/prestador
+  @@index([ocorrencia_id])
+  @@index([prestador_id])
+  @@index([criado_em])
 }

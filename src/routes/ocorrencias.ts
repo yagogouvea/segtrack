@@ -14,6 +14,72 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Rota de teste funcionando!' });
 });
 
+// Rota para buscar ocorrências finalizadas (fechamentos) - SEM AUTENTICAÇÃO TEMPORARIAMENTE
+router.get('/fechamentos', async (req, res) => {
+  try {
+    console.log('[ocorrencias] Buscando ocorrências finalizadas...');
+    
+    const { ensurePrisma } = await import('../lib/prisma');
+    const db = await ensurePrisma();
+    
+    if (!db) {
+      console.error('[ocorrencias] Erro: Instância do Prisma não disponível');
+      return res.status(500).json({ error: 'Erro de conexão com o banco de dados' });
+    }
+
+    // Buscar ocorrências finalizadas e em andamento com resultado
+    const ocorrencias = await db.ocorrencia.findMany({
+      where: {
+        OR: [
+          { status: 'concluida' },
+          { 
+            status: 'em_andamento',
+            resultado: {
+              not: null
+            }
+          }
+        ],
+        resultado: {
+          not: 'cancelado'
+        }
+      },
+      select: {
+        id: true,
+        cliente: true,
+        operador: true,
+        criado_em: true,
+        placa1: true,
+        modelo1: true,
+        cor1: true,
+        tipo: true,
+        coordenadas: true,
+        endereco: true,
+        bairro: true,
+        cidade: true,
+        estado: true,
+        prestador: true,
+        inicio: true,
+        chegada: true,
+        termino: true,
+        km_inicial: true,
+        km_final: true,
+        resultado: true,
+        status: true
+      },
+      orderBy: {
+        criado_em: 'desc'
+      }
+    });
+
+    console.log(`[ocorrencias] Ocorrências finalizadas encontradas: ${ocorrencias.length}`);
+
+    res.json(ocorrencias);
+  } catch (error) {
+    console.error('[ocorrencias] Erro ao buscar ocorrências finalizadas:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 router.use(authenticateToken);
 
 // Rota de teste com autenticação

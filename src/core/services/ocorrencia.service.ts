@@ -99,20 +99,58 @@ export class OcorrenciaService {
           despesas: oc.despesas
         });
       });
-      
-      return ocorrencias;
-    } catch (error: unknown) {
-      console.error('[OcorrenciaService] Erro ao listar ocorrências:', {
-        error,
-        message: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Erro desconhecido',
-        stack: error instanceof Error ? error instanceof Error ? error.stack : undefined : undefined,
-        name: error instanceof Error ? error instanceof Error ? error.name : undefined : undefined,
-        code: error instanceof Prisma.PrismaClientKnownRequestError ? (error as any)?.code : undefined
-      });
 
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        throw new AppError(`Erro no banco de dados: ${error instanceof Error ? error.message : String(error)} (código: ${(error as any)?.code})`);
-      }
+      // ✅ ADICIONAR DADOS FINANCEIROS DOS PRESTADORES (como no app do prestador)
+      console.log('[OcorrenciaService] Adicionando dados financeiros dos prestadores...');
+      
+      // Buscar todos os prestadores únicos das ocorrências
+      const prestadoresNomes = [...new Set(ocorrencias.map(oc => oc.prestador).filter((p): p is string => Boolean(p)))];
+      console.log('[OcorrenciaService] Prestadores únicos encontrados:', prestadoresNomes);
+      
+      // Buscar dados financeiros dos prestadores
+      const prestadoresComDados = await db.prestador.findMany({
+        where: {
+          nome: {
+            in: prestadoresNomes
+          }
+        },
+        select: {
+          nome: true,
+          valor_acionamento: true,
+          valor_hora_adc: true,
+          valor_km_adc: true,
+          franquia_horas: true,
+          franquia_km: true
+        }
+      });
+      
+      console.log('[OcorrenciaService] Dados financeiros dos prestadores:', prestadoresComDados);
+      
+      // Criar mapa para busca rápida
+      const prestadoresMap = new Map(
+        prestadoresComDados.map(p => [p.nome, p])
+      );
+      
+      // Adicionar dados financeiros às ocorrências
+      const ocorrenciasComDadosFinanceiros = ocorrencias.map(oc => {
+        const prestador = prestadoresMap.get(oc.prestador || '');
+        
+        return {
+          ...oc,
+          // Adicionar dados financeiros do prestador (como no app do prestador)
+          valor_acionamento: prestador?.valor_acionamento || null,
+          valor_hora_adc: prestador?.valor_hora_adc || null,
+          valor_km_adc: prestador?.valor_km_adc || null,
+          franquia_horas: prestador?.franquia_horas || null,
+          franquia_km: prestador?.franquia_km || null
+        };
+      });
+      
+      console.log('[OcorrenciaService] Ocorrências com dados financeiros:', ocorrenciasComDadosFinanceiros.length);
+      
+      return ocorrenciasComDadosFinanceiros;
+    } catch (error) {
+      console.error('[OcorrenciaService] Erro na listagem:', error);
       throw new AppError('Erro ao listar ocorrências');
     }
   }
